@@ -1,0 +1,14 @@
+[package]
+name = "byte-knight"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "byte-knight"
+path = "src/main.rs"
+test = false
+bench = false
+
+[dependencies]
+chess = "3.2.0"
+vampirc-uci = { version = "0.11.1", features = ["chess"] }
