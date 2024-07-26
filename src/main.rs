@@ -4,24 +4,29 @@ use std::str::FromStr;
 use crate::engine::EvilBot;
 use chess::{Board, MoveGen};
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use engine::ChessEngine;
 use std::io::{self, BufRead, Write};
 use vampirc_uci::{parse, UciMessage, UciTimeControl};
 
-#[derive(Parser, Debug)]
+#[derive(Parser)]
 #[command(version="0.0.1", about="ByteKnight is a UCI compliant chess engine", long_about=None)]
 struct Options {
-    #[arg(short, long)]
-    engine_name: String,
+    #[command(subcommand)]
+    command: Command,
+}
 
-    #[arg(short, long)]
-    uci_mode: bool,
+#[derive(Subcommand)]
+#[command(about = "Available commands")]
+enum Command {
+    Uci {
+        #[arg(long)]
+        engine_name: String,
+    },
 }
 
 fn main() {
     let args = Options::parse();
-    println!("Engine name: {}", args.engine_name);
 
     let stdin = io::stdin();
     let stdout = io::stdout();
@@ -58,10 +63,10 @@ fn main() {
                                 board = Board::default();
                             }
                             false => {
-                                                    if let Some(fen) = fen {
-                                                        board = Board::from_str(fen.as_str()).unwrap();
-                                                    }
-                                                }
+                                if let Some(fen) = fen {
+                                    board = Board::from_str(fen.as_str()).unwrap();
+                                }
+                            }
                         }
 
                         for m in moves {
@@ -89,9 +94,10 @@ fn main() {
                         } else {
                             // Handle the case when best_move is None.
                             // Use the first legal move as a fallback
-                            MoveGen::new_legal(&board)
-                                .next()
-                                .map(|m| writeln!(stdout, "{}", UciMessage::best_move(m).to_string()).unwrap());
+                            MoveGen::new_legal(&board).next().map(|m| {
+                                writeln!(stdout, "{}", UciMessage::best_move(m).to_string())
+                                    .unwrap()
+                            });
                         }
                     }
                     UciMessage::Quit => {
@@ -103,5 +109,5 @@ fn main() {
 
             stdout.flush().unwrap();
         }
-    };
+    }
 }
