@@ -1,11 +1,13 @@
 mod engine;
+
+use core::time;
 use std::{fmt::{Display, Formatter}, slice::Iter, str::FromStr};
 
 use crate::engine::EvilBot;
 use chess::{Board, MoveGen};
 
 use clap::{Parser, Subcommand};
-use engine::ChessEngine;
+use engine::{ChessEngine, Timer};
 use std::io::{self, BufRead, Write};
 use vampirc_uci::{parse, UciMessage, UciTimeControl};
 
@@ -90,11 +92,34 @@ fn run_uci(engine_name : &String) {
                     }
                     UciMessage::Go {
                         time_control,
-                        search_control,
+                        search_control: _,
                     } => {
                         // TODO: Implement time control
-
-                        let best_move = engine.think(&board);
+                        let tc: &UciTimeControl = time_control.as_ref().unwrap();
+                        let timer;
+                        match tc {
+                            UciTimeControl::TimeLeft { 
+                                white_time,
+                                black_time, 
+                                white_increment: _,
+                                black_increment: _, 
+                                moves_to_go: _ } => {
+                                match board.side_to_move() {
+                                    chess::Color::Black => {
+                                        timer = Timer::new(black_time.unwrap().num_milliseconds());
+                                    },
+                                    chess::Color::White => {
+                                        timer = Timer::new(white_time.unwrap().num_milliseconds());
+                                    }
+                                }
+                            }
+                            _=>{
+                                // TODO: Log error
+                                timer = Timer::new(0);
+                            }
+                        }
+                        
+                        let best_move = engine.think(&board, &timer);
                         if let Some(bot_move) = best_move {
                             writeln!(stdout, "{}", UciMessage::best_move(bot_move).to_string())
                                 .unwrap();
