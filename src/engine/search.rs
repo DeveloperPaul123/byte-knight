@@ -1,4 +1,4 @@
-use chess::{Board, ChessMove, Color, MoveGen, Piece};
+use chess::{Board, ChessMove, MoveGen};
 
 #[derive(Clone, Copy)]
 struct TranspositionTableEntry {

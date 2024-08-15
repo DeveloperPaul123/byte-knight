@@ -2,9 +2,7 @@ mod board;
 mod engine;
 mod definitions;
 
-use core::time;
 use std::{
-    fmt::{Display, Formatter},
     slice::Iter,
     str::FromStr,
 };
