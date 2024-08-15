@@ -1,4 +1,7 @@
-use std::ops::{BitAnd, BitOr, BitXor, Not};
+use std::{
+    fmt::Display,
+    ops::{BitAnd, BitOr, BitXor, Not},
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Bitboard {
@@ -58,6 +61,22 @@ impl Bitboard {
     }
 }
 
+// Allow printing the Bitboard
+impl Display for Bitboard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for rank in (0..8).rev() {
+            for file in 0..8 {
+                let square = rank * 8 + file;
+                let occupied = self.is_square_occupied(square);
+                let symbol = if occupied { "X" } else { "-" };
+                write!(f, "{} ", symbol)?;
+            }
+            writeln!(f)?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -66,6 +85,7 @@ mod tests {
     fn test_bitboard_new() {
         let bb = Bitboard::new(0x8000000000000001);
         assert_eq!(bb.data, 0x8000000000000001);
+        println!("{}", bb);
     }
 
     #[test]
