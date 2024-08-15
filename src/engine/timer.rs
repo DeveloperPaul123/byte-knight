@@ -2,14 +2,14 @@ use stopwatch::Stopwatch;
 
 pub struct Timer {
     sw: Stopwatch,
-    starting_millis_remaining: i64
+    starting_millis_remaining: i64,
 }
 
 impl Timer {
     pub fn new(millis_remaining: i64) -> Timer {
         Timer {
             sw: Stopwatch::start_new(),
-            starting_millis_remaining: millis_remaining
+            starting_millis_remaining: millis_remaining,
         }
     }
 
@@ -29,7 +29,11 @@ impl ToString for Timer {
         let seconds_remaining = millis_remaining / 1000;
         let minutes_remaining = seconds_remaining / 60;
         let seconds_remaining = seconds_remaining % 60;
-        return format!("{:02}:{:02}, {:04} elapsed", minutes_remaining, seconds_remaining, 
-            self.milliseconds_elapsed_this_turn());
+        return format!(
+            "{:02}:{:02}, {:04} elapsed",
+            minutes_remaining,
+            seconds_remaining,
+            self.milliseconds_elapsed_this_turn()
+        );
     }
 }

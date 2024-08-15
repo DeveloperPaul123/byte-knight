@@ -14,7 +14,7 @@ impl Evaluation {
                 i64::MAX
             };
         }
-        let mut sum : i64 = 0;
+        let mut sum: i64 = 0;
         for piece in ALL_PIECES.iter() {
             let black_bb = piece_for_color(board, piece, chess::Color::Black);
             let white_bb = piece_for_color(board, piece, chess::Color::White);
@@ -29,6 +29,5 @@ impl Evaluation {
             sum += (black_bb.popcnt() as i64 - white_bb.popcnt() as i64) * piece_value;
         }
         return sum;
-        
     }
 }

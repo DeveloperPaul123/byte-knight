@@ -1,7 +1,11 @@
 mod engine;
 
 use core::time;
-use std::{fmt::{Display, Formatter}, slice::Iter, str::FromStr};
+use std::{
+    fmt::{Display, Formatter},
+    slice::Iter,
+    str::FromStr,
+};
 
 use crate::engine::EvilBot;
 use chess::{Board, MoveGen};
@@ -28,17 +32,17 @@ enum Command {
         engine: String,
     },
     // prints out what engines are available
-    Engines
+    Engines,
 }
 
 fn engine_for_type(engine_type: EngineType) -> Box<dyn ChessEngine> {
     match engine_type {
-        EngineType::EvilBot => Box::new(EvilBot{}),
-        EngineType::ByteKnight => unimplemented!()
+        EngineType::EvilBot => Box::new(EvilBot {}),
+        EngineType::ByteKnight => unimplemented!(),
     }
 }
 
-fn run_uci(engine_name : &String) {
+fn run_uci(engine_name: &String) {
     let stdin: io::Stdin = io::stdin();
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
@@ -48,7 +52,12 @@ fn run_uci(engine_name : &String) {
 
     // already in UCI mode, so output the engine info
     writeln!(stdout, "{}", UciMessage::id_name("byte-knight")).unwrap();
-    writeln!(stdout, "{}", UciMessage::id_author("Paul T (DeveloperPaul123)")).unwrap();
+    writeln!(
+        stdout,
+        "{}",
+        UciMessage::id_author("Paul T (DeveloperPaul123)")
+    )
+    .unwrap();
     writeln!(stdout, "{}", UciMessage::UciOk).unwrap();
     let engine_type = EngineType::from_str(&engine_name).expect("Invalid engine name");
     let mut engine = engine_for_type(engine_type);
@@ -57,7 +66,6 @@ fn run_uci(engine_name : &String) {
         if let Some(Ok(line)) = input.next() {
             let message = parse(&line);
             for msg in message.iter() {
-                
                 match msg {
                     UciMessage::UciNewGame => {
                         board = Board::default();
@@ -98,27 +106,26 @@ fn run_uci(engine_name : &String) {
                         let tc: &UciTimeControl = time_control.as_ref().unwrap();
                         let timer;
                         match tc {
-                            UciTimeControl::TimeLeft { 
+                            UciTimeControl::TimeLeft {
                                 white_time,
-                                black_time, 
+                                black_time,
                                 white_increment: _,
-                                black_increment: _, 
-                                moves_to_go: _ } => {
-                                match board.side_to_move() {
-                                    chess::Color::Black => {
-                                        timer = Timer::new(black_time.unwrap().num_milliseconds());
-                                    },
-                                    chess::Color::White => {
-                                        timer = Timer::new(white_time.unwrap().num_milliseconds());
-                                    }
+                                black_increment: _,
+                                moves_to_go: _,
+                            } => match board.side_to_move() {
+                                chess::Color::Black => {
+                                    timer = Timer::new(black_time.unwrap().num_milliseconds());
                                 }
-                            }
-                            _=>{
+                                chess::Color::White => {
+                                    timer = Timer::new(white_time.unwrap().num_milliseconds());
+                                }
+                            },
+                            _ => {
                                 // TODO: Log error
                                 timer = Timer::new(0);
                             }
                         }
-                        
+
                         let best_move = engine.think(&board, &timer);
                         if let Some(bot_move) = best_move {
                             writeln!(stdout, "{}", UciMessage::best_move(bot_move).to_string())
@@ -147,13 +154,13 @@ fn run_uci(engine_name : &String) {
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 enum EngineType {
     EvilBot,
-    ByteKnight
+    ByteKnight,
 }
 
 impl EngineType {
     fn iter() -> Iter<'static, EngineType> {
         static ENGINES: [EngineType; 2] = [EngineType::EvilBot, EngineType::ByteKnight];
-        return ENGINES.iter()
+        return ENGINES.iter();
     }
 }
 
@@ -164,7 +171,7 @@ impl FromStr for EngineType {
         match s {
             "EvilBot" => Ok(EngineType::EvilBot),
             "ByteKnight" => Ok(EngineType::ByteKnight),
-            _ => Err("Invalid engine".to_string())
+            _ => Err("Invalid engine".to_string()),
         }
     }
 }
@@ -173,8 +180,8 @@ impl ToString for EngineType {
     fn to_string(&self) -> String {
         return match self {
             EngineType::EvilBot => "EvilBot".to_string(),
-            EngineType::ByteKnight => "ByteKnight".to_string()
-        }
+            EngineType::ByteKnight => "ByteKnight".to_string(),
+        };
     }
 }
 
@@ -183,9 +190,8 @@ fn main() {
     match args.command {
         Command::Uci { engine } => {
             run_uci(&engine);
-        },
-        Command::Engines {
-        } => {
+        }
+        Command::Engines {} => {
             println!("Available engines:");
             for engine in EngineType::iter() {
                 println!("  🤖 {}", engine.to_string());

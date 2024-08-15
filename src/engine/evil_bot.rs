@@ -1,7 +1,7 @@
 use chess::{Board, ChessMove, MoveGen, Piece};
 
-use crate::engine::ChessEngine;
 use super::Timer;
+use crate::engine::ChessEngine;
 
 pub struct EvilBot;
 
@@ -18,8 +18,7 @@ impl EvilBot {
     }
 }
 
-impl ChessEngine for EvilBot
-{
+impl ChessEngine for EvilBot {
     fn think(self: &Self, board: &Board, _: &Timer) -> Option<ChessMove> {
         MoveGen::new_legal(board)
             .filter(|&m| board.piece_on(m.get_dest()).is_some())

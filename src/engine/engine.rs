@@ -5,14 +5,14 @@ use super::{search, ChessEngine, Timer};
 struct ByteKnight {
     /// The current board state
     board: Board,
-    search: search::Search
+    search: search::Search,
 }
 
 impl ByteKnight {
     pub fn new() -> ByteKnight {
         ByteKnight {
             board: Board::default(),
-            search: search::Search::new()
+            search: search::Search::new(),
         }
     }
 }
