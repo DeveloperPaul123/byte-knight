@@ -10,6 +10,11 @@ path = "src/main.rs"
 test = false
 bench = false
 
+[lib]
+name = "byte_board"
+path = "board/lib.rs"
+test = true
+
 [dependencies]
 chess = "3.2.0"
 clap = { version = "4.5.9", features = ["derive"] }

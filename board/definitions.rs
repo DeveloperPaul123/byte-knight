@@ -14,3 +14,11 @@ impl Side {
     pub const WHITE: usize = 0;
     pub const BLACK: usize = 1;
 }
+
+pub struct About;
+impl About {
+    pub const NAME: &'static str = "ByteKnight";
+    pub const VERSION: &'static str = "0.1.0";
+    pub const SHORT_DESCRIPTION: &'static str = "ByteKnight is a UCI compliant chess engine.";
+    pub const AUTHORS: &'static str = "Paul T. (DeveloperPaul123)";
+}

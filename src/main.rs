@@ -1,15 +1,11 @@
-mod board;
 mod engine;
-mod definitions;
 
-use std::{
-    slice::Iter,
-    str::FromStr,
-};
+use std::{slice::Iter, str::FromStr};
 
 use crate::engine::EvilBot;
 use chess::{Board, MoveGen};
 
+use byte_board::definitions::About;
 use clap::{Parser, Subcommand};
 use engine::{ChessEngine, Timer};
 use std::io::{self, BufRead, Write};
@@ -17,7 +13,7 @@ use vampirc_uci::{parse, UciMessage, UciTimeControl};
 
 #[derive(Parser)]
 #[command(
-    version = "0.0.1", about = "ByteKnight is a UCI compliant chess engine", long_about = None
+    version = About::VERSION, about = About::SHORT_DESCRIPTION, long_about = About::SHORT_DESCRIPTION
 )]
 struct Options {
     #[command(subcommand)]
@@ -51,13 +47,9 @@ fn run_uci(engine_name: &String) {
     let mut board = Board::default();
 
     // already in UCI mode, so output the engine info
-    writeln!(stdout, "{}", UciMessage::id_name("byte-knight")).unwrap();
-    writeln!(
-        stdout,
-        "{}",
-        UciMessage::id_author("Paul T (DeveloperPaul123)")
-    )
-    .unwrap();
+    writeln!(stdout, "{}", UciMessage::id_name(About::NAME)).unwrap();
+    writeln!(stdout, "{}", UciMessage::id_author(About::AUTHORS)).unwrap();
+
     writeln!(stdout, "{}", UciMessage::UciOk).unwrap();
     let engine_type = EngineType::from_str(&engine_name).expect("Invalid engine name");
     let mut engine = engine_for_type(engine_type);

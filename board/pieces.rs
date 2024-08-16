@@ -2,6 +2,8 @@ use crate::definitions::NumberOf;
 
 pub type Piece = u8;
 
+/// Names of squares on the board. The index of the square name corresponds to the square index as represented by the bitboard.
+/// See the [crate::bitboard::Bitboard] for more information.
 #[rustfmt::skip]
 pub const SQUARE_NAME: [&str; NumberOf::SQUARES] = [
     "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
@@ -14,6 +16,7 @@ pub const SQUARE_NAME: [&str; NumberOf::SQUARES] = [
     "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"
 ];
 
+/// Fully qualified piece names. Use [Pieces] to index into this array.
 pub const PIECE_NAMES: [&str; NumberOf::PIECE_TYPES] =
     ["Pawn", "Knight", "Bishop", "Rook", "Queen", "King"];
 
