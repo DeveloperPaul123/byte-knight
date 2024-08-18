@@ -16,7 +16,7 @@ pub struct Board {
     castling_rights: u8,
 }
 
-/// Initializations
+// Initializations
 impl Board {
     fn new() -> Self {
         Board {
