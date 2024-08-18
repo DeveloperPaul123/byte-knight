@@ -102,12 +102,21 @@ impl Bitboard {
 
     /// Mark a square as occupied.
     pub fn set_square(&mut self, square: usize) {
+        self.clear_square(square);
         self.data |= 1 << square;
     }
 
     /// Clear a given square.
     pub fn clear_square(&mut self, square: usize) {
         self.data &= !(1 << square);
+    }
+
+    pub fn number_of_occupied_squares(&self) -> u32 {
+        self.data.count_ones()
+    }
+
+    pub fn as_number(&self) -> u64 {
+        self.data
     }
 }
 
@@ -153,6 +162,10 @@ mod tests {
         bb.set_square(0);
         bb.set_square(63);
         assert_eq!(bb.data, 0x8000000000000001);
+
+        bb = Bitboard::new(0);
+        bb.set_square(28);
+        assert_eq!(bb.data, 0x10000000);
     }
 
     #[test]

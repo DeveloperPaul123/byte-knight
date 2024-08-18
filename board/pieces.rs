@@ -18,7 +18,10 @@ pub const SQUARE_NAME: [&str; NumberOf::SQUARES] = [
 
 /// Fully qualified piece names. Use [Pieces] to index into this array.
 pub const PIECE_NAMES: [&str; NumberOf::PIECE_TYPES] =
-    ["Pawn", "Knight", "Bishop", "Rook", "Queen", "King"];
+    ["King", "Queen", "Rook", "Bishop", "Knight", "Pawn"];
+
+/// Short names for pieces. Use [Pieces] to index into this array.
+pub const PIECE_SHORT_NAMES: [&str; NumberOf::PIECE_TYPES] = ["K", "Q", "R", "B", "N", "P"];
 
 pub struct Pieces;
 impl Pieces {
