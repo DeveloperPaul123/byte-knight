@@ -3,8 +3,6 @@ use std::{
     ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not},
 };
 
-use super::pieces::{Piece, Pieces};
-
 /// Bitboard representation of a chess board.
 /// LSB (bit 0) is a1, MSB (bit 63) is h8.
 /// The board is represented as a 64-bit integer.
@@ -88,9 +86,10 @@ impl Not for Bitboard {
 impl Bitboard {
     /// Create a new Bitboard with the given data.
     pub fn new(data: u64) -> Self {
-        Bitboard { data: data }
+        Bitboard { data }
     }
 
+    /// Create an empty Bitboard.
     pub fn default() -> Self {
         Bitboard { data: 0 }
     }
@@ -111,10 +110,12 @@ impl Bitboard {
         self.data &= !(1 << square);
     }
 
+    /// Get the number of occupied squares on the board.
     pub fn number_of_occupied_squares(&self) -> u32 {
         self.data.count_ones()
     }
 
+    /// Convert to a 64-bit unsigned integer.
     pub fn as_number(&self) -> u64 {
         self.data
     }
