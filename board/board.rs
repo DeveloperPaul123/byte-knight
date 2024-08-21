@@ -5,7 +5,7 @@ use crate::fen::FenError;
 
 use super::definitions::{NumberOf, Side};
 use super::fen;
-use super::{bitboard::Bitboard, pieces::Pieces};
+use super::{bitboard::Bitboard, pieces::Piece};
 
 pub struct Board {
     piece_bitboards: [[Bitboard; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
@@ -102,28 +102,25 @@ impl Board {
     /// Initialize bitboard for all white pieces
     fn initialize_white_bbs(&mut self) {
         // Set up the board with the starting position
-        self.piece_bitboards[Side::WHITE][Pieces::PAWN as usize] = Bitboard::new(0xFF00);
-        self.piece_bitboards[Side::WHITE][Pieces::KNIGHT as usize] = Bitboard::new(0x42);
-        self.piece_bitboards[Side::WHITE][Pieces::BISHOP as usize] = Bitboard::new(0x24);
-        self.piece_bitboards[Side::WHITE][Pieces::ROOK as usize] = Bitboard::new(0x81);
-        self.piece_bitboards[Side::WHITE][Pieces::QUEEN as usize] = Bitboard::new(0x8);
-        self.piece_bitboards[Side::WHITE][Pieces::KING as usize] = Bitboard::new(0x10);
+        self.piece_bitboards[Side::WHITE][Piece::PAWN as usize] = Bitboard::new(0xFF00);
+        self.piece_bitboards[Side::WHITE][Piece::KNIGHT as usize] = Bitboard::new(0x42);
+        self.piece_bitboards[Side::WHITE][Piece::BISHOP as usize] = Bitboard::new(0x24);
+        self.piece_bitboards[Side::WHITE][Piece::ROOK as usize] = Bitboard::new(0x81);
+        self.piece_bitboards[Side::WHITE][Piece::QUEEN as usize] = Bitboard::new(0x8);
+        self.piece_bitboards[Side::WHITE][Piece::KING as usize] = Bitboard::new(0x10);
     }
 
     /// Initialize bitboard for all black pieces
     fn initialize_black_bbs(&mut self) {
         // Set up the board with the starting position
-        self.piece_bitboards[Side::BLACK][Pieces::PAWN as usize] = Bitboard::new(0xFF000000000000);
-        self.piece_bitboards[Side::BLACK][Pieces::KNIGHT as usize] =
+        self.piece_bitboards[Side::BLACK][Piece::PAWN as usize] = Bitboard::new(0xFF000000000000);
+        self.piece_bitboards[Side::BLACK][Piece::KNIGHT as usize] =
             Bitboard::new(0x4200000000000000);
-        self.piece_bitboards[Side::BLACK][Pieces::BISHOP as usize] =
+        self.piece_bitboards[Side::BLACK][Piece::BISHOP as usize] =
             Bitboard::new(0x2400000000000000);
-        self.piece_bitboards[Side::BLACK][Pieces::ROOK as usize] =
-            Bitboard::new(0x8100000000000000);
-        self.piece_bitboards[Side::BLACK][Pieces::QUEEN as usize] =
-            Bitboard::new(0x800000000000000);
-        self.piece_bitboards[Side::BLACK][Pieces::KING as usize] =
-            Bitboard::new(0x1000000000000000);
+        self.piece_bitboards[Side::BLACK][Piece::ROOK as usize] = Bitboard::new(0x8100000000000000);
+        self.piece_bitboards[Side::BLACK][Piece::QUEEN as usize] = Bitboard::new(0x800000000000000);
+        self.piece_bitboards[Side::BLACK][Piece::KING as usize] = Bitboard::new(0x1000000000000000);
     }
 }
 
@@ -163,11 +160,11 @@ impl Board {
         self.piece_bitboards[side][piece].set_square(square);
     }
 
-    pub fn piece_on_square(&self, square: usize) -> Option<(usize, usize)> {
+    pub fn piece_on_square(&self, square: usize) -> Option<(Piece, usize)> {
         for piece in 0..NumberOf::PIECE_TYPES {
             for side in 0..NumberOf::SIDES {
                 if self.piece_bitboards[side][piece].is_square_occupied(square) {
-                    return Some((piece, side));
+                    return Some((Piece::try_from(piece as u8).unwrap(), side));
                 }
             }
         }

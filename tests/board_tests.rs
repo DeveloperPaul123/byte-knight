@@ -1,7 +1,7 @@
 use byte_board::{
     board::Board,
     definitions::{CastlingAvailability, File, Rank, Side, DEFAULT_FEN},
-    pieces::Pieces,
+    pieces::Piece,
     square::to_square,
 };
 
@@ -28,40 +28,40 @@ fn construct_board_from_fen_string_2() {
     assert!(board_result.is_ok());
     let board = board_result.unwrap();
 
-    let white_pawn_bb = board.piece_bitboard(Pieces::PAWN as usize, Side::WHITE);
+    let white_pawn_bb = board.piece_bitboard(Piece::PAWN as usize, Side::WHITE);
     assert_eq!(white_pawn_bb.as_number(), 0x1000EF00);
 
-    let black_pawn_bb = board.piece_bitboard(Pieces::PAWN as usize, Side::BLACK);
+    let black_pawn_bb = board.piece_bitboard(Piece::PAWN as usize, Side::BLACK);
     assert_eq!(black_pawn_bb.as_number(), 0xFF000000000000);
 
-    let white_knight_bb = board.piece_bitboard(Pieces::KNIGHT as usize, Side::WHITE);
+    let white_knight_bb = board.piece_bitboard(Piece::KNIGHT as usize, Side::WHITE);
     assert_eq!(white_knight_bb.as_number(), 0x42);
 
-    let black_knight_bb = board.piece_bitboard(Pieces::KNIGHT as usize, Side::BLACK);
+    let black_knight_bb = board.piece_bitboard(Piece::KNIGHT as usize, Side::BLACK);
     assert_eq!(black_knight_bb.as_number(), 0x4200000000000000);
 
-    let white_bishop_bb = board.piece_bitboard(Pieces::BISHOP as usize, Side::WHITE);
+    let white_bishop_bb = board.piece_bitboard(Piece::BISHOP as usize, Side::WHITE);
     assert_eq!(white_bishop_bb.as_number(), 0x24);
 
-    let black_bishop_bb = board.piece_bitboard(Pieces::BISHOP as usize, Side::BLACK);
+    let black_bishop_bb = board.piece_bitboard(Piece::BISHOP as usize, Side::BLACK);
     assert_eq!(black_bishop_bb.as_number(), 0x2400000000000000);
 
-    let white_rook_bb = board.piece_bitboard(Pieces::ROOK as usize, Side::WHITE);
+    let white_rook_bb = board.piece_bitboard(Piece::ROOK as usize, Side::WHITE);
     assert_eq!(white_rook_bb.as_number(), 0x81);
 
-    let black_rook_bb = board.piece_bitboard(Pieces::ROOK as usize, Side::BLACK);
+    let black_rook_bb = board.piece_bitboard(Piece::ROOK as usize, Side::BLACK);
     assert_eq!(black_rook_bb.as_number(), 0x8100000000000000);
 
-    let white_queen_bb = board.piece_bitboard(Pieces::QUEEN as usize, Side::WHITE);
+    let white_queen_bb = board.piece_bitboard(Piece::QUEEN as usize, Side::WHITE);
     assert_eq!(white_queen_bb.as_number(), 0x8);
 
-    let black_queen_bb = board.piece_bitboard(Pieces::QUEEN as usize, Side::BLACK);
+    let black_queen_bb = board.piece_bitboard(Piece::QUEEN as usize, Side::BLACK);
     assert_eq!(black_queen_bb.as_number(), 0x800000000000000);
 
-    let white_king_bb = board.piece_bitboard(Pieces::KING as usize, Side::WHITE);
+    let white_king_bb = board.piece_bitboard(Piece::KING as usize, Side::WHITE);
     assert_eq!(white_king_bb.as_number(), 0x10);
 
-    let black_king_bb = board.piece_bitboard(Pieces::KING as usize, Side::BLACK);
+    let black_king_bb = board.piece_bitboard(Piece::KING as usize, Side::BLACK);
     assert_eq!(black_king_bb.as_number(), 0x1000000000000000);
 
     let all_pieces = board.all_pieces();

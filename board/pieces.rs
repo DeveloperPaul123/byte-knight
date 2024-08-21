@@ -1,7 +1,5 @@
 use crate::definitions::NumberOf;
 
-pub type Piece = u8;
-
 /// Names of squares on the board. The index of the square name corresponds to the square index as represented by the bitboard.
 /// See the [crate::bitboard::Bitboard] for more information.
 #[rustfmt::skip]
@@ -21,15 +19,96 @@ pub const PIECE_NAMES: [&str; NumberOf::PIECE_TYPES] =
     ["King", "Queen", "Rook", "Bishop", "Knight", "Pawn"];
 
 /// Short names for pieces. Use [Pieces] to index into this array.
-pub const PIECE_SHORT_NAMES: [&str; NumberOf::PIECE_TYPES] = ["K", "Q", "R", "B", "N", "P"];
+pub const PIECE_SHORT_NAMES: [char; NumberOf::PIECE_TYPES] = ['K', 'Q', 'R', 'B', 'N', 'P'];
 
-pub struct Pieces;
-impl Pieces {
-    pub const KING: Piece = 0;
-    pub const QUEEN: Piece = 1;
-    pub const ROOK: Piece = 2;
-    pub const BISHOP: Piece = 3;
-    pub const KNIGHT: Piece = 4;
-    pub const PAWN: Piece = 5;
-    pub const NONE: Piece = 6;
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Piece {
+    KING = 0,
+    QUEEN = 1,
+    ROOK = 2,
+    BISHOP = 3,
+    KNIGHT = 4,
+    PAWN = 5,
+    NONE = 6,
+}
+
+impl Piece {
+    /// Returns `true` if the piece is [`KING`].
+    ///
+    /// [`KING`]: Piece::KING
+    #[must_use]
+    pub fn is_king(&self) -> bool {
+        matches!(self, Self::KING)
+    }
+
+    /// Returns `true` if the piece is [`QUEEN`].
+    ///
+    /// [`QUEEN`]: Piece::QUEEN
+    #[must_use]
+    pub fn is_queen(&self) -> bool {
+        matches!(self, Self::QUEEN)
+    }
+
+    /// Returns `true` if the piece is [`ROOK`].
+    ///
+    /// [`ROOK`]: Piece::ROOK
+    #[must_use]
+    pub fn is_rook(&self) -> bool {
+        matches!(self, Self::ROOK)
+    }
+
+    /// Returns `true` if the piece is [`BISHOP`].
+    ///
+    /// [`BISHOP`]: Piece::BISHOP
+    #[must_use]
+    pub fn is_bishop(&self) -> bool {
+        matches!(self, Self::BISHOP)
+    }
+
+    /// Returns `true` if the piece is [`KNIGHT`].
+    ///
+    /// [`KNIGHT`]: Piece::KNIGHT
+    #[must_use]
+    pub fn is_knight(&self) -> bool {
+        matches!(self, Self::KNIGHT)
+    }
+
+    /// Returns `true` if the piece is [`PAWN`].
+    ///
+    /// [`PAWN`]: Piece::PAWN
+    #[must_use]
+    pub fn is_pawn(&self) -> bool {
+        matches!(self, Self::PAWN)
+    }
+
+    /// Returns `true` if the piece is [`NONE`].
+    ///
+    /// [`NONE`]: Piece::NONE
+    #[must_use]
+    pub fn is_none(&self) -> bool {
+        matches!(self, Self::NONE)
+    }
+}
+
+impl Default for Piece {
+    fn default() -> Self {
+        Piece::NONE
+    }
+}
+
+impl TryFrom<u8> for Piece {
+    type Error = ();
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Piece::KING),
+            1 => Ok(Piece::QUEEN),
+            2 => Ok(Piece::ROOK),
+            3 => Ok(Piece::BISHOP),
+            4 => Ok(Piece::KNIGHT),
+            5 => Ok(Piece::PAWN),
+            6 => Ok(Piece::NONE),
+            _ => Err(()),
+        }
+    }
 }

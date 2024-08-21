@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 use crate::{
     board::Board,
     definitions::{CastlingAvailability, Side},
-    pieces::{Pieces, SQUARE_NAME},
+    pieces::{Piece, PIECE_SHORT_NAMES, SQUARE_NAME},
     square::to_square,
 };
 
@@ -66,7 +66,6 @@ impl Display for FenError {
 }
 
 pub type FenResult = Result<(), FenError>;
-pub type FenParseResult = Result<Vec<String>, FenError>;
 pub type SplitFenStringResult = Result<Vec<String>, FenError>;
 pub(crate) type FenPartParser = fn(board: &mut Board, part: &str) -> Result<(), FenError>;
 
@@ -120,19 +119,18 @@ fn parse_piece_placement(board: &mut Board, part: &str) -> FenResult {
                 rank -= 1;
                 file = 0;
             }
-            '1'..='8' => {
-                let num_empty_squares = c.to_digit(10).unwrap() as usize;
-                file += num_empty_squares;
+            c if c.is_ascii_digit() => {
+                file += c.to_digit(10).unwrap() as usize;
             }
-            _ => {
-                let piece = match c {
-                    'P' | 'p' => Pieces::PAWN,
-                    'N' | 'n' => Pieces::KNIGHT,
-                    'B' | 'b' => Pieces::BISHOP,
-                    'R' | 'r' => Pieces::ROOK,
-                    'Q' | 'q' => Pieces::QUEEN,
-                    'K' | 'k' => Pieces::KING,
-                    _ => panic!("Invalid piece"),
+            'P' | 'N' | 'B' | 'R' | 'Q' | 'K' | 'p' | 'n' | 'b' | 'r' | 'q' | 'k' => {
+                let piece = match c.to_ascii_lowercase() {
+                    'p' => Piece::PAWN,
+                    'n' => Piece::KNIGHT,
+                    'b' => Piece::BISHOP,
+                    'r' => Piece::ROOK,
+                    'q' => Piece::QUEEN,
+                    'k' => Piece::KING,
+                    _ => unreachable!(),
                 };
 
                 let side = if c.is_ascii_uppercase() {
@@ -145,6 +143,13 @@ fn parse_piece_placement(board: &mut Board, part: &str) -> FenResult {
                 board.set_piece_square(piece as usize, side, square as usize);
 
                 file += 1;
+            }
+            _ => {
+                return Err(FenError::new(&format!(
+                    "Invalid character {} in FEN part {}",
+                    c,
+                    FenPart::PiecePlacement,
+                )));
             }
         }
     }
@@ -168,15 +173,7 @@ pub(crate) fn piece_placement_to_fen(board: &Board) -> String {
                 let p = piece.0;
                 let color = piece.1;
 
-                let symbol = match p as u8 {
-                    Pieces::PAWN => 'P',
-                    Pieces::KNIGHT => 'N',
-                    Pieces::BISHOP => 'B',
-                    Pieces::ROOK => 'R',
-                    Pieces::QUEEN => 'Q',
-                    Pieces::KING => 'K',
-                    _ => panic!("Invalid piece"),
-                };
+                let symbol = PIECE_SHORT_NAMES[p as usize];
 
                 let side = if color == Side::WHITE {
                     symbol
