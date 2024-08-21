@@ -12,6 +12,7 @@ impl NumberOf {
     pub const FILES: usize = 8;
     pub const RANKS: usize = 8;
     pub const SIDES: usize = 2;
+    pub const CASTLING_OPTIONS: usize = 16;
 }
 
 pub struct File;
