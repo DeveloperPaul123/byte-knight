@@ -108,12 +108,12 @@ impl Move {
 }
 
 #[cfg(test)]
-mod move_tests {
+mod tests {
     use crate::definitions::{File, Rank};
     use crate::moves::{Flags, Move};
     use crate::pieces::Piece;
     #[test]
-    fn test_move_new() {
+    fn new_move() {
         {
             let from = (File::B, Rank::R1);
             let to = (File::C, Rank::R2);

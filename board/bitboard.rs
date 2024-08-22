@@ -142,14 +142,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_bitboard_new() {
+    fn bitboard_new() {
         let bb = Bitboard::new(0x8000000000000001);
         assert_eq!(bb.data, 0x8000000000000001);
         println!("{}", bb);
     }
 
     #[test]
-    fn test_is_square_occupied() {
+    fn is_square_occupied() {
         let bb = Bitboard::new(0x8000000000000001);
         assert!(bb.is_square_occupied(0));
         assert!(bb.is_square_occupied(63));
@@ -158,7 +158,7 @@ mod tests {
     }
 
     #[test]
-    fn test_set_square() {
+    fn set_square() {
         let mut bb = Bitboard::new(0);
         bb.set_square(0);
         bb.set_square(63);
@@ -170,7 +170,7 @@ mod tests {
     }
 
     #[test]
-    fn test_clear_square() {
+    fn clear_square() {
         let mut bb = Bitboard::new(0xFFFFFFFFFFFFFFFF);
         bb.clear_square(0);
         bb.clear_square(63);
@@ -178,7 +178,7 @@ mod tests {
     }
 
     #[test]
-    fn test_bitwise_operations() {
+    fn bitwise_operations() {
         let bb1 = Bitboard::new(0xF0F0F0F0F0F0F0F0);
         let bb2 = Bitboard::new(0x0F0F0F0F0F0F0F0F);
 
