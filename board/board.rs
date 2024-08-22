@@ -11,7 +11,7 @@ pub struct Board {
     piece_bitboards: [[Bitboard; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
     half_move_clock: u32,
     full_move_number: u32,
-    side_to_move: usize,
+    side_to_move: Side,
     en_passant_square: Option<u8>,
     castling_rights: u8,
 }
@@ -23,7 +23,7 @@ impl Board {
             piece_bitboards: [[Bitboard::default(); NumberOf::PIECE_TYPES]; NumberOf::SIDES],
             half_move_clock: 0,
             full_move_number: 1,
-            side_to_move: Side::WHITE,
+            side_to_move: Side::White,
             en_passant_square: None,
             castling_rights: CastlingAvailability::NONE,
         }
@@ -34,13 +34,13 @@ impl Board {
         let mut board = Board::new();
         // Set up the board with the starting position
         // White pieces
-        board.initialize_piece_bbs(Side::WHITE);
+        board.initialize_piece_bbs(Side::White);
         // Black pieces
-        board.initialize_piece_bbs(Side::BLACK);
+        board.initialize_piece_bbs(Side::Black);
         board.set_en_passant_square(None);
         board.set_half_move_clock(0);
         board.set_full_move_number(1);
-        board.set_side_to_move(Side::WHITE);
+        board.set_side_to_move(Side::White);
         board.set_castling_rights(CastlingAvailability::ALL);
         return board;
     }
@@ -90,37 +90,37 @@ impl Board {
     }
 
     /// Initialize bitboards for a given side
-    fn initialize_piece_bbs(&mut self, side: usize) {
+    fn initialize_piece_bbs(&mut self, side: Side) {
         // Set up the board with the starting position
         match side {
-            Side::WHITE => self.initialize_white_bbs(),
-            Side::BLACK => self.initialize_black_bbs(),
+            Side::White => self.initialize_white_bbs(),
+            Side::Black => self.initialize_black_bbs(),
             _ => panic!("Invalid side"),
         }
     }
 
     /// Initialize bitboard for all white pieces
     fn initialize_white_bbs(&mut self) {
+        let index = Side::White as usize;
         // Set up the board with the starting position
-        self.piece_bitboards[Side::WHITE][Piece::PAWN as usize] = Bitboard::new(0xFF00);
-        self.piece_bitboards[Side::WHITE][Piece::KNIGHT as usize] = Bitboard::new(0x42);
-        self.piece_bitboards[Side::WHITE][Piece::BISHOP as usize] = Bitboard::new(0x24);
-        self.piece_bitboards[Side::WHITE][Piece::ROOK as usize] = Bitboard::new(0x81);
-        self.piece_bitboards[Side::WHITE][Piece::QUEEN as usize] = Bitboard::new(0x8);
-        self.piece_bitboards[Side::WHITE][Piece::KING as usize] = Bitboard::new(0x10);
+        self.piece_bitboards[index][Piece::PAWN as usize] = Bitboard::new(0xFF00);
+        self.piece_bitboards[index][Piece::KNIGHT as usize] = Bitboard::new(0x42);
+        self.piece_bitboards[index][Piece::BISHOP as usize] = Bitboard::new(0x24);
+        self.piece_bitboards[index][Piece::ROOK as usize] = Bitboard::new(0x81);
+        self.piece_bitboards[index][Piece::QUEEN as usize] = Bitboard::new(0x8);
+        self.piece_bitboards[index][Piece::KING as usize] = Bitboard::new(0x10);
     }
 
     /// Initialize bitboard for all black pieces
     fn initialize_black_bbs(&mut self) {
+        let index = Side::Black as usize;
         // Set up the board with the starting position
-        self.piece_bitboards[Side::BLACK][Piece::PAWN as usize] = Bitboard::new(0xFF000000000000);
-        self.piece_bitboards[Side::BLACK][Piece::KNIGHT as usize] =
-            Bitboard::new(0x4200000000000000);
-        self.piece_bitboards[Side::BLACK][Piece::BISHOP as usize] =
-            Bitboard::new(0x2400000000000000);
-        self.piece_bitboards[Side::BLACK][Piece::ROOK as usize] = Bitboard::new(0x8100000000000000);
-        self.piece_bitboards[Side::BLACK][Piece::QUEEN as usize] = Bitboard::new(0x800000000000000);
-        self.piece_bitboards[Side::BLACK][Piece::KING as usize] = Bitboard::new(0x1000000000000000);
+        self.piece_bitboards[index][Piece::PAWN as usize] = Bitboard::new(0xFF000000000000);
+        self.piece_bitboards[index][Piece::KNIGHT as usize] = Bitboard::new(0x4200000000000000);
+        self.piece_bitboards[index][Piece::BISHOP as usize] = Bitboard::new(0x2400000000000000);
+        self.piece_bitboards[index][Piece::ROOK as usize] = Bitboard::new(0x8100000000000000);
+        self.piece_bitboards[index][Piece::QUEEN as usize] = Bitboard::new(0x800000000000000);
+        self.piece_bitboards[index][Piece::KING as usize] = Bitboard::new(0x1000000000000000);
     }
 }
 
@@ -139,7 +139,7 @@ impl Board {
     pub fn white_pieces(&self) -> Bitboard {
         let mut white_pieces = Bitboard::default();
         for piece_type in 0..NumberOf::PIECE_TYPES {
-            white_pieces |= self.piece_bitboards[Side::WHITE][piece_type];
+            white_pieces |= self.piece_bitboards[Side::White as usize][piece_type];
         }
         return white_pieces;
     }
@@ -147,7 +147,7 @@ impl Board {
     pub fn black_pieces(&self) -> Bitboard {
         let mut black_pieces = Bitboard::default();
         for piece_type in 0..NumberOf::PIECE_TYPES {
-            black_pieces |= self.piece_bitboards[Side::BLACK][piece_type];
+            black_pieces |= self.piece_bitboards[Side::Black as usize][piece_type];
         }
         return black_pieces;
     }
@@ -171,11 +171,11 @@ impl Board {
         return None;
     }
 
-    pub(crate) fn set_side_to_move(&mut self, side: usize) {
+    pub(crate) fn set_side_to_move(&mut self, side: Side) {
         self.side_to_move = side;
     }
 
-    pub fn side_to_move(&self) -> usize {
+    pub fn side_to_move(&self) -> Side {
         return self.side_to_move;
     }
 

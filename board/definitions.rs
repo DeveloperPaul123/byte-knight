@@ -1,8 +1,7 @@
-use crate::bitboard::Bitboard;
-
 pub const SPACE: &str = " ";
 pub const NEWLINE: &str = "\n";
 pub const DASH: &str = "-";
+pub const EM_DASH: char = '–';
 pub const SLASH: &str = "/";
 
 pub struct NumberOf;
@@ -15,36 +14,72 @@ impl NumberOf {
     pub const CASTLING_OPTIONS: usize = 16;
 }
 
-pub struct File;
-impl File {
-    pub const A: u8 = 0;
-    pub const B: u8 = 1;
-    pub const C: u8 = 2;
-    pub const D: u8 = 3;
-    pub const E: u8 = 4;
-    pub const F: u8 = 5;
-    pub const G: u8 = 6;
-    pub const H: u8 = 7;
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum File {
+    A = 0,
+    B = 1,
+    C = 2,
+    D = 3,
+    E = 4,
+    F = 5,
+    G = 6,
+    H = 7,
 }
 
-pub struct Rank;
-impl Rank {
-    pub const R1: u8 = 0;
-    pub const R2: u8 = 1;
-    pub const R3: u8 = 2;
-    pub const R4: u8 = 3;
-    pub const R5: u8 = 4;
-    pub const R6: u8 = 5;
-    pub const R7: u8 = 6;
-    pub const R8: u8 = 7;
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Rank {
+    R1 = 0,
+    R2 = 1,
+    R3 = 2,
+    R4 = 3,
+    R5 = 4,
+    R6 = 5,
+    R7 = 6,
+    R8 = 7,
 }
 
 pub const EMPTY: u64 = 0;
 
-pub struct Side;
+#[repr(usize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Side {
+    White = 0,
+    Black = 1,
+    Both = 2,
+}
+
 impl Side {
-    pub const WHITE: usize = 0;
-    pub const BLACK: usize = 1;
+    /// Returns `true` if the side is [`WHITE`].
+    ///
+    /// [`WHITE`]: Side::WHITE
+    #[must_use]
+    pub fn is_white(&self) -> bool {
+        matches!(self, Self::White)
+    }
+
+    /// Returns `true` if the side is [`BLACK`].
+    ///
+    /// [`BLACK`]: Side::BLACK
+    #[must_use]
+    pub fn is_black(&self) -> bool {
+        matches!(self, Self::Black)
+    }
+
+    /// Returns `true` if the side is [`BOTH`].
+    ///
+    /// [`BOTH`]: Side::BOTH
+    #[must_use]
+    pub fn is_both(&self) -> bool {
+        matches!(self, Self::Both)
+    }
+}
+
+impl Default for Side {
+    fn default() -> Self {
+        Self::White
+    }
 }
 
 pub struct About;
