@@ -70,6 +70,21 @@ impl BitXor for Bitboard {
     }
 }
 
+impl BitXor<u64> for Bitboard {
+    type Output = Self;
+    fn bitxor(self, rhs: u64) -> Self::Output {
+        Bitboard {
+            data: self.data ^ rhs,
+        }
+    }
+}
+
+impl BitXorAssign<u64> for Bitboard {
+    fn bitxor_assign(&mut self, rhs: u64) {
+        self.data ^= rhs;
+    }
+}
+
 impl BitXorAssign for Bitboard {
     fn bitxor_assign(&mut self, rhs: Self) {
         self.data ^= rhs.data;
