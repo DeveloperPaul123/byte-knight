@@ -131,12 +131,12 @@ fn parse_piece_placement(board: &mut Board, part: &str) -> FenResult {
             }
             'P' | 'N' | 'B' | 'R' | 'Q' | 'K' | 'p' | 'n' | 'b' | 'r' | 'q' | 'k' => {
                 let piece = match c.to_ascii_lowercase() {
-                    'p' => Piece::PAWN,
-                    'n' => Piece::KNIGHT,
-                    'b' => Piece::BISHOP,
-                    'r' => Piece::ROOK,
-                    'q' => Piece::QUEEN,
-                    'k' => Piece::KING,
+                    'p' => Piece::Pawn,
+                    'n' => Piece::Knight,
+                    'b' => Piece::Bishop,
+                    'r' => Piece::Rook,
+                    'q' => Piece::Queen,
+                    'k' => Piece::King,
                     _ => unreachable!(),
                 };
 

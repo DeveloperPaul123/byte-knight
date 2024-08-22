@@ -24,13 +24,13 @@ pub const PIECE_SHORT_NAMES: [char; NumberOf::PIECE_TYPES] = ['K', 'Q', 'R', 'B'
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Piece {
-    KING = 0,
-    QUEEN = 1,
-    ROOK = 2,
-    BISHOP = 3,
-    KNIGHT = 4,
-    PAWN = 5,
-    NONE = 6,
+    King = 0,
+    Queen = 1,
+    Rook = 2,
+    Bishop = 3,
+    Knight = 4,
+    Pawn = 5,
+    None = 6,
 }
 
 impl Piece {
@@ -39,7 +39,7 @@ impl Piece {
     /// [`KING`]: Piece::KING
     #[must_use]
     pub fn is_king(&self) -> bool {
-        matches!(self, Self::KING)
+        matches!(self, Self::King)
     }
 
     /// Returns `true` if the piece is [`QUEEN`].
@@ -47,7 +47,7 @@ impl Piece {
     /// [`QUEEN`]: Piece::QUEEN
     #[must_use]
     pub fn is_queen(&self) -> bool {
-        matches!(self, Self::QUEEN)
+        matches!(self, Self::Queen)
     }
 
     /// Returns `true` if the piece is [`ROOK`].
@@ -55,7 +55,7 @@ impl Piece {
     /// [`ROOK`]: Piece::ROOK
     #[must_use]
     pub fn is_rook(&self) -> bool {
-        matches!(self, Self::ROOK)
+        matches!(self, Self::Rook)
     }
 
     /// Returns `true` if the piece is [`BISHOP`].
@@ -63,7 +63,7 @@ impl Piece {
     /// [`BISHOP`]: Piece::BISHOP
     #[must_use]
     pub fn is_bishop(&self) -> bool {
-        matches!(self, Self::BISHOP)
+        matches!(self, Self::Bishop)
     }
 
     /// Returns `true` if the piece is [`KNIGHT`].
@@ -71,7 +71,7 @@ impl Piece {
     /// [`KNIGHT`]: Piece::KNIGHT
     #[must_use]
     pub fn is_knight(&self) -> bool {
-        matches!(self, Self::KNIGHT)
+        matches!(self, Self::Knight)
     }
 
     /// Returns `true` if the piece is [`PAWN`].
@@ -79,7 +79,7 @@ impl Piece {
     /// [`PAWN`]: Piece::PAWN
     #[must_use]
     pub fn is_pawn(&self) -> bool {
-        matches!(self, Self::PAWN)
+        matches!(self, Self::Pawn)
     }
 
     /// Returns `true` if the piece is [`NONE`].
@@ -87,13 +87,13 @@ impl Piece {
     /// [`NONE`]: Piece::NONE
     #[must_use]
     pub fn is_none(&self) -> bool {
-        matches!(self, Self::NONE)
+        matches!(self, Self::None)
     }
 }
 
 impl Default for Piece {
     fn default() -> Self {
-        Piece::NONE
+        Piece::None
     }
 }
 
@@ -101,13 +101,13 @@ impl TryFrom<u8> for Piece {
     type Error = ();
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0 => Ok(Piece::KING),
-            1 => Ok(Piece::QUEEN),
-            2 => Ok(Piece::ROOK),
-            3 => Ok(Piece::BISHOP),
-            4 => Ok(Piece::KNIGHT),
-            5 => Ok(Piece::PAWN),
-            6 => Ok(Piece::NONE),
+            0 => Ok(Piece::King),
+            1 => Ok(Piece::Queen),
+            2 => Ok(Piece::Rook),
+            3 => Ok(Piece::Bishop),
+            4 => Ok(Piece::Knight),
+            5 => Ok(Piece::Pawn),
+            6 => Ok(Piece::None),
             _ => Err(()),
         }
     }

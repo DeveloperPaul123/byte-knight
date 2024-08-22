@@ -103,24 +103,24 @@ impl Board {
     fn initialize_white_bbs(&mut self) {
         let index = Side::White as usize;
         // Set up the board with the starting position
-        self.piece_bitboards[index][Piece::PAWN as usize] = Bitboard::new(0xFF00);
-        self.piece_bitboards[index][Piece::KNIGHT as usize] = Bitboard::new(0x42);
-        self.piece_bitboards[index][Piece::BISHOP as usize] = Bitboard::new(0x24);
-        self.piece_bitboards[index][Piece::ROOK as usize] = Bitboard::new(0x81);
-        self.piece_bitboards[index][Piece::QUEEN as usize] = Bitboard::new(0x8);
-        self.piece_bitboards[index][Piece::KING as usize] = Bitboard::new(0x10);
+        self.piece_bitboards[index][Piece::Pawn as usize] = Bitboard::new(0xFF00);
+        self.piece_bitboards[index][Piece::Knight as usize] = Bitboard::new(0x42);
+        self.piece_bitboards[index][Piece::Bishop as usize] = Bitboard::new(0x24);
+        self.piece_bitboards[index][Piece::Rook as usize] = Bitboard::new(0x81);
+        self.piece_bitboards[index][Piece::Queen as usize] = Bitboard::new(0x8);
+        self.piece_bitboards[index][Piece::King as usize] = Bitboard::new(0x10);
     }
 
     /// Initialize bitboard for all black pieces
     fn initialize_black_bbs(&mut self) {
         let index = Side::Black as usize;
         // Set up the board with the starting position
-        self.piece_bitboards[index][Piece::PAWN as usize] = Bitboard::new(0xFF000000000000);
-        self.piece_bitboards[index][Piece::KNIGHT as usize] = Bitboard::new(0x4200000000000000);
-        self.piece_bitboards[index][Piece::BISHOP as usize] = Bitboard::new(0x2400000000000000);
-        self.piece_bitboards[index][Piece::ROOK as usize] = Bitboard::new(0x8100000000000000);
-        self.piece_bitboards[index][Piece::QUEEN as usize] = Bitboard::new(0x800000000000000);
-        self.piece_bitboards[index][Piece::KING as usize] = Bitboard::new(0x1000000000000000);
+        self.piece_bitboards[index][Piece::Pawn as usize] = Bitboard::new(0xFF000000000000);
+        self.piece_bitboards[index][Piece::Knight as usize] = Bitboard::new(0x4200000000000000);
+        self.piece_bitboards[index][Piece::Bishop as usize] = Bitboard::new(0x2400000000000000);
+        self.piece_bitboards[index][Piece::Rook as usize] = Bitboard::new(0x8100000000000000);
+        self.piece_bitboards[index][Piece::Queen as usize] = Bitboard::new(0x800000000000000);
+        self.piece_bitboards[index][Piece::King as usize] = Bitboard::new(0x1000000000000000);
     }
 }
 
@@ -152,8 +152,8 @@ impl Board {
         return black_pieces;
     }
 
-    pub fn piece_bitboard(&self, piece: usize, side: usize) -> &Bitboard {
-        return &self.piece_bitboards[side][piece];
+    pub fn piece_bitboard(&self, piece: Piece, side: Side) -> &Bitboard {
+        return &self.piece_bitboards[side as usize][piece as usize];
     }
 
     pub(crate) fn set_piece_square(&mut self, piece: usize, side: usize, square: usize) {
