@@ -1,8 +1,8 @@
-pub const SPACE: &str = " ";
-pub const NEWLINE: &str = "\n";
-pub const DASH: &str = "-";
+pub const SPACE: char = ' ';
+pub const NEWLINE: char = '\n';
+pub const DASH: char = '-';
 pub const EM_DASH: char = '–';
-pub const SLASH: &str = "/";
+pub const SLASH: char = '/';
 
 pub struct NumberOf;
 impl NumberOf {

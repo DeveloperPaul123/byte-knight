@@ -70,19 +70,19 @@ impl Board {
         let mut fen = String::new();
         // Piece placement
         fen.push_str(&fen::piece_placement_to_fen(&self));
-        fen.push_str(SPACE);
+        fen.push(SPACE);
         // Active color
         fen.push_str(&fen::active_color_to_fen(&self));
-        fen.push_str(SPACE);
+        fen.push(SPACE);
         // Castling availability
         fen.push_str(&fen::castling_availability_to_fen(&self));
-        fen.push_str(SPACE);
+        fen.push(SPACE);
         // En passant target square
         fen.push_str(&fen::en_passant_target_square_to_fen(&self));
-        fen.push_str(SPACE);
+        fen.push(SPACE);
         // Halfmove clock
         fen.push_str(&fen::halfmove_clock_to_fen(&self));
-        fen.push_str(SPACE);
+        fen.push(SPACE);
         // Fullmove number
         fen.push_str(&fen::fullmove_number_to_fen(&self));
 
