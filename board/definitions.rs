@@ -42,6 +42,8 @@ pub enum Rank {
 
 pub const EMPTY: u64 = 0;
 
+pub type Square = (File, Rank);
+
 #[repr(usize)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Side {
