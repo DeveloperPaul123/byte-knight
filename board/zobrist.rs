@@ -3,6 +3,8 @@ use rand::{Rng, SeedableRng};
 
 use crate::definitions::NumberOf;
 
+pub type ZobristHash = u64;
+
 pub struct ZobristRandomValues {
     pub piece_values: [[[u64; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
     pub castling_values: [u64; NumberOf::CASTLING_OPTIONS],
@@ -13,7 +15,7 @@ pub struct ZobristRandomValues {
 const RANDOM_SEED: [u8; 32] = [115; 32];
 
 impl ZobristRandomValues {
-    pub fn new() {
+    pub fn new() -> Self {
         let mut random = StdRng::from_seed(RANDOM_SEED);
         // initialize everything to 0
         let mut random_values = Self {
@@ -48,6 +50,8 @@ impl ZobristRandomValues {
         random_values.side_values.iter_mut().for_each(|value| {
             *value = random.gen();
         });
+
+        return random_values;
     }
 
     pub fn get_piece_value(&self, piece: usize, side: usize, square: usize) -> u64 {

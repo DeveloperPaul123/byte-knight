@@ -1,7 +1,9 @@
 use std::iter::zip;
 
+use crate::bitboard_helpers;
 use crate::definitions::{CastlingAvailability, SPACE};
 use crate::fen::FenError;
+use crate::zobrist::{ZobristHash, ZobristRandomValues};
 
 use super::definitions::{NumberOf, Side};
 use super::fen;
@@ -14,9 +16,11 @@ pub struct Board {
     side_to_move: Side,
     en_passant_square: Option<u8>,
     castling_rights: u8,
+    zobrist_hash: ZobristHash,
+    zobrist_values: ZobristRandomValues,
 }
 
-// Initializations
+// Private methods
 impl Board {
     fn new() -> Self {
         Board {
@@ -26,67 +30,54 @@ impl Board {
             side_to_move: Side::White,
             en_passant_square: None,
             castling_rights: CastlingAvailability::NONE,
+            zobrist_hash: 0,
+            zobrist_values: ZobristRandomValues::new(),
         }
     }
 
-    /// Create a new board with the default starting position.
-    pub fn default_board() -> Board {
-        let mut board = Board::new();
-        // Set up the board with the starting position
-        // White pieces
-        board.initialize_piece_bbs(Side::White);
-        // Black pieces
-        board.initialize_piece_bbs(Side::Black);
-        board.set_en_passant_square(None);
-        board.set_half_move_clock(0);
-        board.set_full_move_number(1);
-        board.set_side_to_move(Side::White);
-        board.set_castling_rights(CastlingAvailability::ALL);
-        return board;
+    pub(crate) fn initialize(&mut self) {
+        self.zobrist_hash = self.initialize_zobrist_hash();
     }
 
-    /// Create a new board from a FEN string.
-    pub fn from_fen(fen: &str) -> Result<Board, FenError> {
-        let mut board = Board::new();
+    fn initialize_zobrist_hash(&self) -> ZobristHash {
+        // create the initial zobrist hash based on the starting position
+        // for each piece on the board, get the corresponding zobrist value and xor it with the hash
+        // for each side to move, xor the hash with the zobrist value for the side
+        // for each castling right, xor the hash with the zobrist value for the castling right
+        // for the en passant square, xor the hash with the zobrist value for the en passant square
+        // Initialize the zobrist hash to 0
+        let mut zobrist_hash = ZobristHash::default();
 
-        // parse the FEN string
-        let fen_parts = fen::split_fen_string(fen);
-        match fen_parts {
-            Ok(parts) => {
-                let fen_part_parsers = fen::FEN_PART_PARSERS;
-                for (part, parser) in zip(parts, fen_part_parsers) {
-                    parser(&mut board, &part)?;
+        // XOR the zobrist values for each piece on the board
+        for side in 0..NumberOf::SIDES {
+            for piece in 0..NumberOf::PIECE_TYPES {
+                let mut bitboard = self.piece_bitboards[side][piece].clone();
+
+                while bitboard != 0 {
+                    let square = bitboard_helpers::next_bit(&mut bitboard);
+                    zobrist_hash ^=
+                        self.zobrist_values
+                            .get_piece_value(piece, side, square as usize);
                 }
             }
-            Err(e) => {
-                return Err(e);
-            }
         }
-        return Ok(board);
-    }
 
-    /// Convert the board to a FEN string.
-    pub fn to_fen(self) -> String {
-        let mut fen = String::new();
-        // Piece placement
-        fen.push_str(&fen::piece_placement_to_fen(&self));
-        fen.push(SPACE);
-        // Active color
-        fen.push_str(&fen::active_color_to_fen(&self));
-        fen.push(SPACE);
-        // Castling availability
-        fen.push_str(&fen::castling_availability_to_fen(&self));
-        fen.push(SPACE);
-        // En passant target square
-        fen.push_str(&fen::en_passant_target_square_to_fen(&self));
-        fen.push(SPACE);
-        // Halfmove clock
-        fen.push_str(&fen::halfmove_clock_to_fen(&self));
-        fen.push(SPACE);
-        // Fullmove number
-        fen.push_str(&fen::fullmove_number_to_fen(&self));
+        // XOR the zobrist value for the side to move
+        zobrist_hash ^= self
+            .zobrist_values
+            .get_side_value(self.side_to_move() as usize);
 
-        return fen;
+        // XOR the zobrist values for castling rights
+        zobrist_hash ^= self
+            .zobrist_values
+            .get_castling_value(self.castling_rights() as usize);
+
+        // XOR the zobrist value for the en passant square, if any
+        zobrist_hash ^= self
+            .zobrist_values
+            .get_en_passant_value(self.en_passant_square);
+
+        zobrist_hash
     }
 
     /// Initialize bitboards for a given side
@@ -124,8 +115,74 @@ impl Board {
     }
 }
 
-/// Piece operations
+// Public API
 impl Board {
+    /// Create a new board with the default starting position.
+    pub fn default_board() -> Board {
+        let mut board = Board::new();
+        // Set up the board with the starting position
+        // White pieces
+        board.initialize_piece_bbs(Side::White);
+        // Black pieces
+        board.initialize_piece_bbs(Side::Black);
+        board.set_en_passant_square(None);
+        board.set_half_move_clock(0);
+        board.set_full_move_number(1);
+        board.set_side_to_move(Side::White);
+        board.set_castling_rights(CastlingAvailability::ALL);
+        board.zobrist_hash = board.initialize_zobrist_hash();
+        return board;
+    }
+
+    /// Create a new board from a FEN string.
+    pub fn from_fen(fen: &str) -> Result<Board, FenError> {
+        let mut board = Board::new();
+
+        // parse the FEN string
+        let fen_parts = fen::split_fen_string(fen);
+        match fen_parts {
+            Ok(parts) => {
+                let fen_part_parsers = fen::FEN_PART_PARSERS;
+                for (part, parser) in zip(parts, fen_part_parsers) {
+                    parser(&mut board, &part)?;
+                }
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
+
+        // the parser initializes most of the board state, but we need to set the zobrist hash
+        // initializing the board will handle initializing anything that isn't set by the FEN parser
+        board.initialize();
+
+        return Ok(board);
+    }
+
+    /// Convert the board to a FEN string.
+    pub fn to_fen(self) -> String {
+        let mut fen = String::new();
+        // Piece placement
+        fen.push_str(&fen::piece_placement_to_fen(&self));
+        fen.push(SPACE);
+        // Active color
+        fen.push_str(&fen::active_color_to_fen(&self));
+        fen.push(SPACE);
+        // Castling availability
+        fen.push_str(&fen::castling_availability_to_fen(&self));
+        fen.push(SPACE);
+        // En passant target square
+        fen.push_str(&fen::en_passant_target_square_to_fen(&self));
+        fen.push(SPACE);
+        // Halfmove clock
+        fen.push_str(&fen::halfmove_clock_to_fen(&self));
+        fen.push(SPACE);
+        // Fullmove number
+        fen.push_str(&fen::fullmove_number_to_fen(&self));
+
+        return fen;
+    }
+
     pub fn all_pieces(&self) -> Bitboard {
         let mut all_pieces = Bitboard::default();
         for piece_type in 0..NumberOf::PIECE_TYPES {
@@ -210,6 +267,10 @@ impl Board {
 
     pub fn castling_rights(&self) -> u8 {
         return self.castling_rights;
+    }
+
+    pub fn zobrist_hash(&self) -> u64 {
+        return self.zobrist_hash;
     }
 }
 
