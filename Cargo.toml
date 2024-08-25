@@ -4,12 +4,6 @@ version = "0.1.0"
 # 2024 isn't stable yet
 edition = "2021"
 
-[[bin]]
-name = "byte-knight"
-path = "src/main.rs"
-test = false
-bench = false
-
 [lib]
 name = "byte_board"
 path = "board/lib.rs"

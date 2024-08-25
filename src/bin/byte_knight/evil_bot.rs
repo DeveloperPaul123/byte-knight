@@ -1,7 +1,8 @@
 use chess::{Board, ChessMove, MoveGen, Piece};
 
+use crate::ChessEngine;
+
 use super::Timer;
-use crate::engine::ChessEngine;
 
 pub struct EvilBot;
 

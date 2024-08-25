@@ -1,13 +1,21 @@
+mod base_engine;
+mod chess_board_helpers;
 mod engine;
+mod evaluation;
+mod evil_bot;
+mod search;
+mod timer;
+
+pub use base_engine::ChessEngine;
+pub use evil_bot::EvilBot;
+pub use timer::Timer;
 
 use std::{slice::Iter, str::FromStr};
 
-use crate::engine::EvilBot;
 use chess::{Board, MoveGen};
 
 use byte_board::definitions::About;
 use clap::{Parser, Subcommand};
-use engine::{ChessEngine, Timer};
 use std::io::{self, BufRead, Write};
 use vampirc_uci::{parse, UciMessage, UciTimeControl};
 
