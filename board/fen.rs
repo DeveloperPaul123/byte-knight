@@ -183,7 +183,9 @@ pub(crate) fn piece_placement_to_fen(board: &Board) -> String {
 
                 let symbol = PIECE_SHORT_NAMES[p as usize];
 
-                let side = if color == Side::White as usize {
+                // If the piece is white, the symbol is uppercase.
+                // If the piece is black, the symbol is lowercase.
+                let side = if color == Side::White {
                     symbol
                 } else {
                     symbol.to_ascii_lowercase()

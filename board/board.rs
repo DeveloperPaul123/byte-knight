@@ -1,7 +1,7 @@
 use std::iter::zip;
 
 use crate::bitboard_helpers;
-use crate::definitions::{CastlingAvailability, SPACE};
+use crate::definitions::{CastlingAvailability, Square, SPACE};
 use crate::fen::FenError;
 use crate::zobrist::{ZobristHash, ZobristRandomValues};
 
@@ -183,6 +183,8 @@ impl Board {
         return fen;
     }
 
+    /// Returns the all pieces of this [`Board`].
+    /// This is also known as the occupancy bitboard.
     pub fn all_pieces(&self) -> Bitboard {
         let mut all_pieces = Bitboard::default();
         for piece_type in 0..NumberOf::PIECE_TYPES {
@@ -193,6 +195,7 @@ impl Board {
         return all_pieces;
     }
 
+    /// Returns the white pieces of this [`Board`].
     pub fn white_pieces(&self) -> Bitboard {
         let mut white_pieces = Bitboard::default();
         for piece_type in 0..NumberOf::PIECE_TYPES {
@@ -201,6 +204,7 @@ impl Board {
         return white_pieces;
     }
 
+    /// Returns the black pieces of this [`Board`].
     pub fn black_pieces(&self) -> Bitboard {
         let mut black_pieces = Bitboard::default();
         for piece_type in 0..NumberOf::PIECE_TYPES {
@@ -209,36 +213,66 @@ impl Board {
         return black_pieces;
     }
 
+    /// Returns the bitboard for a specific piece and side.
     pub fn piece_bitboard(&self, piece: Piece, side: Side) -> &Bitboard {
         return &self.piece_bitboards[side as usize][piece as usize];
+    }
+
+    pub(crate) fn mut_piece_bitboard(&mut self, piece: Piece, side: Side) -> &mut Bitboard {
+        return &mut self.piece_bitboards[side as usize][piece as usize];
     }
 
     pub(crate) fn set_piece_square(&mut self, piece: usize, side: usize, square: usize) {
         self.piece_bitboards[side][piece].set_square(square);
     }
 
-    pub fn piece_on_square(&self, square: usize) -> Option<(Piece, usize)> {
+    /// Find what piece is on a given square.
+    ///
+    /// # Returns
+    ///
+    /// Returns an optional tuple of the piece and the side that the piece belongs to.
+    pub fn piece_on_square(&self, square: usize) -> Option<(Piece, Side)> {
         for piece in 0..NumberOf::PIECE_TYPES {
             for side in 0..NumberOf::SIDES {
                 if self.piece_bitboards[side][piece].is_square_occupied(square) {
-                    return Some((Piece::try_from(piece as u8).unwrap(), side));
+                    return Some((
+                        Piece::try_from(piece as u8).unwrap(),
+                        Side::try_from(side as u8).unwrap(),
+                    ));
                 }
             }
         }
         return None;
     }
 
+    /// Sets the side to move and updates the zobrist hash.
     pub(crate) fn set_side_to_move(&mut self, side: Side) {
+        // undo the current side to move in the hash
+        self.zobrist_hash ^= self
+            .zobrist_values
+            .get_side_value(self.side_to_move as usize);
+        // set the new side to move
         self.side_to_move = side;
+        // update zobrist hash with the new side to move
+        self.zobrist_hash ^= self
+            .zobrist_values
+            .get_side_value(self.side_to_move as usize);
     }
 
+    /// Returns the side to move of this [`Board`].
     pub fn side_to_move(&self) -> Side {
         return self.side_to_move;
     }
 
+    /// Set the en passant square and update the zobrist hash.
     pub(crate) fn set_en_passant_square(&mut self, square: Option<u8>) {
-        // TODO: Check if square is valid
+        self.zobrist_hash ^= self
+            .zobrist_values
+            .get_en_passant_value(self.en_passant_square);
         self.en_passant_square = square;
+        self.zobrist_hash ^= self
+            .zobrist_values
+            .get_en_passant_value(self.en_passant_square);
     }
 
     pub fn en_passant_square(&self) -> Option<u8> {
@@ -262,7 +296,13 @@ impl Board {
     }
 
     pub(crate) fn set_castling_rights(&mut self, castling_rights: u8) {
+        self.zobrist_hash ^= self
+            .zobrist_values
+            .get_castling_value(self.castling_rights as usize);
         self.castling_rights = castling_rights;
+        self.zobrist_hash ^= self
+            .zobrist_values
+            .get_castling_value(self.castling_rights as usize);
     }
 
     pub fn castling_rights(&self) -> u8 {
@@ -272,10 +312,20 @@ impl Board {
     pub fn zobrist_hash(&self) -> u64 {
         return self.zobrist_hash;
     }
+
+    pub(crate) fn update_zobrist_hash_for_piece(&mut self, square: u8, piece: Piece, side: Side) {
+        self.zobrist_hash ^=
+            self.zobrist_values
+                .get_piece_value(piece as usize, side as usize, square as usize);
+    }
 }
 
 #[cfg(test)]
 mod board_tests {
+    use std::path::PathBuf;
+
+    use crate::test_helpers;
+
     use super::*;
 
     #[test]

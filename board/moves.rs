@@ -5,6 +5,7 @@ const MOVE_INFO_FROM_SHIFT: u16 = 10;
 const MOVE_INFO_TO_MASK: u16 = 0b0000001111110000;
 const MOVE_INFO_TO_SHIFT: u16 = 4;
 const MOVE_INFO_FLAGS_MASK: u16 = 0b0000000000001111;
+
 struct Flags;
 impl Flags {
     pub const NONE: u8 = 0b0000;

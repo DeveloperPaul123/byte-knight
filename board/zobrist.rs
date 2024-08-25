@@ -64,7 +64,7 @@ impl ZobristRandomValues {
 
     pub fn get_en_passant_value(&self, square: Option<u8>) -> u64 {
         match square {
-            None => return 0,
+            None => return self.en_passant_values[NumberOf::SQUARES],
             Some(square) => return self.en_passant_values[square as usize],
         }
     }

@@ -1,3 +1,5 @@
+use std::ops::BitXor;
+
 pub const SPACE: char = ' ';
 pub const NEWLINE: char = '\n';
 pub const DASH: char = '-';
@@ -52,7 +54,17 @@ pub enum Side {
     Both = 2,
 }
 
+impl Side {}
+
 impl Side {
+    pub fn opposite(side: Side) -> Side {
+        match side {
+            Side::White => Side::Black,
+            Side::Black => Side::White,
+            _ => Side::Both,
+        }
+    }
+
     /// Returns `true` if the side is [`WHITE`].
     ///
     /// [`WHITE`]: Side::WHITE
@@ -81,6 +93,19 @@ impl Side {
 impl Default for Side {
     fn default() -> Self {
         Self::White
+    }
+}
+
+impl TryFrom<u8> for Side {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::White),
+            1 => Ok(Self::Black),
+            2 => Ok(Self::Both),
+            _ => Err(()),
+        }
     }
 }
 
