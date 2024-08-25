@@ -322,10 +322,6 @@ impl Board {
 
 #[cfg(test)]
 mod board_tests {
-    use std::path::PathBuf;
-
-    use crate::test_helpers;
-
     use super::*;
 
     #[test]

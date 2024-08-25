@@ -7,5 +7,4 @@ pub mod move_making;
 pub mod moves;
 pub mod pieces;
 pub mod square;
-mod test_helpers;
 pub mod zobrist;
