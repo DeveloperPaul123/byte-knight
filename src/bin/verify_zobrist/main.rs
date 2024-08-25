@@ -1,7 +1,13 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 use byte_board::{board::Board, fen};
+use console::Emoji;
+use indicatif::ParallelProgressIterator;
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 mod utils;
+
+static CHECK_BOX: Emoji = Emoji("✅", "");
+static CROSS_MARK: Emoji = Emoji("❌", "");
 
 fn main() {
     // load data
@@ -21,11 +27,11 @@ fn main() {
             panic!("Failed to extract zip file: {:?}", e);
         }
 
-        print!("Extracted data file.")
+        println!("Extracted data file.")
     }
 
     assert!(data_path.exists());
-    print!("Reading test data...");
+    println!("Reading test data...");
     let records_result = utils::read_lichess_puzzles(data_path);
 
     // Compare two FEN strings for equality only using the first four parts
@@ -54,31 +60,64 @@ fn main() {
 
     match records_result {
         Ok(records) => {
+            let mut hashes: Vec<(u64, String)> = Vec::with_capacity(records.len());
             println!("Read {} records", records.len());
-            let mut hashes = Vec::with_capacity(records.len());
-            for record in records {
-                // the list does not contain unique FENs, so we need to check for duplicates
-                if hashes
-                    .iter()
-                    .find(|(_, f)| fen_match(f, &record.fen))
-                    .is_some()
-                {
-                    println!("Skipping duplicate FEN: {}", record.fen);
-                    continue;
-                }
+            println!("Calculating hashes...");
+            records
+                .par_iter()
+                .progress_count(records.len() as u64)
+                .map(|record| {
+                    let board = Board::from_fen(&record.fen);
+                    assert!(board.is_ok());
+                    let board = board.unwrap();
+                    let hash = board.zobrist_hash();
+                    return (hash, record.fen.clone());
+                })
+                .collect_into_vec(&mut hashes);
 
-                let board = Board::from_fen(&record.fen);
-                assert!(board.is_ok());
-                let board = board.unwrap();
-                let hash = board.zobrist_hash();
-                let found_hash = hashes.iter().find(|(h, _)| h == &hash);
-                if let Some(loc) = found_hash {
-                    println!("Duplicate hash: {}, {}", hash, record.fen);
-                    println!("Duplicate of: {}, {}", loc.0, loc.1);
-                    assert!(false);
+            // Compare the hashes
+            println!("Comparing hashes...");
+            let mut hash_map: HashMap<u64, Vec<String>> = std::collections::HashMap::new();
+
+            for (hash, fen) in hashes {
+                if hash_map.contains_key(&hash) {
+                    let vec = hash_map.get_mut(&hash).unwrap();
+                    vec.push(fen);
                 } else {
-                    hashes.push((board.zobrist_hash(), record.fen));
+                    hash_map.insert(hash, vec![fen]);
                 }
+            }
+
+            let mut duplicates = 0;
+            for (hash, fens) in hash_map {
+                if fens.len() > 1 {
+                    let mut matched = false;
+                    for i in 0..fens.len() {
+                        for j in i + 1..fens.len() {
+                            if fen_match(&fens[i], &fens[j]) {
+                                matched = true;
+                                break;
+                            }
+                        }
+                        if matched {
+                            break;
+                        }
+                    }
+
+                    if !matched {
+                        println!("Hash collision detected: {}", hash);
+                        for fen in fens {
+                            println!("{}", fen);
+                        }
+                        duplicates += 1;
+                    }
+                }
+            }
+
+            if duplicates == 0 {
+                println!("{} No hash collisions detected!", CHECK_BOX.to_string());
+            } else {
+                println!("{} {} hash collisions detected", CROSS_MARK, duplicates);
             }
         }
         Err(e) => {
