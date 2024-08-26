@@ -14,20 +14,27 @@ fn main() {
     let mut data_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     data_path.push("data/lichess_db_puzzle.csv");
     if !data_path.exists() {
-        print!("Data file not found, extracting from zip file...");
-        // we need to unzip the data
-        let mut zip_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        zip_path.push("data/lichess_db_puzzle.csv.zst");
-        let file = std::fs::File::open(zip_path).unwrap();
-        let mut archive = zip::ZipArchive::new(file).unwrap();
+        println!("Data file not found, decompressing from .zst file...");
+        let mut zst_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        zst_path.push("data/lichess_db_puzzle.csv.zst");
+        let file = std::fs::File::open(&zst_path)
+            .unwrap_or_else(|_| panic!("Failed to open .zst file at {:?}", zst_path));
+
+        let mut decoder = zstd::Decoder::new(file)
+            .unwrap_or_else(|_| panic!("Failed to create zstd decoder for {:?}", zst_path));
+
         let mut data_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         data_folder.push("data");
-        let result = archive.extract(data_folder);
-        if let Err(e) = result {
-            panic!("Failed to extract zip file: {:?}", e);
-        }
+        let mut output_path = data_folder.clone();
+        output_path.push("lichess_db_puzzle.csv");
 
-        println!("Extracted data file.")
+        let mut output_file = std::fs::File::create(&output_path)
+            .unwrap_or_else(|_| panic!("Failed to create output file at {:?}", output_path));
+
+        std::io::copy(&mut decoder, &mut output_file)
+            .unwrap_or_else(|_| panic!("Failed to decompress .zst file to {:?}", output_path));
+
+        println!("Decompressed data file.");
     }
 
     assert!(data_path.exists());
