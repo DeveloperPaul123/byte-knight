@@ -1,8 +1,10 @@
 pub mod bitboard;
 mod bitboard_helpers;
 pub mod board;
+pub mod board_state;
 pub mod definitions;
 pub mod fen;
+pub mod move_history;
 pub mod move_making;
 pub mod moves;
 pub mod pieces;

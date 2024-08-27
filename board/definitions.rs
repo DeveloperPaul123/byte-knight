@@ -6,6 +6,8 @@ pub const DASH: char = '-';
 pub const EM_DASH: char = '–';
 pub const SLASH: char = '/';
 
+pub const MAX_MOVES: usize = 3072;
+
 pub struct NumberOf;
 impl NumberOf {
     pub const PIECE_TYPES: usize = 6;

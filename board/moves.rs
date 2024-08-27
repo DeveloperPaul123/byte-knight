@@ -1,10 +1,11 @@
 use crate::{definitions::Square, pieces::Piece, square::to_square};
-
-const MOVE_INFO_FROM_MASK: u16 = 0b1111110000000000;
-const MOVE_INFO_FROM_SHIFT: u16 = 10;
-const MOVE_INFO_TO_MASK: u16 = 0b0000001111110000;
-const MOVE_INFO_TO_SHIFT: u16 = 4;
-const MOVE_INFO_FLAGS_MASK: u16 = 0b0000000000001111;
+const MOVE_INFO_CAPTURED_PIECE_SHIFT: u32 = 19;
+const MOVE_INFO_PIECE_SHIFT: u32 = 16;
+const MOVE_INFO_FROM_MASK: u32 = 0b1111110000000000;
+const MOVE_INFO_FROM_SHIFT: u32 = 10;
+const MOVE_INFO_TO_MASK: u32 = 0b1111110000;
+const MOVE_INFO_TO_SHIFT: u32 = 4;
+const MOVE_INFO_FLAGS_MASK: u32 = 0b1111;
 
 struct Flags;
 impl Flags {
@@ -20,14 +21,17 @@ impl Flags {
 
 /// Compact, 16-bit move representation
 /// Taken from https://github.com/SebLague/Chess-Challenge/blob/main/Chess-Challenge/src/Framework/Chess/Board/Move.cs
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Move {
-    /// The move information.
-    /// The first 6 bits represent the from square.
+    /// The move information, from LSB to MSB:
+    /// The first 4 bits represent the flags.
     /// The next 6 bits represent the to square.
-    /// The next 4 bits represent the flags.
-    /// fffff tttttt 0000
-    move_info: u16,
+    /// The next 6 bits represent the from square.
+    /// The next 3 bits represent the piece doing the move.
+    /// The next 3 bits represent the captured piece (if any).
+    /// The last 10 bits are unused.
+    /// 00000000 cccppp fffff tttttt 0000
+    move_info: u32,
 }
 
 impl Move {
@@ -36,11 +40,22 @@ impl Move {
     }
 
     /// Creates a new [`Move`].
-    pub fn new(from: Square, to: Square, flags: u8) -> Self {
-        let from_index = to_square(from.0 as u8, from.1 as u8) as u16;
-        let to_index = to_square(to.0 as u8, to.1 as u8) as u16;
-        let move_info =
-            (from_index << MOVE_INFO_FROM_SHIFT) | (to_index << MOVE_INFO_TO_SHIFT) | flags as u16;
+    pub fn new(
+        from: Square,
+        to: Square,
+        flags: u8,
+        piece: Piece,
+        captured_piece: Option<Piece>,
+    ) -> Self {
+        let from_index = to_square(from.0 as u8, from.1 as u8) as u32;
+        let to_index = to_square(to.0 as u8, to.1 as u8) as u32;
+
+        let move_info = (captured_piece.unwrap_or(Piece::None) as u32)
+            << MOVE_INFO_CAPTURED_PIECE_SHIFT
+            | (piece as u32) << MOVE_INFO_PIECE_SHIFT
+            | (from_index << MOVE_INFO_FROM_SHIFT)
+            | (to_index << MOVE_INFO_TO_SHIFT)
+            | flags as u32;
         Self { move_info }
     }
 
@@ -106,6 +121,22 @@ impl Move {
             return None;
         }
     }
+
+    pub fn captured_piece(&self) -> Option<Piece> {
+        // shift right and then mask 3 bits
+        let piece_value = (self.move_info >> MOVE_INFO_CAPTURED_PIECE_SHIFT) & 0b111 as u32;
+        if piece_value == Piece::None as u32 {
+            return None;
+        }
+
+        return Some(Piece::try_from(piece_value as u8).unwrap());
+    }
+
+    pub fn piece(&self) -> Piece {
+        // shift right and then mask 3 bits
+        let piece_value = (self.move_info >> MOVE_INFO_PIECE_SHIFT) & 0b111 as u32;
+        return Piece::try_from(piece_value as u8).unwrap();
+    }
 }
 
 #[cfg(test)]
@@ -118,18 +149,22 @@ mod tests {
         {
             let from = (File::B, Rank::R1);
             let to = (File::C, Rank::R2);
-            let m = Move::new(from, to, Flags::NONE);
+            let m = Move::new(from, to, Flags::NONE, Piece::Pawn, None);
             assert_eq!(m.from(), 1);
             assert_eq!(m.to(), 10);
             assert!(!m.is_promotion());
+            assert_eq!(m.captured_piece(), None);
+            assert_eq!(m.piece(), Piece::Pawn);
         }
         {
             let from = (File::H, Rank::R8);
             let to = (File::A, Rank::R8);
-            let m = Move::new(from, to, Flags::NONE);
+            let m = Move::new(from, to, Flags::NONE, Piece::Queen, Some(Piece::Rook));
             assert_eq!(m.from(), 63);
             assert_eq!(m.to(), 56);
             assert!(!m.is_promotion());
+            assert_eq!(m.captured_piece().unwrap(), Piece::Rook);
+            assert_eq!(m.piece(), Piece::Queen);
         }
         {
             let from = (File::A, Rank::R2);
@@ -138,47 +173,57 @@ mod tests {
                 from,
                 to,
                 Flags::EN_PASSANT_CAPTURE | Flags::PAWN_TWO_UP | Flags::CASTLE,
+                Piece::Bishop,
+                Some(Piece::Rook),
             );
             assert_eq!(m.from(), 8);
             assert_eq!(m.to(), 24);
             assert!(m.is_en_passant_capture());
             assert!(m.is_pawn_two_up());
             assert!(m.is_castle());
+            assert_eq!(m.captured_piece().unwrap(), Piece::Rook);
+            assert_eq!(m.piece(), Piece::Bishop);
         }
         {
             let from = (File::A, Rank::R7);
             let to = (File::A, Rank::R8);
-            let m = Move::new(from, to, Flags::PROMOTE_TO_QUEEN);
+            let m = Move::new(from, to, Flags::PROMOTE_TO_QUEEN, Piece::Pawn, None);
             assert_eq!(m.from(), 48);
             assert_eq!(m.to(), 56);
             assert!(m.is_promote_to_queen());
             assert!(m.is_promotion());
             assert_eq!(m.promotion_piece().unwrap(), Piece::Queen);
+            assert_eq!(m.captured_piece(), None);
+            assert_eq!(m.piece(), Piece::Pawn);
         }
         {
             let from = (File::A, Rank::R7);
             let to = (File::A, Rank::R8);
-            let m = Move::new(from, to, Flags::PROMOTE_TO_KNIGHT);
+            let m = Move::new(from, to, Flags::PROMOTE_TO_KNIGHT, Piece::Pawn, None);
             assert_eq!(m.from(), 48);
             assert_eq!(m.to(), 56);
             assert!(m.is_promote_to_knight());
             assert!(m.is_promotion());
             assert_eq!(m.promotion_piece().unwrap(), Piece::Knight);
+            assert_eq!(m.captured_piece(), None);
+            assert_eq!(m.piece(), Piece::Pawn);
         }
         {
             let from = (File::A, Rank::R7);
             let to = (File::A, Rank::R8);
-            let m = Move::new(from, to, Flags::PROMOTE_TO_ROOK);
+            let m = Move::new(from, to, Flags::PROMOTE_TO_ROOK, Piece::Pawn, None);
             assert_eq!(m.from(), 48);
             assert_eq!(m.to(), 56);
             assert!(m.is_promote_to_rook());
             assert!(m.is_promotion());
             assert_eq!(m.promotion_piece().unwrap(), Piece::Rook);
+            assert_eq!(m.captured_piece(), None);
+            assert_eq!(m.piece(), Piece::Pawn);
         }
         {
             let from = (File::A, Rank::R7);
             let to = (File::A, Rank::R8);
-            let m = Move::new(from, to, Flags::PROMOTE_TO_BISHOP);
+            let m = Move::new(from, to, Flags::PROMOTE_TO_BISHOP, Piece::Pawn, None);
             assert_eq!(m.from(), 48);
             assert_eq!(m.to(), 56);
             assert!(m.is_promote_to_bishop());
@@ -187,6 +232,8 @@ mod tests {
             assert!(!m.is_promote_to_knight());
             assert!(m.is_promotion());
             assert_eq!(m.promotion_piece().unwrap(), Piece::Bishop);
+            assert_eq!(m.captured_piece(), None);
+            assert_eq!(m.piece(), Piece::Pawn);
         }
     }
 }

@@ -1,8 +1,10 @@
 use std::iter::zip;
 
 use crate::bitboard_helpers;
+use crate::board_state::BoardState;
 use crate::definitions::{CastlingAvailability, Square, SPACE};
 use crate::fen::FenError;
+use crate::move_history::BoardHistory;
 use crate::zobrist::{ZobristHash, ZobristRandomValues};
 
 use super::definitions::{NumberOf, Side};
@@ -11,12 +13,8 @@ use super::{bitboard::Bitboard, pieces::Piece};
 
 pub struct Board {
     piece_bitboards: [[Bitboard; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
-    half_move_clock: u32,
-    full_move_number: u32,
-    side_to_move: Side,
-    en_passant_square: Option<u8>,
-    castling_rights: u8,
-    zobrist_hash: ZobristHash,
+    pub(crate) history: BoardHistory,
+    state: BoardState,
     zobrist_values: ZobristRandomValues,
 }
 
@@ -25,18 +23,14 @@ impl Board {
     fn new() -> Self {
         Board {
             piece_bitboards: [[Bitboard::default(); NumberOf::PIECE_TYPES]; NumberOf::SIDES],
-            half_move_clock: 0,
-            full_move_number: 1,
-            side_to_move: Side::White,
-            en_passant_square: None,
-            castling_rights: CastlingAvailability::NONE,
-            zobrist_hash: 0,
+            history: BoardHistory::new(),
+            state: BoardState::new(),
             zobrist_values: ZobristRandomValues::new(),
         }
     }
 
     pub(crate) fn initialize(&mut self) {
-        self.zobrist_hash = self.initialize_zobrist_hash();
+        self.state.zobrist_hash = self.initialize_zobrist_hash();
     }
 
     fn initialize_zobrist_hash(&self) -> ZobristHash {
@@ -75,7 +69,7 @@ impl Board {
         // XOR the zobrist value for the en passant square, if any
         zobrist_hash ^= self
             .zobrist_values
-            .get_en_passant_value(self.en_passant_square);
+            .get_en_passant_value(self.state.en_passant_square);
 
         zobrist_hash
     }
@@ -130,7 +124,7 @@ impl Board {
         board.set_full_move_number(1);
         board.set_side_to_move(Side::White);
         board.set_castling_rights(CastlingAvailability::ALL);
-        board.zobrist_hash = board.initialize_zobrist_hash();
+        board.set_zobrist_hash(board.initialize_zobrist_hash());
         return board;
     }
 
@@ -228,8 +222,6 @@ impl Board {
 
     /// Find what piece is on a given square.
     ///
-    /// # Returns
-    ///
     /// Returns an optional tuple of the piece and the side that the piece belongs to.
     pub fn piece_on_square(&self, square: usize) -> Option<(Piece, Side)> {
         for piece in 0..NumberOf::PIECE_TYPES {
@@ -248,85 +240,122 @@ impl Board {
     /// Sets the side to move and updates the zobrist hash.
     pub(crate) fn set_side_to_move(&mut self, side: Side) {
         // undo the current side to move in the hash
-        self.zobrist_hash ^= self
+        self.state.zobrist_hash ^= self
             .zobrist_values
-            .get_side_value(self.side_to_move as usize);
+            .get_side_value(self.state.side_to_move as usize);
         // set the new side to move
-        self.side_to_move = side;
+        self.state.side_to_move = side;
         // update zobrist hash with the new side to move
-        self.zobrist_hash ^= self
+        self.state.zobrist_hash ^= self
             .zobrist_values
-            .get_side_value(self.side_to_move as usize);
+            .get_side_value(self.state.side_to_move as usize);
     }
 
     /// Returns the side to move of this [`Board`].
     pub fn side_to_move(&self) -> Side {
-        return self.side_to_move;
+        return self.state.side_to_move;
     }
 
     /// Set the en passant square and update the zobrist hash.
     pub(crate) fn set_en_passant_square(&mut self, square: Option<u8>) {
-        self.zobrist_hash ^= self
+        self.state.zobrist_hash ^= self
             .zobrist_values
-            .get_en_passant_value(self.en_passant_square);
-        self.en_passant_square = square;
-        self.zobrist_hash ^= self
+            .get_en_passant_value(self.state.en_passant_square);
+        self.state.en_passant_square = square;
+        self.state.zobrist_hash ^= self
             .zobrist_values
-            .get_en_passant_value(self.en_passant_square);
+            .get_en_passant_value(self.state.en_passant_square);
     }
 
     pub fn en_passant_square(&self) -> Option<u8> {
-        return self.en_passant_square;
+        return self.state.en_passant_square;
     }
 
     pub(crate) fn set_half_move_clock(&mut self, half_move_clock: u32) {
-        self.half_move_clock = half_move_clock;
+        self.state.half_move_clock = half_move_clock;
     }
 
     pub fn half_move_clock(&self) -> u32 {
-        return self.half_move_clock;
+        return self.state.half_move_clock;
     }
 
     pub(crate) fn set_full_move_number(&mut self, full_move_number: u32) {
-        self.full_move_number = full_move_number;
+        self.state.full_move_number = full_move_number;
     }
 
     pub fn full_move_number(&self) -> u32 {
-        return self.full_move_number;
+        return self.state.full_move_number;
     }
 
     pub(crate) fn set_castling_rights(&mut self, castling_rights: u8) {
-        self.zobrist_hash ^= self
+        self.state.zobrist_hash ^= self
             .zobrist_values
-            .get_castling_value(self.castling_rights as usize);
-        self.castling_rights = castling_rights;
-        self.zobrist_hash ^= self
+            .get_castling_value(self.state.castling_rights as usize);
+        self.state.castling_rights = castling_rights;
+        self.state.zobrist_hash ^= self
             .zobrist_values
-            .get_castling_value(self.castling_rights as usize);
+            .get_castling_value(self.state.castling_rights as usize);
     }
 
     pub fn castling_rights(&self) -> u8 {
-        return self.castling_rights;
+        return self.state.castling_rights;
     }
 
     pub fn zobrist_hash(&self) -> u64 {
-        return self.zobrist_hash;
+        return self.state.zobrist_hash;
     }
 
     pub(crate) fn update_zobrist_hash_for_piece(&mut self, square: u8, piece: Piece, side: Side) {
-        self.zobrist_hash ^=
+        self.state.zobrist_hash ^=
             self.zobrist_values
                 .get_piece_value(piece as usize, side as usize, square as usize);
+    }
+
+    fn set_zobrist_hash(&mut self, hash: u64) {
+        self.state.zobrist_hash = hash;
+    }
+
+    pub(crate) fn board_state(&self) -> &BoardState {
+        return &self.state;
+    }
+
+    pub(crate) fn set_board_state(&mut self, state: BoardState) {
+        self.state = state;
     }
 }
 
 #[cfg(test)]
 mod board_tests {
+    use crate::{
+        definitions::{File, Rank},
+        moves::Move,
+    };
+
     use super::*;
 
     #[test]
     fn test_default_board() {
         let board = Board::default_board();
         assert_eq!(board.all_pieces(), 0xFFFF00000000FFFF);
+    }
+
+    #[test]
+    fn make_and_unmake_move_change_hash() {
+        static FEN: &str = "6nr/pp3p1p/k1p5/8/1QN5/2P1P3/4KPqP/8 b - - 5 26";
+
+        let mut board = Board::from_fen(FEN).unwrap();
+        let mut hash = board.zobrist_hash();
+        let chess_move = Move::new(
+            (File::F, Rank::R7),
+            (File::F, Rank::R5),
+            0,
+            Piece::Pawn,
+            None,
+        );
+        let mv_ok = board.make_move(&chess_move);
+        assert!(mv_ok.is_ok());
+        assert_ne!(hash, board.zobrist_hash());
+        hash = board.zobrist_hash();
+        // TODO: perform an unmake move
     }
 }
