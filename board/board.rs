@@ -2,7 +2,7 @@ use std::iter::zip;
 
 use crate::bitboard_helpers;
 use crate::board_state::BoardState;
-use crate::definitions::{CastlingAvailability, Square, SPACE};
+use crate::definitions::{CastlingAvailability, SPACE};
 use crate::fen::FenError;
 use crate::move_history::BoardHistory;
 use crate::zobrist::{ZobristHash, ZobristRandomValues};
@@ -352,10 +352,19 @@ mod board_tests {
             Piece::Pawn,
             None,
         );
-        let mv_ok = board.make_move(&chess_move);
+        let mut mv_ok = board.make_move(&chess_move);
         assert!(mv_ok.is_ok());
         assert_ne!(hash, board.zobrist_hash());
-        hash = board.zobrist_hash();
-        // TODO: perform an unmake move
+        let move_hash = board.zobrist_hash();
+        mv_ok = board.unmake_move();
+        assert!(mv_ok.is_ok());
+        let unmake_hash = board.zobrist_hash();
+        assert_ne!(unmake_hash, move_hash);
+        assert_eq!(unmake_hash, hash);
+    }
+
+    fn make_move_updates_caslting_rights(board: &mut Board) {
+        let mut board = Board::default_board();
+        // TODO
     }
 }
