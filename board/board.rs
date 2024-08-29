@@ -340,11 +340,11 @@ mod board_tests {
     }
 
     #[test]
-    fn make_and_unmake_move_change_hash() {
+    fn make_and_unmake_move_changes_hash() {
         static FEN: &str = "6nr/pp3p1p/k1p5/8/1QN5/2P1P3/4KPqP/8 b - - 5 26";
 
         let mut board = Board::from_fen(FEN).unwrap();
-        let mut hash = board.zobrist_hash();
+        let hash = board.zobrist_hash();
         let chess_move = Move::new(
             (File::F, Rank::R7),
             (File::F, Rank::R5),
@@ -363,7 +363,8 @@ mod board_tests {
         assert_eq!(unmake_hash, hash);
     }
 
-    fn make_move_updates_caslting_rights(board: &mut Board) {
+    #[test]
+    fn make_move_updates_caslting_rights() {
         let mut board = Board::default_board();
         // TODO
     }
