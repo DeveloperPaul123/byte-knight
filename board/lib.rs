@@ -10,3 +10,4 @@ pub mod moves;
 pub mod pieces;
 pub mod square;
 pub mod zobrist;
+pub mod move_generation;

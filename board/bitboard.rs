@@ -1,6 +1,6 @@
 use std::{
     fmt::Display,
-    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not},
+    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, Shr},
 };
 
 /// Bitboard representation of a chess board.
@@ -19,9 +19,15 @@ use std::{
 /// 0 0 0 0 0 0 0 0 <- h1 (bit 7)
 /// ^-a1 (bit 0)
 ///
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Bitboard {
     data: u64,
+}
+
+impl PartialOrd<u64> for Bitboard {
+    fn partial_cmp(&self, other: &u64) -> Option<std::cmp::Ordering> {
+        self.data.partial_cmp(other)
+    }
 }
 
 impl PartialEq<u64> for Bitboard {
@@ -36,6 +42,15 @@ impl BitAnd for Bitboard {
     fn bitand(self, rhs: Self) -> Self::Output {
         Bitboard {
             data: self.data & rhs.data,
+        }
+    }
+}
+
+impl BitAnd<u64> for Bitboard {
+    type Output = Self;
+    fn bitand(self, rhs: u64) -> Self::Output {
+        Bitboard {
+            data: self.data & rhs,
         }
     }
 }
@@ -95,6 +110,42 @@ impl Not for Bitboard {
     type Output = Self;
     fn not(self) -> Self::Output {
         Bitboard { data: !self.data }
+    }
+}
+
+impl Shl for Bitboard {
+    type Output = Self;
+    fn shl(self, rhs: Bitboard) -> Self::Output {
+        Bitboard {
+            data: self.data << rhs.data,
+        }
+    }
+}
+
+impl Shl<u64> for Bitboard {
+    type Output = Self;
+    fn shl(self, rhs: u64) -> Self::Output {
+        Bitboard {
+            data: self.data << rhs,
+        }
+    }
+}
+
+impl Shr for Bitboard {
+    type Output = Self;
+    fn shr(self, rhs: Bitboard) -> Self::Output {
+        Bitboard {
+            data: self.data >> rhs.data,
+        }
+    }
+}
+
+impl Shr<u64> for Bitboard {
+    type Output = Self;
+    fn shr(self, rhs: u64) -> Self::Output {
+        Bitboard {
+            data: self.data >> rhs,
+        }
     }
 }
 
@@ -207,6 +258,6 @@ mod tests {
         assert_eq!((bb1 ^ bb2).data, 0xFFFFFFFFFFFFFFFF);
 
         // NOT
-        assert_eq!((!bb1).data, 0x0F0F0F0F0F0F0F0F);
+        assert_eq!((!bb1), 0x0F0F0F0F0F0F0F0F);
     }
 }
