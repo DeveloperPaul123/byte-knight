@@ -123,6 +123,13 @@ impl Board {
         return Ok(());
     }
 
+    /// Undo the last move made on this [`Board`].
+    /// In general, each undo() should be preceded by a [Board::make_move()]. But this isn't a hard requirement.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if it is unable to undo the last move. This can happen if
+    /// no moves have been made on the board.
     pub fn unmake_move(&mut self) -> Result<(), &'static str> {
         let maybe_state = self.history.pop();
         if maybe_state.is_none() {
@@ -137,6 +144,12 @@ impl Board {
         let them = Side::opposite(us);
         // this is move that we're unmaking
         let chess_move = state.next_move;
+        // TODO: Handle null moves
+        if chess_move.is_null_move() {
+            //nothing else to undo except swapping the side to move
+            self.switch_side();
+            return Ok(());
+        }
 
         let from = chess_move.from();
         let to = chess_move.to();
@@ -168,6 +181,15 @@ impl Board {
         }
 
         return Ok(());
+    }
+
+    pub fn null_move(&mut self) {
+        let mut current_state = self.board_state().clone();
+        current_state.next_move = Move::default();
+        // update history before modifying the current state
+        self.history.push(current_state);
+
+        self.switch_side();
     }
 
     fn undo_move(&mut self, side: Side, piece: Piece, from: u8, to: u8, update_zobrist_hash: bool) {

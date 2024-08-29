@@ -137,6 +137,13 @@ impl Move {
         let piece_value = (self.move_info >> MOVE_INFO_PIECE_SHIFT) & 0b111 as u32;
         return Piece::try_from(piece_value as u8).unwrap();
     }
+
+    pub(crate) fn is_null_move(&self) -> bool {
+        // this is the default value, and should be interpreted as a null move
+        // the reason for this is that a move at a minimum should always have a to and from square
+        // and a piece. So if there is no information about the move, it is a null move
+        return self.move_info == 0;
+    }
 }
 
 #[cfg(test)]
