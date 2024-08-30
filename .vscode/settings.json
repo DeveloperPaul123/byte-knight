@@ -1,0 +1,45 @@
+{
+    "psi-header.config": {
+        "author": "Paul Tsouchlos (DeveloperPaul123)",
+        "license": "GPL-3.0-or-later",
+        "copyrightHolder": "Paul Tsouchlos (DeveloperPaul123)",
+        "createYear": true,
+        "authorEmail": "developer.paul.123@gmail.com",
+        "forceToTop": true,
+        "blankLinesAfter": 1,
+        "initials": "PT",
+    },
+    "psi-header.license-reference": {
+        "uri": "https://spdx.org/licenses/GPL-3.0.html"
+    },
+    "psi-header.templates": [
+        {
+            "language": "rust",
+            "template": [
+                "<<filename>>",
+                "Part of the byte-knight project",
+                "Created Date: <<filecreated('dddd, MMMM Do YYYY')>>",
+                "Author: <<author>> (<<authorEmail>>)",
+                "-----",
+                "Last Modified: ",
+                "-----",
+                "Copyright (c) <<year>> <<copyrightHolder>>",
+                "<<licensename>>",
+                "<<licenseurl>>",
+                "",
+            ],
+        }
+    ],
+    "psi-header.changes-tracking": {
+        "autoHeader": "manualSave",
+        "modDate": "Last Modified: ",
+        "enforceHeader": true,
+        "isActive": true,
+        "excludeGlob": [
+            "build/**",
+            "data/**",
+            "target/**",
+            "**/settings.json"
+        ]
+    }
+}
