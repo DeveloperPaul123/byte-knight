@@ -14,7 +14,10 @@
 
 use std::{
     fmt::Display,
-    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, Shr},
+    ops::{
+        BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
+        ShrAssign,
+    },
 };
 
 /// Bitboard representation of a chess board.
@@ -145,6 +148,18 @@ impl Shl<u64> for Bitboard {
     }
 }
 
+impl ShlAssign for Bitboard {
+    fn shl_assign(&mut self, rhs: Bitboard) {
+        self.data <<= rhs.data;
+    }
+}
+
+impl ShlAssign<u64> for Bitboard {
+    fn shl_assign(&mut self, rhs: u64) {
+        self.data <<= rhs;
+    }
+}
+
 impl Shr for Bitboard {
     type Output = Self;
     fn shr(self, rhs: Bitboard) -> Self::Output {
@@ -160,6 +175,18 @@ impl Shr<u64> for Bitboard {
         Bitboard {
             data: self.data >> rhs,
         }
+    }
+}
+
+impl ShrAssign for Bitboard {
+    fn shr_assign(&mut self, rhs: Bitboard) {
+        self.data >>= rhs.data;
+    }
+}
+
+impl ShrAssign<u64> for Bitboard {
+    fn shr_assign(&mut self, rhs: u64) {
+        self.data >>= rhs;
     }
 }
 
