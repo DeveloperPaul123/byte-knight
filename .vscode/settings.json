@@ -31,15 +31,16 @@
         }
     ],
     "psi-header.changes-tracking": {
-        "autoHeader": "manualSave",
+        "autoHeader": "off",
         "modDate": "Last Modified: ",
         "enforceHeader": true,
-        "isActive": true,
+        "isActive": false,
         "excludeGlob": [
             "build/**",
             "data/**",
             "target/**",
-            "**/settings.json"
+            "**/settings.json",
+            "**.md"
         ]
     }
 }
