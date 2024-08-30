@@ -1,3 +1,17 @@
+/*
+ * bitboard.rs
+ * Part of the byte-knight project
+ * Created Date: Wednesday, August 14th 2024
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified:
+ * -----
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ *
+ */
+
 use std::{
     fmt::Display,
     ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, Shr},
@@ -151,12 +165,12 @@ impl Shr<u64> for Bitboard {
 
 impl Bitboard {
     /// Create a new Bitboard with the given data.
-    pub fn new(data: u64) -> Self {
+    pub const fn new(data: u64) -> Self {
         Bitboard { data }
     }
 
     /// Create an empty Bitboard.
-    pub fn default() -> Self {
+    pub const fn default() -> Self {
         Bitboard { data: 0 }
     }
 
@@ -182,7 +196,7 @@ impl Bitboard {
     }
 
     /// Convert to a 64-bit unsigned integer.
-    pub fn as_number(&self) -> u64 {
+    pub const fn as_number(&self) -> u64 {
         self.data
     }
 }
