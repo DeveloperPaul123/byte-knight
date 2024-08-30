@@ -12,9 +12,12 @@
  *
  */
 
+use serde::de::value;
+
 use crate::{
     bitboard::Bitboard,
     definitions::{File, NumberOf, Rank, Side},
+    square,
 };
 
 type FileBitboards = [Bitboard; NumberOf::FILES];
@@ -194,11 +197,149 @@ impl MoveGenerator {
             initialize_pawn_attacks(square, &mut self.pawn_attacks);
         }
     }
+    fn edges(file: u8, rank: u8) -> Bitboard {
+        // need to get the rank and file of the square
+        let file_bb = FILE_BITBOARDS[file as usize];
+        let rank_bb = RANK_BITBOARDS[rank as usize];
+        // get the edges of the board
+        let edges = (FILE_BITBOARDS[File::A as usize] & !file_bb)
+            | (FILE_BITBOARDS[File::H as usize] & !file_bb)
+            | (RANK_BITBOARDS[Rank::R1 as usize] & !rank_bb)
+            | (RANK_BITBOARDS[Rank::R8 as usize] & !rank_bb);
+
+        return edges;
+    }
+
+    fn orthogonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
+        let mut attacks = Bitboard::default();
+        let bb = Bitboard::new(1u64 << square);
+        let not_a_file = !FILE_BITBOARDS[File::A as usize];
+        let not_h_file = !FILE_BITBOARDS[File::H as usize];
+
+        // North
+        let mut ray = bb;
+        while ray != 0 {
+            ray <<= 8;
+            attacks |= ray;
+            if ray & occupied != 0 {
+                break;
+            }
+        }
+
+        // South
+        let mut ray = bb;
+        while ray != 0 {
+            ray >>= 8;
+            attacks |= ray;
+            if ray & occupied != 0 {
+                break;
+            }
+        }
+
+        // East
+        let mut ray = bb;
+        while ray != 0 && ray & not_h_file != 0 {
+            ray <<= 1;
+            attacks |= ray;
+            if ray & occupied != 0 {
+                break;
+            }
+        }
+
+        // West
+        let mut ray = bb;
+        while ray != 0 && ray & not_a_file != 0 {
+            ray >>= 1;
+            attacks |= ray;
+            if ray & occupied != 0 {
+                break;
+            }
+        }
+
+        attacks
+    }
+
+    fn diagonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
+        let mut attacks = Bitboard::default();
+        let bb = Bitboard::new(1u64 << square);
+        let not_a_file = !FILE_BITBOARDS[File::A as usize];
+        let not_h_file = !FILE_BITBOARDS[File::H as usize];
+
+        // Northeast
+        let mut ray = bb;
+        while ray != 0 && ray & not_h_file != 0 {
+            ray <<= 9;
+            attacks |= ray;
+            if ray & occupied != 0 {
+                break;
+            }
+        }
+
+        // Northwest
+        let mut ray = bb;
+        while ray != 0 && ray & not_a_file != 0 {
+            ray <<= 7;
+            attacks |= ray;
+            if ray & occupied != 0 {
+                break;
+            }
+        }
+
+        // Southeast
+        let mut ray = bb;
+        while ray != 0 && ray & not_h_file != 0 {
+            ray >>= 7;
+            attacks |= ray;
+            if ray & occupied != 0 {
+                break;
+            }
+        }
+
+        // Southwest
+        let mut ray = bb;
+        while ray != 0 && ray & not_a_file != 0 {
+            ray >>= 9;
+            attacks |= ray;
+            if ray & occupied != 0 {
+                break;
+            }
+        }
+
+        attacks
+    }
+
+    fn relevant_rook_bits(square: usize) -> Bitboard {
+        let mut bb = Bitboard::default();
+        bb.set_square(square);
+
+        // need to get the rank and file of the square
+        let (file, rank) = square::from_square(square as u8);
+        let file_bb = FILE_BITBOARDS[file as usize];
+        let rank_bb = RANK_BITBOARDS[rank as usize];
+        let rook_rays_bb = MoveGenerator::orthogonal_ray_attacks(square as u8, 0);
+        // get the edges of the board
+        let edges = MoveGenerator::edges(file, rank);
+
+        return rook_rays_bb & !edges & !bb;
+    }
+
+    fn relevant_bishop_bits(square: usize) -> Bitboard {
+        let mut bb = Bitboard::default();
+        bb.set_square(square);
+
+        let (file, rank) = square::from_square(square as u8);
+        let edges = MoveGenerator::edges(file, rank);
+
+        // need to calculate ray attacks for the bishop from its square
+        let bishop_ray_attacks = MoveGenerator::diagonal_ray_attacks(square as u8, 0);
+
+        return bishop_ray_attacks & !edges & !bb;
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{definitions::Squares, square};
+    use crate::{definitions::Squares, move_generation, square};
 
     use super::*;
 
@@ -504,6 +645,158 @@ mod tests {
             assert_eq!(
                 attacks_w_bb.as_number(),
                 expected_white_pawn_attacks[square]
+            );
+        }
+    }
+
+    #[test]
+    fn check_rook_relevant_bits() {
+        let rook_relevant_bit_expected: [u64; NumberOf::SQUARES] = [
+            282578800148862,
+            565157600297596,
+            1130315200595066,
+            2260630401190006,
+            4521260802379886,
+            9042521604759646,
+            18085043209519166,
+            36170086419038334,
+            282578800180736,
+            565157600328704,
+            1130315200625152,
+            2260630401218048,
+            4521260802403840,
+            9042521604775424,
+            18085043209518592,
+            36170086419037696,
+            282578808340736,
+            565157608292864,
+            1130315208328192,
+            2260630408398848,
+            4521260808540160,
+            9042521608822784,
+            18085043209388032,
+            36170086418907136,
+            282580897300736,
+            565159647117824,
+            1130317180306432,
+            2260632246683648,
+            4521262379438080,
+            9042522644946944,
+            18085043175964672,
+            36170086385483776,
+            283115671060736,
+            565681586307584,
+            1130822006735872,
+            2261102847592448,
+            4521664529305600,
+            9042787892731904,
+            18085034619584512,
+            36170077829103616,
+            420017753620736,
+            699298018886144,
+            1260057572672512,
+            2381576680245248,
+            4624614895390720,
+            9110691325681664,
+            18082844186263552,
+            36167887395782656,
+            35466950888980736,
+            34905104758997504,
+            34344362452452352,
+            33222877839362048,
+            30979908613181440,
+            26493970160820224,
+            17522093256097792,
+            35607136465616896,
+            9079539427579068672,
+            8935706818303361536,
+            8792156787827803136,
+            8505056726876686336,
+            7930856604974452736,
+            6782456361169985536,
+            4485655873561051136,
+            9115426935197958144,
+        ];
+
+        for square in 0..NumberOf::SQUARES {
+            let rook_bits = move_generation::MoveGenerator::relevant_rook_bits(square);
+            assert_eq!(rook_bits.as_number(), rook_relevant_bit_expected[square]);
+        }
+    }
+
+    #[test]
+    fn check_relevant_bishop_bits() {
+        let bishop_relevant_bit_expected: [u64; NumberOf::SQUARES] = [
+            18049651735527936,
+            70506452091904,
+            275415828992,
+            1075975168,
+            38021120,
+            8657588224,
+            2216338399232,
+            567382630219776,
+            9024825867763712,
+            18049651735527424,
+            70506452221952,
+            275449643008,
+            9733406720,
+            2216342585344,
+            567382630203392,
+            1134765260406784,
+            4512412933816832,
+            9024825867633664,
+            18049651768822272,
+            70515108615168,
+            2491752130560,
+            567383701868544,
+            1134765256220672,
+            2269530512441344,
+            2256206450263040,
+            4512412900526080,
+            9024834391117824,
+            18051867805491712,
+            637888545440768,
+            1135039602493440,
+            2269529440784384,
+            4539058881568768,
+            1128098963916800,
+            2256197927833600,
+            4514594912477184,
+            9592139778506752,
+            19184279556981248,
+            2339762086609920,
+            4538784537380864,
+            9077569074761728,
+            562958610993152,
+            1125917221986304,
+            2814792987328512,
+            5629586008178688,
+            11259172008099840,
+            22518341868716544,
+            9007336962655232,
+            18014673925310464,
+            2216338399232,
+            4432676798464,
+            11064376819712,
+            22137335185408,
+            44272556441600,
+            87995357200384,
+            35253226045952,
+            70506452091904,
+            567382630219776,
+            1134765260406784,
+            2832480465846272,
+            5667157807464448,
+            11333774449049600,
+            22526811443298304,
+            9024825867763712,
+            18049651735527936,
+        ];
+        for square in 0..NumberOf::SQUARES {
+            let bishop_bits = move_generation::MoveGenerator::relevant_bishop_bits(square);
+            assert_eq!(
+                bishop_bits.as_number(),
+                bishop_relevant_bit_expected[square]
             );
         }
     }
