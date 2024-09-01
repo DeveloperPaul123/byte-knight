@@ -1,3 +1,17 @@
+/*
+ * board.rs
+ * Part of the byte-knight project
+ * Created Date: Wednesday, August 21st 2024
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified: 
+ * -----
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ * 
+ */
+
 use std::iter::zip;
 
 use crate::bitboard_helpers;
@@ -364,7 +378,7 @@ mod board_tests {
     }
 
     #[test]
-    fn make_move_updates_caslting_rights() {
+    fn make_move_updates_castling_rights() {
         let mut board = Board::default_board();
         // TODO
     }
