@@ -1,3 +1,17 @@
+/*
+ * definitions.rs
+ * Part of the byte-knight project
+ * Created Date: Wednesday, August 21st 2024
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified: Sat Aug 31 2024
+ * -----
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ * 
+ */
+
 pub const SPACE: char = ' ';
 pub const NEWLINE: char = '\n';
 pub const DASH: char = '-';
@@ -5,6 +19,9 @@ pub const EM_DASH: char = '–';
 pub const SLASH: char = '/';
 
 pub const MAX_MOVES: usize = 3072;
+// see the tests in move_generation.rs for how these numbers were calculated
+pub const ROOK_BLOCKER_PERMUTATIONS: usize = 102_400;
+pub const BISHOP_BLOCKER_PERMUTATIONS: usize = 5_248;
 
 pub struct NumberOf;
 impl NumberOf {

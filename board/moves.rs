@@ -1,3 +1,17 @@
+/*
+ * moves.rs
+ * Part of the byte-knight project
+ * Created Date: Monday, August 19th 2024
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified: Sat Aug 31 2024
+ * -----
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ *
+ */
+
 use crate::{definitions::Square, pieces::Piece, square::to_square};
 const MOVE_INFO_CAPTURED_PIECE_SHIFT: u32 = 19;
 const MOVE_INFO_PIECE_SHIFT: u32 = 16;
@@ -34,11 +48,13 @@ pub struct Move {
     move_info: u32,
 }
 
-impl Move {
-    pub fn default() -> Self {
+impl Default for Move {
+    fn default() -> Self {
         Self { move_info: 0 }
     }
+}
 
+impl Move {
     /// Creates a new [`Move`].
     pub fn new(
         from: Square,

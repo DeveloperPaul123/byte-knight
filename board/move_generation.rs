@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 28th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Aug 29 2024
+ * Last Modified: Sun Sep 01 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -210,6 +210,11 @@ impl MoveGenerator {
         return edges;
     }
 
+    fn edges_from_square(square: u8) -> Bitboard {
+        let (file, rank) = square::from_square(square as u8);
+        return MoveGenerator::edges(file, rank);
+    }
+
     fn orthogonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
         let mut attacks = Bitboard::default();
         let bb = Bitboard::new(1u64 << square);
@@ -308,14 +313,12 @@ impl MoveGenerator {
         attacks
     }
 
-    fn relevant_rook_bits(square: usize) -> Bitboard {
+    pub fn relevant_rook_bits(square: usize) -> Bitboard {
         let mut bb = Bitboard::default();
         bb.set_square(square);
 
         // need to get the rank and file of the square
         let (file, rank) = square::from_square(square as u8);
-        let file_bb = FILE_BITBOARDS[file as usize];
-        let rank_bb = RANK_BITBOARDS[rank as usize];
         let rook_rays_bb = MoveGenerator::orthogonal_ray_attacks(square as u8, 0);
         // get the edges of the board
         let edges = MoveGenerator::edges(file, rank);
@@ -323,7 +326,7 @@ impl MoveGenerator {
         return rook_rays_bb & !edges & !bb;
     }
 
-    fn relevant_bishop_bits(square: usize) -> Bitboard {
+    pub fn relevant_bishop_bits(square: usize) -> Bitboard {
         let mut bb = Bitboard::default();
         bb.set_square(square);
 
@@ -335,11 +338,68 @@ impl MoveGenerator {
 
         return bishop_ray_attacks & !edges & !bb;
     }
+
+    pub fn create_blocker_permutations(bb: Bitboard) -> Vec<Bitboard> {
+        // use the carry-rippler method to cycle through all possible permutations of the given bitboard
+        let mask = bb;
+        let mut subset = Bitboard::default();
+
+        const BASE: u64 = 2 as u64;
+        let total_permutations = BASE.pow(bb.as_number().count_ones());
+
+        let mut blocker_bitboards = Vec::with_capacity(total_permutations as usize);
+        loop {
+            // there could be no blockers, so start with that...
+            blocker_bitboards.push(subset);
+            // carry-rippler method to generate all possible permutations of the given bitboard
+            subset = Bitboard::new(subset.as_number().wrapping_sub(mask.as_number())) & mask;
+            if subset == 0 {
+                break;
+            }
+        }
+        blocker_bitboards
+    }
+
+    pub fn rook_attacks(square: u8, blockers: &Vec<Bitboard>) -> Vec<Bitboard> {
+        let mut attacks = Vec::with_capacity(blockers.len());
+        for blocker in blockers {
+            attacks.push(MoveGenerator::calculate_rook_attack(square, blocker));
+        }
+        return attacks;
+    }
+
+    fn calculate_rook_attack(square: u8, blocker: &Bitboard) -> Bitboard {
+        // calculate ray attacks for the rook from its square
+        let rook_rays_bb = MoveGenerator::orthogonal_ray_attacks(square as u8, blocker.as_number());
+        // get the edges of the board
+        let edges = MoveGenerator::edges_from_square(square);
+        // remove the edges from the ray attacks
+        return rook_rays_bb & !edges;
+    }
+
+    pub fn bishop_attacks(square: u8, blockers: &Vec<Bitboard>) -> Vec<Bitboard> {
+        let mut attacks = Vec::with_capacity(blockers.len());
+        for blocker in blockers {
+            attacks.push(MoveGenerator::calculate_bishop_attack(square, blocker));
+        }
+        return attacks;
+    }
+
+    pub fn calculate_bishop_attack(square: u8, blocker: &Bitboard) -> Bitboard {
+        let bishop_rays_bb = MoveGenerator::diagonal_ray_attacks(square as u8, blocker.as_number());
+        let edges = MoveGenerator::edges_from_square(square);
+        return bishop_rays_bb & !edges;
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{definitions::Squares, move_generation, square};
+    use chess::get_rook_moves;
+
+    use crate::{
+        definitions::{Square, Squares},
+        move_generation, square,
+    };
 
     use super::*;
 
@@ -718,10 +778,15 @@ mod tests {
             9115426935197958144,
         ];
 
+        let mut offset_sum: u64 = 0;
+        const BASE: u64 = 2 as u64;
         for square in 0..NumberOf::SQUARES {
             let rook_bits = move_generation::MoveGenerator::relevant_rook_bits(square);
             assert_eq!(rook_bits.as_number(), rook_relevant_bit_expected[square]);
+
+            offset_sum += BASE.pow(rook_bits.as_number().count_ones());
         }
+        println!("rook offset sum: {}", offset_sum);
     }
 
     #[test]
@@ -792,12 +857,70 @@ mod tests {
             9024825867763712,
             18049651735527936,
         ];
+
+        let mut offset_sum: u64 = 0;
+        const BASE: u64 = 2 as u64;
+
         for square in 0..NumberOf::SQUARES {
             let bishop_bits = move_generation::MoveGenerator::relevant_bishop_bits(square);
             assert_eq!(
                 bishop_bits.as_number(),
                 bishop_relevant_bit_expected[square]
             );
+
+            offset_sum += BASE.pow(bishop_bits.as_number().count_ones());
+        }
+
+        println!("bishop offset sum: {}", offset_sum);
+    }
+
+    #[test]
+    fn check_blocker_permutations() {
+        const BASE: u64 = 2 as u64;
+
+        for sq in 0..NumberOf::SQUARES {
+            let rook_bb = MoveGenerator::relevant_rook_bits(sq);
+            let permutations = MoveGenerator::create_blocker_permutations(rook_bb);
+            let total_permutations = BASE.pow(rook_bb.as_number().count_ones());
+            assert_eq!(permutations.len(), total_permutations as usize);
+            for bb in permutations {
+                // check that the permutation is a subset of the rook bitboard
+                if (bb) != 0 {
+                    assert_eq!(bb & !rook_bb, 0);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn check_rook_attacks() {
+        for square in 0..NumberOf::SQUARES {
+            let rook_bb = MoveGenerator::relevant_rook_bits(square as usize);
+            let blockers = MoveGenerator::create_blocker_permutations(rook_bb);
+
+            let attacks = MoveGenerator::rook_attacks(square as u8, &blockers);
+            assert_eq!(attacks.len(), blockers.len());
+
+            for attack in attacks {
+                // attack should be a subset of the rook bitboard
+                assert_eq!(attack & !rook_bb, 0);
+            }
+        }
+    }
+
+    #[test]
+    fn check_bishop_attacks() {
+        for square in 0..NumberOf::SQUARES {
+            let bishop_bb = MoveGenerator::relevant_bishop_bits(square as usize);
+            let blockers = MoveGenerator::create_blocker_permutations(bishop_bb);
+
+            let attacks = MoveGenerator::bishop_attacks(square as u8, &blockers);
+            assert_eq!(attacks.len(), blockers.len());
+
+            for attack in attacks {
+                // attack should be a subset of the bishop bitboard
+                assert_eq!(attack & !bishop_bb, 0);
+            }
         }
     }
 }

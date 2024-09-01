@@ -4,20 +4,19 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Aug 29 2024
+ * Last Modified: Sat Aug 31 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
- * 
+ *
  */
 
 use crate::{
     board::Board,
-    definitions::{CastlingAvailability, File, Rank, Side, Squares},
+    definitions::{CastlingAvailability, Side, Squares},
     moves::Move,
     pieces::Piece,
-    square::{self, to_square},
 };
 
 impl Board {
@@ -61,7 +60,7 @@ impl Board {
 
             if mv.is_en_passant_capture() {
                 // remove the captured pawn
-                // TODO: Is ^8 right?
+                // ^8 flips the square
                 self.remove_piece(them, Piece::Pawn, to ^ 8, update_zobrist_hash);
             }
             // check if this is a double pawn push
@@ -196,7 +195,7 @@ impl Board {
     }
 
     pub fn null_move(&mut self) {
-        let mut current_state = self.board_state().clone();
+        let mut current_state = *self.board_state();
         current_state.next_move = Move::default();
         // update history before modifying the current state
         self.history.push(current_state);
