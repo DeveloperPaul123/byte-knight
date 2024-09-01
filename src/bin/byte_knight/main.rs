@@ -1,3 +1,17 @@
+/*
+ * main.rs
+ * Part of the byte-knight project
+ * Created Date: Wednesday, August 14th 2024
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified: 
+ * -----
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ * 
+ */
+
 mod base_engine;
 mod chess_board_helpers;
 mod engine;
@@ -134,7 +148,7 @@ fn run_uci(engine_name: &String) {
                             // Handle the case when best_move is None.
                             // Use the first legal move as a fallback
                             MoveGen::new_legal(&board).next().map(|m| {
-                                writeln!(stdout, "{}", UciMessage::best_move(m).to_string())
+                                writeln!(stdout, "{}", UciMessage::best_move(m))
                                     .unwrap()
                             });
                         }
