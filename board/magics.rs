@@ -4,7 +4,7 @@
  * Created Date: Friday, August 30th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Sat Aug 31 2024
+ * Last Modified: Sun Sep 01 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -47,10 +47,11 @@ impl MagicNumber {
     /// Returns the index of the magic number in the table.
     /// This is basically the same formula used to calculate magic numbers, but it's just missing the magic value.
     /// We take into account the shift and offset to calculate the index without the magic value.
-    pub fn index(&self, occupancy: &Bitboard) -> usize {
-        let blockers = *occupancy & self.relevant_bits_mask;
+    pub fn index(&self, occupancy: Bitboard) -> usize {
+        let blockers = occupancy & self.relevant_bits_mask;
         // need to shift
-        ((blockers.as_number().wrapping_mul(self.magic_value) >> self.shift) + self.offset) as usize
+        let blocker_num = blockers.as_number();
+        return ((blocker_num.wrapping_mul(self.magic_value) >> self.shift) + self.offset) as usize;
     }
 }
 
@@ -61,5 +62,34 @@ impl Display for MagicNumber {
             "bb {} shift {} offset {} magic {}",
             self.relevant_bits_mask, self.shift, self.offset, self.magic_value
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{definitions::Squares, move_generation::MoveGenerator};
+
+    use super::*;
+
+    #[test]
+    fn test_magic_number_index() {
+        // test a1 for the rook
+        let relevant_bits = MoveGenerator::relevant_rook_bits(Squares::A1 as usize);
+        let blockers = MoveGenerator::create_blocker_permutations(relevant_bits);
+        let magic_value = 684547693657194778;
+        let magic = MagicNumber::new(
+            relevant_bits,
+            (64 - relevant_bits.as_number().count_ones()) as u8,
+            0,
+            magic_value,
+        );
+        let blocker = blockers[0];
+        assert_eq!(magic.index(blocker), 0);
+
+        let mut indexes = Vec::with_capacity(blockers.len());
+        for blocker in blockers {
+            let index = magic.index(blocker);
+            indexes.push(index);
+        }
     }
 }
