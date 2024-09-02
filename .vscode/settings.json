@@ -40,7 +40,8 @@
             "data/**",
             "target/**",
             "**/settings.json",
-            "**.md"
+            "**.md",
+            "*.toml"
         ]
     }
 }
