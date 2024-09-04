@@ -12,34 +12,17 @@
  *
  */
 
+use std::path::PathBuf;
+
 use byte_board::{
     bitboard::Bitboard,
     definitions::{NumberOf, BISHOP_BLOCKER_PERMUTATIONS, ROOK_BLOCKER_PERMUTATIONS},
     magics::MagicNumber,
     move_generation::MoveGenerator,
-    pieces::Piece,
-    square,
+    pieces::{Piece, SQUARE_NAME},
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaChaRng;
-
-fn random_u64<rng: Rng>(rng: &mut rng) -> u64 {
-    let u1 = rng.gen::<u64>() & 0xFFFF;
-    let u2 = rng.gen::<u64>() & 0xFFFF;
-    let u3 = rng.gen::<u64>() & 0xFFFF;
-    let u4 = rng.gen::<u64>() & 0xFFFF;
-
-    return u1 | (u2 << 16) | (u3 << 32) | (u4 << 48);
-}
-
-fn random_u64_few_bits<rng: Rng>(rng: &mut rng) -> u64 {
-    return random_u64(rng) & random_u64(rng) & random_u64(rng);
-}
-
-fn find_magic_number(square: u8, piece: Piece) -> MagicNumber {
-    // TODO
-    return MagicNumber::default();
-}
 
 fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
     let mut rng = ChaChaRng::from_entropy();
@@ -48,8 +31,10 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
     let mut rook_hash_table = vec![Bitboard::default(); ROOK_BLOCKER_PERMUTATIONS];
     let mut bishop_hash_table = vec![Bitboard::default(); BISHOP_BLOCKER_PERMUTATIONS];
     const BASE: u64 = 2 as u64;
-    
+
     let mut offset = 0;
+
+    println!("Finding magic numbers for {}", piece);
 
     for sq in 0..NumberOf::SQUARES {
         let rook_mask = MoveGenerator::relevant_rook_bits(sq);
@@ -86,7 +71,7 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
         while !found {
             // generate a random magic value
             // we & the values together to try and reduce the number of bits
-            let mgc = random_u64_few_bits(&mut rng);
+            let mgc = rng.gen::<u64>() & rng.gen::<u64>() & rng.gen::<u64>();
             let test = (use_mask.as_number() * mgc) & 0xFF00000000000000;
             if test.count_ones() < 6 {
                 continue;
@@ -104,13 +89,16 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
                     &mut bishop_hash_table
                 };
 
-                if table[index] == Bitboard::default() {
+                let attack_to_insert = attacks[i];
+                // if the table at the index is empty or the attack is the same as the one we're inserting,
+                // insert it any way since this doesn't affect correctness
+                if table[index] == Bitboard::default() || table[index] == attack_to_insert {
                     assert!(
                         index as u64 >= offset && index as u64 <= end,
                         "index out of bounds"
                     );
 
-                    table[index] = attacks[i];
+                    table[index] = attack_to_insert;
                 } else {
                     // Non-empty value found in the table so we have a key collision.
                     // No bueno because the magic value doesn't work. Time to try again.
@@ -123,7 +111,7 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
                 }
             }
         }
-        println!("{}", magic);
+        println!("{} {}", SQUARE_NAME[sq as usize], magic);
         magic_numbers.push(magic);
         offset += total_permutations;
     }
@@ -143,13 +131,27 @@ fn main() {
     println!("");
     let magic_bishop_numbers = find_magic_numbers(Piece::Bishop);
 
-    // output the magic numbers to a csv
-    let mut writer = csv::Writer::from_writer(std::io::stdout());
+    let mut data_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    data_path.push("data");
+
+    let rook_output_path = data_path.join("rook_magics.csv");
+    let bishop_output_path = data_path.join("bishop_magics.csv");
+
+    // output the magic numbers to a csv file
+    let mut rook_writer =
+        csv::Writer::from_path(rook_output_path).expect("Failed to open magics.csv");
+    let mut bishop_writer =
+        csv::Writer::from_path(bishop_output_path).expect("Failed to open magics.csv");
+
     for magic in magic_bishop_numbers {
-        writer.serialize(magic).expect("Failed to write to csv");
+        bishop_writer
+            .serialize(magic)
+            .expect("Failed to write to csv");
     }
 
     for magic in magic_rook_numbers {
-        writer.serialize(magic).expect("Failed to write to csv");
+        rook_writer
+            .serialize(magic)
+            .expect("Failed to write to csv");
     }
 }

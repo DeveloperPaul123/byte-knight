@@ -59,7 +59,7 @@ impl Display for MagicNumber {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(
             f,
-            "bb {} shift {} offset {} magic {}",
+            "bb {:24} shift {:4} offset {:6} magic {:24}",
             self.relevant_bits_mask, self.shift, self.offset, self.magic_value
         )
     }

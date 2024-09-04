@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::definitions::NumberOf;
 
 /// Names of squares on the board. The index of the square name corresponds to the square index as represented by the bitboard.
@@ -31,6 +33,20 @@ pub enum Piece {
     Knight = 4,
     Pawn = 5,
     None = 6,
+}
+
+impl Display for Piece {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Piece::King => write!(f, "King"),
+            Piece::Queen => write!(f, "Queen"),
+            Piece::Rook => write!(f, "Rook"),
+            Piece::Bishop => write!(f, "Bishop"),
+            Piece::Knight => write!(f, "Knight"),
+            Piece::Pawn => write!(f, "Pawn"),
+            Piece::None => write!(f, "None"),
+        }
+    }
 }
 
 impl Piece {
