@@ -12,11 +12,17 @@
  *
  */
 
+use std::mem::offset_of;
+
 use serde::de::value;
 
 use crate::{
     bitboard::Bitboard,
-    definitions::{File, NumberOf, Rank, Side},
+    definitions::{
+        File, NumberOf, Rank, Side, BISHOP_BLOCKER_PERMUTATIONS, ROOK_BLOCKER_PERMUTATIONS,
+    },
+    magics::{self, MagicNumber, BISHOP_MAGIC_VALUES, ROOK_MAGIC_VALUES},
+    pieces::Piece,
     square,
 };
 
@@ -173,6 +179,10 @@ pub struct MoveGenerator {
     king_attacks: [Bitboard; NumberOf::SQUARES],
     knight_attacks: [Bitboard; NumberOf::SQUARES],
     pawn_attacks: [[Bitboard; NumberOf::SQUARES]; NumberOf::SIDES],
+    rook_magics: [MagicNumber; NumberOf::SQUARES],
+    bishop_magics: [MagicNumber; NumberOf::SQUARES],
+    rook_attacks: Vec<Bitboard>,
+    bishop_attacks: Vec<Bitboard>,
 }
 
 impl MoveGenerator {
@@ -184,6 +194,10 @@ impl MoveGenerator {
             king_attacks,
             knight_attacks,
             pawn_attacks,
+            rook_magics: [MagicNumber::default(); NumberOf::SQUARES],
+            bishop_magics: [MagicNumber::default(); NumberOf::SQUARES],
+            rook_attacks: Vec::with_capacity(ROOK_BLOCKER_PERMUTATIONS),
+            bishop_attacks: Vec::with_capacity(BISHOP_BLOCKER_PERMUTATIONS),
         };
 
         move_gen.initialize_attack_boards();
@@ -197,6 +211,60 @@ impl MoveGenerator {
             initialize_pawn_attacks(square, &mut self.pawn_attacks);
         }
     }
+
+    fn initialize_magic_numbers(&mut self, piece: Piece) {
+        assert!(piece == Piece::Rook || piece == Piece::Bishop);
+
+        // TODO: Initialize the magics
+        for square in 0..NumberOf::SQUARES {
+            let rook_relevant_bits = MoveGenerator::relevant_rook_bits(square);
+            let bishop_relevant_bits = MoveGenerator::relevant_bishop_bits(square);
+            let use_mask = if piece == Piece::Rook {
+                rook_relevant_bits
+            } else {
+                bishop_relevant_bits
+            };
+
+            let mut offset = 0;
+            let bit_count = use_mask.as_number().count_ones();
+            let total_permutations = 2u64.pow(bit_count);
+            let end = offset + total_permutations - 1u64;
+            let blocker_bitboards = MoveGenerator::create_blocker_permutations(use_mask);
+            assert_eq!(blocker_bitboards.len(), total_permutations as usize);
+
+            let rook_attacks = MoveGenerator::rook_attacks(square as u8, &blocker_bitboards);
+            let bishop_attacks = MoveGenerator::bishop_attacks(square as u8, &blocker_bitboards);
+            let attacks = if piece == Piece::Rook {
+                rook_attacks
+            } else {
+                bishop_attacks
+            };
+
+            let magics = if piece == Piece::Rook {
+                &mut self.rook_magics
+            } else {
+                &mut self.bishop_magics
+            };
+
+            let magic_constant = if piece == Piece::Rook {
+                ROOK_MAGIC_VALUES
+            } else {
+                BISHOP_MAGIC_VALUES
+            };
+
+            magics[square as usize] = MagicNumber::new(
+                use_mask,
+                (64 - bit_count) as u8,
+                offset,
+                magic_constant[square as usize],
+            );
+
+            for i in 0..blocker_bitboards.len() {
+                // TODO: Fill the attack table
+            }
+        }
+    }
+
     fn edges(file: u8, rank: u8) -> Bitboard {
         // need to get the rank and file of the square
         let file_bb = FILE_BITBOARDS[file as usize];
