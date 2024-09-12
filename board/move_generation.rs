@@ -22,7 +22,7 @@ use crate::{
         File, NumberOf, Rank, Side, BISHOP_BLOCKER_PERMUTATIONS, ROOK_BLOCKER_PERMUTATIONS,
     },
     magics::{self, MagicNumber, BISHOP_MAGIC_VALUES, ROOK_MAGIC_VALUES},
-    pieces::Piece,
+    pieces::{Piece, SQUARE_NAME},
     square,
 };
 
@@ -196,8 +196,8 @@ impl MoveGenerator {
             pawn_attacks,
             rook_magics: [MagicNumber::default(); NumberOf::SQUARES],
             bishop_magics: [MagicNumber::default(); NumberOf::SQUARES],
-            rook_attacks: Vec::with_capacity(ROOK_BLOCKER_PERMUTATIONS),
-            bishop_attacks: Vec::with_capacity(BISHOP_BLOCKER_PERMUTATIONS),
+            rook_attacks: vec![Bitboard::default(); ROOK_BLOCKER_PERMUTATIONS],
+            bishop_attacks: vec![Bitboard::default(); BISHOP_BLOCKER_PERMUTATIONS],
         };
 
         move_gen.initialize_attack_boards();
@@ -210,12 +210,15 @@ impl MoveGenerator {
             initialize_knight_attacks(square, &mut self.knight_attacks);
             initialize_pawn_attacks(square, &mut self.pawn_attacks);
         }
+
+        self.initialize_magic_numbers(Piece::Rook);
+        self.initialize_magic_numbers(Piece::Bishop);
     }
 
     fn initialize_magic_numbers(&mut self, piece: Piece) {
         assert!(piece == Piece::Rook || piece == Piece::Bishop);
+        let mut offset = 0;
 
-        // TODO: Initialize the magics
         for square in 0..NumberOf::SQUARES {
             let rook_relevant_bits = MoveGenerator::relevant_rook_bits(square);
             let bishop_relevant_bits = MoveGenerator::relevant_bishop_bits(square);
@@ -225,7 +228,6 @@ impl MoveGenerator {
                 bishop_relevant_bits
             };
 
-            let mut offset = 0;
             let bit_count = use_mask.as_number().count_ones();
             let total_permutations = 2u64.pow(bit_count);
             let end = offset + total_permutations - 1u64;
@@ -252,6 +254,12 @@ impl MoveGenerator {
                 BISHOP_MAGIC_VALUES
             };
 
+            let attack_table = if piece == Piece::Rook {
+                &mut self.rook_attacks
+            } else {
+                &mut self.bishop_attacks
+            };
+
             magics[square as usize] = MagicNumber::new(
                 use_mask,
                 (64 - bit_count) as u8,
@@ -260,8 +268,23 @@ impl MoveGenerator {
             );
 
             for i in 0..blocker_bitboards.len() {
-                // TODO: Fill the attack table
+                let blocker = blocker_bitboards[i];
+                let index = magics[square as usize].index(blocker);
+
+                if attack_table[index] == Bitboard::default() || attack_table[index] == attacks[i] {
+                    // did we fail high or low index wise? (out of bounds)
+                    assert!(
+                        index as u64 >= offset && index as u64 <= end,
+                        "index out of bounds"
+                    );
+                    attack_table[index] = attacks[i];
+                } else {
+                    panic!("Collision detected while initializing attack tables for piece {:?} and square {} - \n\t{}", piece, SQUARE_NAME[square as usize], magics[square as usize]);
+                }
             }
+
+            // update the offset for the next square
+            offset += total_permutations;
         }
     }
 
@@ -462,14 +485,22 @@ impl MoveGenerator {
 
 #[cfg(test)]
 mod tests {
-    use chess::get_rook_moves;
 
-    use crate::{
-        definitions::{Square, Squares},
-        move_generation, square,
-    };
+    use crate::move_generation;
 
     use super::*;
+
+    #[test]
+    fn check_basic_construction() {
+        let move_gen = MoveGenerator::new();
+        // verify the order of the magic numbers
+        for square in 0..NumberOf::SQUARES {
+            let rook_magic = move_gen.rook_magics[square];
+            let bishop_magic = move_gen.bishop_magics[square];
+            assert_eq!(rook_magic.magic_value, ROOK_MAGIC_VALUES[square as usize]);
+            assert_eq!(bishop_magic.magic_value, BISHOP_MAGIC_VALUES[square as usize]);
+        }
+    }
 
     #[test]
     fn check_king_attacks() {
