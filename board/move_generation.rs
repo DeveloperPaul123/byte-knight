@@ -456,6 +456,29 @@ impl MoveGenerator {
         let edges = MoveGenerator::edges_from_square(square);
         return bishop_rays_bb & !edges;
     }
+
+    pub fn generate_moves(board: &Board, move_list: &MoveList) {
+        // TODO:
+        // 1. Generate pawn moves
+        // 2. Generate knight moves
+        // 3. Generate bishop moves
+        // 4. Generate rook moves
+        // 5. Generate queen moves
+        // 6. Generate king moves
+        // 7. Generate castling moves
+        // 8. Generate en passant moves
+        // 9. Generate promotion moves
+
+        let us = board.side_to_move();
+        let them = Side::opposite(us);
+
+        // where are we?
+        let mut pawns = board.piece_bitboard(Piece::Pawn, us).clone();
+        let square = bitboard_helpers::next_bit(&mut pawns);
+        while square != 0 {
+            // TODO
+        }
+    }
 }
 
 #[cfg(test)]
