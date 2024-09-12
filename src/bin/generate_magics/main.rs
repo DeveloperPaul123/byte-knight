@@ -4,15 +4,13 @@
  * Created Date: Friday, August 30th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Sun Sep 01 2024
+ * Last Modified: Wed Sep 11 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
  *
  */
-
-use std::path::PathBuf;
 
 use byte_board::{
     bitboard::Bitboard,
@@ -126,32 +124,18 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
 
     return magic_numbers;
 }
+
 fn main() {
     let magic_rook_numbers = find_magic_numbers(Piece::Rook);
-    println!("");
     let magic_bishop_numbers = find_magic_numbers(Piece::Bishop);
 
-    let mut data_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    data_path.push("data");
-
-    let rook_output_path = data_path.join("rook_magics.csv");
-    let bishop_output_path = data_path.join("bishop_magics.csv");
-
-    // output the magic numbers to a csv file
-    let mut rook_writer =
-        csv::Writer::from_path(rook_output_path).expect("Failed to open magics.csv");
-    let mut bishop_writer =
-        csv::Writer::from_path(bishop_output_path).expect("Failed to open magics.csv");
-
+    println!("\nBishop magic values:\n");
     for magic in magic_bishop_numbers {
-        bishop_writer
-            .serialize(magic)
-            .expect("Failed to write to csv");
+        println!("{},", magic.magic_value);
     }
 
+    println!("\nRook magic values:");
     for magic in magic_rook_numbers {
-        rook_writer
-            .serialize(magic)
-            .expect("Failed to write to csv");
+        println!("{},", magic.magic_value);
     }
 }
