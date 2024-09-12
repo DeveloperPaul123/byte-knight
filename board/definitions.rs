@@ -9,7 +9,7 @@
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
- * 
+ *
  */
 
 pub const SPACE: char = ' ';
@@ -18,6 +18,7 @@ pub const DASH: char = '-';
 pub const EM_DASH: char = '–';
 pub const SLASH: char = '/';
 
+pub const MAX_MOVE_LIST_SIZE: usize = 256;
 pub const MAX_MOVES: usize = 3072;
 // see the tests in move_generation.rs for how these numbers were calculated
 pub const ROOK_BLOCKER_PERMUTATIONS: usize = 102_400;

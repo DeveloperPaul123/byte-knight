@@ -33,8 +33,9 @@ impl Flags {
     pub const PROMOTE_TO_BISHOP: u8 = 0b0111;
 }
 
-/// Compact, 16-bit move representation
+/// Compact, 32-bit move representation
 /// Taken from https://github.com/SebLague/Chess-Challenge/blob/main/Chess-Challenge/src/Framework/Chess/Board/Move.cs
+/// Also inspired by Rustic's move representation: https://github.com/mvanthoor/rustic/blob/master/src/movegen/defs.rs
 #[derive(Debug, Clone, Copy)]
 pub struct Move {
     /// The move information, from LSB to MSB:

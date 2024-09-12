@@ -20,6 +20,13 @@ use crate::{
 };
 
 impl Board {
+    /// Make a move on the board and update the board state
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the move is illegal. The passed in moves are assumed to be pseudo-legal,
+    /// hence why the check has to be done after making the move. This function will make the move, check for legality
+    /// and then undo the move if it is illegal.
     pub fn make_move(&mut self, mv: &Move) -> Result<(), &'static str> {
         let mut current_state = self.board_state().clone();
         current_state.next_move = mv.clone();

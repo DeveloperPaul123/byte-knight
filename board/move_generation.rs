@@ -12,44 +12,21 @@
  *
  */
 
-use std::mem::offset_of;
-
-use serde::de::value;
-
 use crate::{
     bitboard::Bitboard,
+    bitboard_helpers,
+    board::Board,
     definitions::{
         File, NumberOf, Rank, Side, BISHOP_BLOCKER_PERMUTATIONS, ROOK_BLOCKER_PERMUTATIONS,
     },
-    magics::{self, MagicNumber, BISHOP_MAGIC_VALUES, ROOK_MAGIC_VALUES},
+    magics::{MagicNumber, BISHOP_MAGIC_VALUES, ROOK_MAGIC_VALUES},
+    move_list::MoveList,
     pieces::{Piece, SQUARE_NAME},
     square,
 };
 
 type FileBitboards = [Bitboard; NumberOf::FILES];
 type RankBitboards = [Bitboard; NumberOf::RANKS];
-
-const fn initialize_file_bitboards() -> FileBitboards {
-    let mut file_bitboards = [Bitboard::default(); NumberOf::FILES];
-    let mut i = 0;
-    let file_a_bb: u64 = 0x101010101010101;
-    while i < NumberOf::FILES {
-        file_bitboards[i] = Bitboard::new(file_a_bb << i as u64);
-        i += 1;
-    }
-    return file_bitboards;
-}
-
-const fn initialize_rank_bitboards() -> RankBitboards {
-    let mut rank_bitboards = [Bitboard::default(); NumberOf::RANKS];
-    let rank_1_bb = 0xFF;
-    let mut i = 0;
-    while i < NumberOf::RANKS {
-        rank_bitboards[i] = Bitboard::new(rank_1_bb << ((i * 8) as u64));
-        i += 1;
-    }
-    return rank_bitboards;
-}
 
 const FILE_BITBOARDS: FileBitboards = [
     Bitboard::new(72340172838076673),
@@ -153,26 +130,24 @@ fn initialize_pawn_attacks(
     square: usize,
     attacks: &mut [[Bitboard; NumberOf::SQUARES]; NumberOf::SIDES],
 ) {
-    for sq in 0..NumberOf::SQUARES {
-        let mut bb = Bitboard::default();
-        bb.set_square(sq);
+    let mut bb = Bitboard::default();
+    bb.set_square(square);
 
-        let mut attacks_w_bb = Bitboard::default();
-        let mut attacks_b_bb = Bitboard::default();
+    let mut attacks_w_bb = Bitboard::default();
+    let mut attacks_b_bb = Bitboard::default();
 
-        let not_a_file = !FILE_BITBOARDS[File::A as usize];
-        let not_h_file = !FILE_BITBOARDS[File::H as usize];
+    let not_a_file = !FILE_BITBOARDS[File::A as usize];
+    let not_h_file = !FILE_BITBOARDS[File::H as usize];
 
-        // white is NORTH_WEST and NORTH_EAST
-        attacks_w_bb |= (bb & not_a_file) << NORTH_WEST;
-        attacks_w_bb |= (bb & not_h_file) << NORTH_EAST;
+    // white is NORTH_WEST and NORTH_EAST
+    attacks_w_bb |= (bb & not_a_file) << NORTH_WEST;
+    attacks_w_bb |= (bb & not_h_file) << NORTH_EAST;
 
-        attacks_b_bb |= (bb & not_a_file) >> SOUTH_WEST;
-        attacks_b_bb |= (bb & not_h_file) >> SOUTH_EAST;
+    attacks_b_bb |= (bb & not_a_file) >> SOUTH_WEST;
+    attacks_b_bb |= (bb & not_h_file) >> SOUTH_EAST;
 
-        attacks[Side::White as usize][sq] = attacks_w_bb;
-        attacks[Side::Black as usize][sq] = attacks_b_bb;
-    }
+    attacks[Side::White as usize][square] = attacks_w_bb;
+    attacks[Side::Black as usize][square] = attacks_b_bb;
 }
 
 pub struct MoveGenerator {
@@ -498,7 +473,10 @@ mod tests {
             let rook_magic = move_gen.rook_magics[square];
             let bishop_magic = move_gen.bishop_magics[square];
             assert_eq!(rook_magic.magic_value, ROOK_MAGIC_VALUES[square as usize]);
-            assert_eq!(bishop_magic.magic_value, BISHOP_MAGIC_VALUES[square as usize]);
+            assert_eq!(
+                bishop_magic.magic_value,
+                BISHOP_MAGIC_VALUES[square as usize]
+            );
         }
     }
 
