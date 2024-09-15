@@ -4,31 +4,27 @@ use crate::{
 };
 
 pub struct MoveList {
-    index: usize,
+    size: usize,
     moves: [Move; MAX_MOVE_LIST_SIZE],
 }
 
 impl MoveList {
     pub fn new() -> Self {
         MoveList {
-            index: 0,
+            size: 0,
             moves: [Move::default(); MAX_MOVE_LIST_SIZE],
         }
     }
 
-    pub fn push(&mut self, mv: Move) {
-        if self.index >= MAX_MOVES {
-            panic!("MoveList is full");
-        }
-        self.moves[self.index] = mv;
-        self.index += 1;
+    pub fn len(&self) -> usize {
+        self.size
     }
 
-    pub fn pop(&mut self) -> Option<Move> {
-        if self.index == 0 {
-            return None;
+    pub fn push(&mut self, mv: Move) {
+        if self.size >= MAX_MOVES {
+            panic!("MoveList is full");
         }
-        self.index -= 1;
-        return Some(self.moves[self.index]);
+        self.moves[self.size] = mv;
+        self.size += 1;
     }
 }
