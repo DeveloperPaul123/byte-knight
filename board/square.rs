@@ -12,6 +12,19 @@
  *
  */
 
+use crate::definitions::{File, Rank};
+
+pub struct Square {
+    pub file: File,
+    pub rank: Rank,
+}
+
+impl Square {
+    pub fn new(file: File, rank: Rank) -> Self {
+        Self { file, rank }
+    }
+}
+
 /// Converts a file and rank tuple to a square
 ///
 /// # Arguments
@@ -24,6 +37,10 @@
 /// The square corresponding to the given file and rank
 pub const fn to_square(file: u8, rank: u8) -> u8 {
     rank * 8 + file
+}
+
+pub fn to_square_object(file: u8, rank: u8) -> Square {
+    Square::new(File::try_from(file).unwrap(), Rank::try_from(rank).unwrap())
 }
 
 /// Converts a square to a file and rank tuple

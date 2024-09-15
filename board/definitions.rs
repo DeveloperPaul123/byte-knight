@@ -47,6 +47,24 @@ pub enum File {
     H = 7,
 }
 
+impl TryFrom<u8> for File {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::A),
+            1 => Ok(Self::B),
+            2 => Ok(Self::C),
+            3 => Ok(Self::D),
+            4 => Ok(Self::E),
+            5 => Ok(Self::F),
+            6 => Ok(Self::G),
+            7 => Ok(Self::H),
+            _ => Err(()),
+        }
+    }
+}
+
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Rank {
@@ -60,9 +78,25 @@ pub enum Rank {
     R8 = 7,
 }
 
-pub const EMPTY: u64 = 0;
+impl TryFrom<u8> for Rank {
+    type Error = ();
 
-pub type Square = (File, Rank);
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::R1),
+            1 => Ok(Self::R2),
+            2 => Ok(Self::R3),
+            3 => Ok(Self::R4),
+            4 => Ok(Self::R5),
+            5 => Ok(Self::R6),
+            6 => Ok(Self::R7),
+            7 => Ok(Self::R8),
+            _ => Err(()),
+        }
+    }
+}
+
+pub const EMPTY: u64 = 0;
 
 #[repr(usize)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
