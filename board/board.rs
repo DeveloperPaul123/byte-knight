@@ -4,12 +4,12 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: 
+ * Last Modified:
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
- * 
+ *
  */
 
 use std::iter::zip;
@@ -203,22 +203,23 @@ impl Board {
         return all_pieces;
     }
 
-    /// Returns the white pieces of this [`Board`].
-    pub fn white_pieces(&self) -> Bitboard {
-        let mut white_pieces = Bitboard::default();
+    /// Returns all the pieces of a given side in a single [`Bitboard`].
+    pub fn pieces(&self, side: Side) -> Bitboard {
+        let mut pieces = Bitboard::default();
         for piece_type in 0..NumberOf::PIECE_TYPES {
-            white_pieces |= self.piece_bitboards[Side::White as usize][piece_type];
+            pieces |= self.piece_bitboards[side as usize][piece_type];
         }
-        return white_pieces;
+        return pieces;
     }
 
-    /// Returns the black pieces of this [`Board`].
+    /// Returns the white pieces of this [`Board`] in a single [`Bitboard`].
+    pub fn white_pieces(&self) -> Bitboard {
+        return self.pieces(Side::White);
+    }
+
+    /// Returns the black pieces of this [`Board`] in a single [`Bitboard`].
     pub fn black_pieces(&self) -> Bitboard {
-        let mut black_pieces = Bitboard::default();
-        for piece_type in 0..NumberOf::PIECE_TYPES {
-            black_pieces |= self.piece_bitboards[Side::Black as usize][piece_type];
-        }
-        return black_pieces;
+        return self.pieces(Side::Black);
     }
 
     /// Returns the bitboard for a specific piece and side.
@@ -342,7 +343,7 @@ impl Board {
 mod board_tests {
     use crate::{
         definitions::{File, Rank},
-        moves::Move,
+        moves::Move, square::Square,
     };
 
     use super::*;
@@ -360,8 +361,8 @@ mod board_tests {
         let mut board = Board::from_fen(FEN).unwrap();
         let hash = board.zobrist_hash();
         let chess_move = Move::new(
-            (File::F, Rank::R7),
-            (File::F, Rank::R5),
+            Square::new(File::F, Rank::R7),
+            Square::new(File::F, Rank::R5),
             0,
             Piece::Pawn,
             None,
