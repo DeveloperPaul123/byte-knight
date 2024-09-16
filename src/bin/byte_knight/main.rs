@@ -4,12 +4,12 @@
  * Created Date: Wednesday, August 14th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: 
+ * Last Modified:
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
- * 
+ *
  */
 
 mod base_engine;
@@ -147,10 +147,9 @@ fn run_uci(engine_name: &String) {
                         } else {
                             // Handle the case when best_move is None.
                             // Use the first legal move as a fallback
-                            MoveGen::new_legal(&board).next().map(|m| {
-                                writeln!(stdout, "{}", UciMessage::best_move(m))
-                                    .unwrap()
-                            });
+                            MoveGen::new_legal(&board)
+                                .next()
+                                .map(|m| writeln!(stdout, "{}", UciMessage::best_move(m)).unwrap());
                         }
                     }
                     UciMessage::Quit => {
@@ -192,10 +191,10 @@ impl FromStr for EngineType {
 
 impl ToString for EngineType {
     fn to_string(&self) -> String {
-        return match self {
+        match self {
             EngineType::EvilBot => "EvilBot".to_string(),
             EngineType::ByteKnight => "ByteKnight".to_string(),
-        };
+        }
     }
 }
 

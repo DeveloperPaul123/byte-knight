@@ -386,7 +386,6 @@ mod board_tests {
 
     #[test]
     fn make_move_updates_castling_rights() {
-        let mut board = Board::default_board();
         // TODO
     }
 

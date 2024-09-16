@@ -561,6 +561,7 @@ impl MoveGenerator {
 
     fn get_pawn_moves(&self, board: &Board, move_list: &mut MoveList, move_type: &MoveType) {
         // TODO
+        todo!("Implement get_pawn_moves");
     }
 
     fn enumerate_moves(
