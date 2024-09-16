@@ -27,4 +27,8 @@ impl MoveList {
         self.moves[self.size] = mv;
         self.size += 1;
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = &Move> {
+        self.moves.iter().take(self.size)
+    }
 }

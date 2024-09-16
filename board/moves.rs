@@ -12,7 +12,12 @@
  *
  */
 
-use crate::{pieces::Piece, square::to_square, square::Square};
+use std::fmt::Display;
+
+use crate::{
+    pieces::{Piece, SQUARE_NAME},
+    square::{to_square, Square},
+};
 const MOVE_INFO_CAPTURED_PIECE_SHIFT: u32 = 19;
 const MOVE_INFO_PIECE_SHIFT: u32 = 16;
 const MOVE_INFO_FROM_MASK: u32 = 0b1111110000000000;
@@ -36,6 +41,7 @@ impl Flags {
 pub enum MoveType {
     Quiet,
     Capture,
+    All,
 }
 
 /// Compact, 32-bit move representation
@@ -60,11 +66,25 @@ impl Default for Move {
     }
 }
 
+impl Display for Move {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Move: from: {}, to: {}, flags: {}, piece: {}, captured_piece: {}",
+            SQUARE_NAME[self.from() as usize],
+            SQUARE_NAME[self.to() as usize],
+            self.flags(),
+            self.piece(),
+            self.captured_piece().unwrap_or(Piece::None)
+        )
+    }
+}
+
 impl Move {
     /// Creates a new [`Move`].
     pub fn new(
-        from: Square,
-        to: Square,
+        from: &Square,
+        to: &Square,
         flags: u8,
         piece: Piece,
         captured_piece: Option<Piece>,
@@ -179,7 +199,7 @@ mod tests {
         {
             let from = Square::new(File::B, Rank::R1);
             let to = Square::new(File::C, Rank::R2);
-            let m = Move::new(from, to, Flags::NONE, Piece::Pawn, None);
+            let m = Move::new(&from, &to, Flags::NONE, Piece::Pawn, None);
             assert_eq!(m.from(), 1);
             assert_eq!(m.to(), 10);
             assert!(!m.is_promotion());
@@ -189,7 +209,7 @@ mod tests {
         {
             let from = Square::new(File::H, Rank::R8);
             let to = Square::new(File::A, Rank::R8);
-            let m = Move::new(from, to, Flags::NONE, Piece::Queen, Some(Piece::Rook));
+            let m = Move::new(&from, &to, Flags::NONE, Piece::Queen, Some(Piece::Rook));
             assert_eq!(m.from(), 63);
             assert_eq!(m.to(), 56);
             assert!(!m.is_promotion());
@@ -200,8 +220,8 @@ mod tests {
             let from = Square::new(File::A, Rank::R2);
             let to = Square::new(File::A, Rank::R4);
             let m = Move::new(
-                from,
-                to,
+                &from,
+                &to,
                 Flags::EN_PASSANT_CAPTURE | Flags::PAWN_TWO_UP | Flags::CASTLE,
                 Piece::Bishop,
                 Some(Piece::Rook),
@@ -217,7 +237,7 @@ mod tests {
         {
             let from = Square::new(File::A, Rank::R7);
             let to = Square::new(File::A, Rank::R8);
-            let m = Move::new(from, to, Flags::PROMOTE_TO_QUEEN, Piece::Pawn, None);
+            let m = Move::new(&from, &to, Flags::PROMOTE_TO_QUEEN, Piece::Pawn, None);
             assert_eq!(m.from(), 48);
             assert_eq!(m.to(), 56);
             assert!(m.is_promote_to_queen());
@@ -229,7 +249,7 @@ mod tests {
         {
             let from = Square::new(File::A, Rank::R7);
             let to = Square::new(File::A, Rank::R8);
-            let m = Move::new(from, to, Flags::PROMOTE_TO_KNIGHT, Piece::Pawn, None);
+            let m = Move::new(&from, &to, Flags::PROMOTE_TO_KNIGHT, Piece::Pawn, None);
             assert_eq!(m.from(), 48);
             assert_eq!(m.to(), 56);
             assert!(m.is_promote_to_knight());
@@ -241,7 +261,7 @@ mod tests {
         {
             let from = Square::new(File::A, Rank::R7);
             let to = Square::new(File::A, Rank::R8);
-            let m = Move::new(from, to, Flags::PROMOTE_TO_ROOK, Piece::Pawn, None);
+            let m = Move::new(&from, &to, Flags::PROMOTE_TO_ROOK, Piece::Pawn, None);
             assert_eq!(m.from(), 48);
             assert_eq!(m.to(), 56);
             assert!(m.is_promote_to_rook());
@@ -253,7 +273,7 @@ mod tests {
         {
             let from = Square::new(File::A, Rank::R7);
             let to = Square::new(File::A, Rank::R8);
-            let m = Move::new(from, to, Flags::PROMOTE_TO_BISHOP, Piece::Pawn, None);
+            let m = Move::new(&from, &to, Flags::PROMOTE_TO_BISHOP, Piece::Pawn, None);
             assert_eq!(m.from(), 48);
             assert_eq!(m.to(), 56);
             assert!(m.is_promote_to_bishop());

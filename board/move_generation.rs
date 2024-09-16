@@ -21,8 +21,9 @@ use crate::{
     },
     magics::{MagicNumber, BISHOP_MAGIC_VALUES, ROOK_MAGIC_VALUES},
     move_list::MoveList,
+    moves::{Flags, Move, MoveType},
     pieces::{Piece, SQUARE_NAME},
-    square,
+    square::{self, Square},
 };
 
 type FileBitboards = [Bitboard; NumberOf::FILES];
@@ -457,26 +458,178 @@ impl MoveGenerator {
         return bishop_rays_bb & !edges;
     }
 
-    pub fn generate_moves(board: &Board, move_list: &MoveList) {
-        // TODO:
-        // 1. Generate pawn moves
-        // 2. Generate knight moves
-        // 3. Generate bishop moves
-        // 4. Generate rook moves
-        // 5. Generate queen moves
-        // 6. Generate king moves
-        // 7. Generate castling moves
-        // 8. Generate en passant moves
-        // 9. Generate promotion moves
+    pub fn generate_moves(&self, board: &Board, move_list: &mut MoveList, move_type: &MoveType) {
+        for piece in [
+            Piece::King,
+            Piece::Knight,
+            Piece::Rook,
+            Piece::Bishop,
+            Piece::Queen,
+        ] {
+            self.get_piece_moves(piece, board, move_list, move_type);
+        }
+        self.get_pawn_moves(board, move_list, move_type);
+        // TODO: castling
+    }
 
+    fn get_piece_moves(
+        &self,
+        piece: Piece,
+        board: &Board,
+        move_list: &mut MoveList,
+        move_type: &MoveType,
+    ) {
         let us = board.side_to_move();
         let them = Side::opposite(us);
+        let our_pieces = board.pieces(us);
+        let their_pieces = board.pieces(them);
+        let occupancy = board.all_pieces();
+        let empty = !occupancy;
 
-        // where are we?
-        let mut pawns = board.piece_bitboard(Piece::Pawn, us).clone();
-        let square = bitboard_helpers::next_bit(&mut pawns);
-        while square != 0 {
-            // TODO
+        println!("us {}\nthem {}", our_pieces, their_pieces);
+
+        let mut piece_bb = *board.piece_bitboard(piece, us);
+        while piece_bb.as_number() > 0 {
+            println!("bb for {:?}\n{}", piece, piece_bb);
+            let from_square = bitboard_helpers::next_bit(&mut piece_bb) as u8;
+            let attack_bb = match piece {
+                Piece::King | Piece::Knight => self.get_non_slider_moves(piece, from_square),
+                Piece::Rook | Piece::Bishop | Piece::Queen => {
+                    self.get_slider_moves(piece, from_square, &occupancy)
+                }
+                _ => panic!("Piece must be non-slider and not pawn"),
+            };
+
+            println!("attack_bb\n{}", attack_bb);
+
+            let bb_moves = match move_type {
+                MoveType::Capture => attack_bb & their_pieces,
+                MoveType::Quiet => attack_bb & empty,
+                MoveType::All => attack_bb & !our_pieces,
+            };
+
+            println!("bb_moves\n{}", bb_moves);
+
+            self.enumerate_moves(
+                &bb_moves,
+                &Square::from_square_index(from_square),
+                piece,
+                board,
+                move_list,
+            );
+        }
+    }
+
+    fn get_non_slider_moves(&self, piece: Piece, from_square: u8) -> Bitboard {
+        assert!(
+            piece == Piece::King || piece == Piece::Knight,
+            "Piece must be non-slider and not pawn"
+        );
+
+        let attack_table = match piece {
+            Piece::King => self.king_attacks,
+            Piece::Knight => self.knight_attacks,
+            _ => panic!("Piece must be non-slider and not pawn"),
+        };
+
+        attack_table[from_square as usize]
+    }
+
+    fn get_slider_moves(&self, piece: Piece, from_square: u8, occupancy: &Bitboard) -> Bitboard {
+        assert!(
+            piece == Piece::Rook || piece == Piece::Bishop || piece == Piece::Queen,
+            "Piece must be a slider"
+        );
+
+        match piece {
+            Piece::Rook => {
+                let index = self.rook_magics[from_square as usize].index(*occupancy);
+                self.rook_attacks[index]
+            }
+            Piece::Bishop => {
+                let index = self.bishop_magics[from_square as usize].index(*occupancy);
+                self.bishop_attacks[index]
+            }
+            Piece::Queen => {
+                let rook_index = self.rook_magics[from_square as usize].index(*occupancy);
+                let bishop_index = self.bishop_magics[from_square as usize].index(*occupancy);
+                self.rook_attacks[rook_index] ^ self.bishop_attacks[bishop_index]
+            }
+            _ => panic!("Piece must be a slider"),
+        }
+    }
+
+    fn get_pawn_moves(&self, board: &Board, move_list: &mut MoveList, move_type: &MoveType) {
+        // TODO
+    }
+
+    fn enumerate_moves(
+        &self,
+        bitboard: &Bitboard,
+        from: &Square,
+        piece: Piece,
+        board: &Board,
+        move_list: &mut MoveList,
+    ) {
+        let mut bb = *bitboard;
+        let us = board.side_to_move();
+        let them = Side::opposite(us);
+        let enemy_pieces = board.pieces(them);
+        let promotion_rank = Rank::promotion_rank(us);
+        while bb > 0 {
+            let to_square = bitboard_helpers::next_bit(&mut bb) as u8;
+            let (file, rank) = square::from_square(to_square as u8);
+
+            let en_passant = match board.board_state().en_passant_square {
+                Some(en_passant_square) => en_passant_square == to_square && piece == Piece::Pawn,
+                None => false,
+            };
+
+            let is_capture = enemy_pieces.is_square_occupied(to_square as usize) || en_passant;
+            // 2 rows = 16 squares
+            let is_double_move = piece == Piece::Pawn
+                && (to_square as i8 - from.to_square_index() as i8).abs() == 16;
+            let is_promotion =
+                piece == Piece::Pawn && Board::is_square_on_rank(to_square, promotion_rank as u8);
+
+            let mut flags = Flags::NONE;
+
+            if is_double_move {
+                flags |= Flags::PAWN_TWO_UP;
+            }
+
+            if en_passant {
+                flags |= Flags::EN_PASSANT_CAPTURE;
+            }
+
+            let capture_piece = if is_capture {
+                Some(board.piece_on_square(to_square as usize).unwrap().0)
+            } else {
+                None
+            };
+
+            let to_square = square::to_square_object(file, rank);
+            if is_promotion {
+                // we have to add 4 moves for each promotion type
+                for promotion_flag in [
+                    Flags::PROMOTE_TO_BISHOP,
+                    Flags::PROMOTE_TO_KNIGHT,
+                    Flags::PROMOTE_TO_QUEEN,
+                    Flags::PROMOTE_TO_ROOK,
+                ] {
+                    let mv = Move::new(
+                        &from,
+                        &to_square,
+                        flags | promotion_flag,
+                        piece,
+                        capture_piece,
+                    );
+                    move_list.push(mv);
+                }
+            } else {
+                let mv = Move::new(&from, &to_square, flags, piece, capture_piece);
+                move_list.push(mv);
+            }
         }
     }
 }
@@ -1022,5 +1175,19 @@ mod tests {
                 assert_eq!(attack & !bishop_bb, 0);
             }
         }
+    }
+
+    #[test]
+    fn check_basic_move_gen() {
+        let board = Board::default_board();
+        let mut move_list = MoveList::new();
+        let move_gen = MoveGenerator::new();
+        move_gen.generate_moves(&board, &mut move_list, &MoveType::All);
+
+        for mv in move_list.iter() {
+            println!("{}", mv);
+        }
+
+        assert_eq!(move_list.len(), 20);
     }
 }

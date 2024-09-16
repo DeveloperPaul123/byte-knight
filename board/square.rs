@@ -23,6 +23,16 @@ impl Square {
     pub fn new(file: File, rank: Rank) -> Self {
         Self { file, rank }
     }
+    pub fn to_square_index(&self) -> u8 {
+        to_square(self.file as u8, self.rank as u8)
+    }
+    pub fn from_square_index(square: u8) -> Self {
+        let (file, rank) = from_square(square);
+        Self {
+            file: File::try_from(file).unwrap(),
+            rank: Rank::try_from(rank).unwrap(),
+        }
+    }
 }
 
 /// Converts a file and rank tuple to a square

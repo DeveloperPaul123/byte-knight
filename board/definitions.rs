@@ -78,6 +78,16 @@ pub enum Rank {
     R8 = 7,
 }
 
+impl Rank {
+    pub fn promotion_rank(side: Side) -> Rank {
+        match side {
+            Side::White => Rank::R8,
+            Side::Black => Rank::R1,
+            _ => Rank::R1,
+        }
+    }
+}
+
 impl TryFrom<u8> for Rank {
     type Error = ();
 

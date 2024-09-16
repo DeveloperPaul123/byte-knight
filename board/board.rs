@@ -14,12 +14,12 @@
 
 use std::iter::zip;
 
-use crate::bitboard_helpers;
 use crate::board_state::BoardState;
 use crate::definitions::{CastlingAvailability, SPACE};
 use crate::fen::FenError;
 use crate::move_history::BoardHistory;
 use crate::zobrist::{ZobristHash, ZobristRandomValues};
+use crate::{bitboard_helpers, square};
 
 use super::definitions::{NumberOf, Side};
 use super::fen;
@@ -337,13 +337,19 @@ impl Board {
     pub(crate) fn set_board_state(&mut self, state: BoardState) {
         self.state = state;
     }
+
+    pub fn is_square_on_rank(square: u8, rank: u8) -> bool {
+        let (_, rnk) = square::from_square(square);
+        return rnk == rank;
+    }
 }
 
 #[cfg(test)]
 mod board_tests {
     use crate::{
-        definitions::{File, Rank},
-        moves::Move, square::Square,
+        definitions::{File, Rank, Squares},
+        moves::Move,
+        square::Square,
     };
 
     use super::*;
@@ -361,8 +367,8 @@ mod board_tests {
         let mut board = Board::from_fen(FEN).unwrap();
         let hash = board.zobrist_hash();
         let chess_move = Move::new(
-            Square::new(File::F, Rank::R7),
-            Square::new(File::F, Rank::R5),
+            &Square::new(File::F, Rank::R7),
+            &Square::new(File::F, Rank::R5),
             0,
             Piece::Pawn,
             None,
@@ -382,5 +388,12 @@ mod board_tests {
     fn make_move_updates_castling_rights() {
         let mut board = Board::default_board();
         // TODO
+    }
+
+    #[test]
+    fn check_square_on_rank() {
+        assert!(Board::is_square_on_rank(Squares::A1, Rank::R1 as u8));
+        assert!(!Board::is_square_on_rank(Squares::A1, Rank::R2 as u8));
+        assert!(Board::is_square_on_rank(Squares::C5, Rank::R5 as u8));
     }
 }
