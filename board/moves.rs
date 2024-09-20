@@ -38,6 +38,7 @@ impl Flags {
     pub const PROMOTE_TO_BISHOP: u8 = 0b0111;
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MoveType {
     Quiet,
     Capture,
