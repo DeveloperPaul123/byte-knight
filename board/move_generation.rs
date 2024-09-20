@@ -486,11 +486,9 @@ impl MoveGenerator {
         let occupancy = board.all_pieces();
         let empty = !occupancy;
 
-        println!("us {}\nthem {}", our_pieces, their_pieces);
-
         let mut piece_bb = *board.piece_bitboard(piece, us);
+        // loop through all the pieces of the given type
         while piece_bb.as_number() > 0 {
-            println!("bb for {:?}\n{}", piece, piece_bb);
             let from_square = bitboard_helpers::next_bit(&mut piece_bb) as u8;
             let attack_bb = match piece {
                 Piece::King | Piece::Knight => self.get_non_slider_moves(piece, from_square),
@@ -500,15 +498,11 @@ impl MoveGenerator {
                 _ => panic!("Piece must be non-slider and not pawn"),
             };
 
-            println!("attack_bb\n{}", attack_bb);
-
             let bb_moves = match move_type {
                 MoveType::Capture => attack_bb & their_pieces,
                 MoveType::Quiet => attack_bb & empty,
                 MoveType::All => attack_bb & !our_pieces,
             };
-
-            println!("bb_moves\n{}", bb_moves);
 
             self.enumerate_moves(
                 &bb_moves,
@@ -560,8 +554,58 @@ impl MoveGenerator {
     }
 
     fn get_pawn_moves(&self, board: &Board, move_list: &mut MoveList, move_type: &MoveType) {
-        // TODO
-        todo!("Implement get_pawn_moves");
+        let us = board.side_to_move();
+        let them = Side::opposite(us);
+        let their_pieces = board.pieces(them);
+        let occupancy = board.all_pieces();
+        let empty = !occupancy;
+        let direction = if us == Side::White { NORTH } else { SOUTH };
+        let pawns_bb = board.piece_bitboard(Piece::Pawn, us);
+
+        let mut bb = *pawns_bb;
+
+        // loop through all the pawns for us
+        while bb > 0 {
+            let from_square = bitboard_helpers::next_bit(&mut bb) as u8;
+            let attack_bb = self.pawn_attacks[us as usize][from_square as usize];
+
+            let mut bb_moves = Bitboard::default();
+            let to_square = from_square as u64 + direction;
+            let double_push_square = match us {
+                Side::White => to_square + direction,
+                Side::Black => to_square - direction,
+                Side::Both => panic!("Both side not allowed"),
+            };
+
+            // pawn non-capture moves
+            if *move_type == MoveType::All || *move_type == MoveType::Quiet {
+                let bb_push = Bitboard::new(1u64 << to_square);
+                println!("push: \n{}", bb_push);
+                let bb_single_push = bb_push & empty;
+                let bb_double_push = Bitboard::new(1u64 << double_push_square) & empty;
+                bb_moves |= bb_single_push | bb_double_push;
+            }
+
+            // pawn captures
+            if move_type == &MoveType::All || move_type == &MoveType::Capture {
+                let bb_capture = attack_bb & their_pieces;
+                // en passant
+                let bb_en_passant = match board.en_passant_square() {
+                    Some(en_passant_square) => Bitboard::new(en_passant_square as u64),
+                    None => Bitboard::default(),
+                };
+
+                bb_moves |= bb_capture | bb_en_passant;
+            }
+
+            self.enumerate_moves(
+                &bb_moves,
+                &Square::from_square_index(from_square),
+                Piece::Pawn,
+                board,
+                move_list,
+            );
+        }
     }
 
     fn enumerate_moves(
