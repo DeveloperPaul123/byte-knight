@@ -469,7 +469,35 @@ impl MoveGenerator {
             self.get_piece_moves(piece, board, move_list, move_type);
         }
         self.get_pawn_moves(board, move_list, move_type);
-        // TODO: castling
+        // TODO: handle castling moves
+        self.get_castling_moves(board, move_list);
+    }
+
+    fn get_castling_moves(&self, board: &Board, move_list: &MoveList) {
+        // TODO
+        // for castling, the king and rook must not have moved
+        // the squares between the king and rook must be empty
+        // the squares the king moves through must not be under attack
+        // the king must not be in check
+        // the king must not move through check
+        // the king must not end up in check
+
+        // white king side castling
+        if board.can_castle_kingside(Side::White) {
+            let king_from = Square::from_square_index(4); // e1
+            let king_to = Square::from_square_index(6); // g1
+            let rook_from = Square::from_square_index(7); // h1
+            let rook_to = Square::from_square_index(5); // f1
+
+            if !board.is_square_attacked(king_from, Side::Black)
+                && !board.is_square_attacked(Square::from_square_index(5), Side::Black)
+                && !board.is_square_attacked(king_to, Side::Black)
+                && board.is_square_empty(Square::from_square_index(5))
+                && board.is_square_empty(king_to)
+            {
+                move_list.push(Move::new_castle(&king_from, &king_to, &rook_from, &rook_to));
+            }
+        }
     }
 
     fn get_piece_moves(
