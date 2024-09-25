@@ -489,9 +489,9 @@ impl MoveGenerator {
             let rook_from = Square::from_square_index(7); // h1
             let rook_to = Square::from_square_index(5); // f1
 
-            if !board.is_square_attacked(king_from, Side::Black)
-                && !board.is_square_attacked(Square::from_square_index(5), Side::Black)
-                && !board.is_square_attacked(king_to, Side::Black)
+            if !self.is_square_attacked(board, king_from, Side::Black)
+                && !self.is_square_attacked(board, Square::from_square_index(5), Side::Black)
+                && !self.is_square_attacked(board, king_to, Side::Black)
                 && board.is_square_empty(Square::from_square_index(5))
                 && board.is_square_empty(king_to)
             {
@@ -704,6 +704,46 @@ impl MoveGenerator {
                 move_list.push(mv);
             }
         }
+    }
+
+    /// Returns true if the given square is attacked by any piece that is on the attacking_side.
+    /// This method uses the so called "super-piece" method.
+    /// See: https://talkchess.com/viewtopic.php?t=27152
+    ///
+    /// The gist is that we treat the attacking square as the from square and we project the attacks to the same sides pieces.
+    /// If there are any collisions, then we know that a piece is attacking that square.
+    ///
+    /// # Arguments
+    /// - board: the current board state
+    /// - square: the square to check if it is attacked
+    /// - attacking_side: the side that is potentially attacking the square
+    ///
+    /// # Returns
+    /// - true if the square is attacked, false otherwise
+    pub fn is_square_attacked(&self, board: &Board, square: Square, attacking_side: Side) -> bool {
+        let king_bb = board.piece_bitboard(Piece::King, attacking_side);
+        let knight_bb = board.piece_bitboard(Piece::Knight, attacking_side);
+        let bishop_bb = board.piece_bitboard(Piece::Bishop, attacking_side);
+        let rook_bb = board.piece_bitboard(Piece::Rook, attacking_side);
+        let queen_bb = board.piece_bitboard(Piece::Queen, attacking_side);
+        let pawn_bb = board.piece_bitboard(Piece::Pawn, attacking_side);
+
+        let occupancy = board.all_pieces();
+        let king_attacks = self.get_non_slider_moves(Piece::King, square.to_square_index());
+        let knight_attacks = self.get_non_slider_moves(Piece::Knight, square.to_square_index());
+        let rook_attacks = self.get_slider_moves(Piece::Rook, square.to_square_index(), &occupancy);
+        let bishop_attacks =
+            self.get_slider_moves(Piece::Bishop, square.to_square_index(), &occupancy);
+        let queen_attacks = rook_attacks | bishop_attacks;
+        let pawn_attacks =
+            self.pawn_attacks[attacking_side as usize][square.to_square_index() as usize];
+
+        return (king_attacks & *king_bb) > 0
+            || (knight_attacks & *knight_bb) > 0
+            || (rook_attacks & *rook_bb) > 0
+            || (bishop_attacks & *bishop_bb) > 0
+            || (queen_attacks & *queen_bb) > 0
+            || (pawn_attacks & *pawn_bb) > 0;
     }
 }
 
