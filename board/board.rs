@@ -18,6 +18,7 @@ use crate::board_state::BoardState;
 use crate::definitions::{CastlingAvailability, SPACE};
 use crate::fen::FenError;
 use crate::move_history::BoardHistory;
+use crate::square::Square;
 use crate::zobrist::{ZobristHash, ZobristRandomValues};
 use crate::{bitboard_helpers, square};
 
@@ -341,6 +342,12 @@ impl Board {
     pub fn is_square_on_rank(square: u8, rank: u8) -> bool {
         let (_, rnk) = square::from_square(square);
         return rnk == rank;
+    }
+
+    pub fn is_square_empty(&self, square: Square) -> bool {
+        return self
+            .all_pieces()
+            .is_square_occupied(square.to_square_index() as usize);
     }
 }
 
