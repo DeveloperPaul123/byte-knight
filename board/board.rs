@@ -344,7 +344,7 @@ impl Board {
         return rnk == rank;
     }
 
-    pub fn is_square_empty(&self, square: Square) -> bool {
+    pub fn is_square_empty(&self, square: &Square) -> bool {
         return self
             .all_pieces()
             .is_square_occupied(square.to_square_index() as usize);
