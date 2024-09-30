@@ -488,9 +488,18 @@ impl MoveGenerator {
             let king_to = Square::from_square_index(Squares::G1); // g1
 
             if !self.is_square_attacked(board, &king_from, Side::Black)
-                && !self.is_square_attacked(board, &Square::from_square_index(5), Side::Black)
+                && !self.is_square_attacked(
+                    board,
+                    &Square::from_square_index(Squares::F1),
+                    Side::Black,
+                )
+                && !self.is_square_attacked(
+                    board,
+                    &Square::from_square_index(Squares::G1),
+                    Side::Black,
+                )
                 && !self.is_square_attacked(board, &king_to, Side::Black)
-                && board.is_square_empty(&Square::from_square_index(5))
+                && board.is_square_empty(&Square::from_square_index(Squares::F1))
                 && board.is_square_empty(&king_to)
             {
                 move_list.push(Move::new_castle(&king_from, &king_to));
