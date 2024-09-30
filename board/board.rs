@@ -349,6 +349,24 @@ impl Board {
             .all_pieces()
             .is_square_occupied(square.to_square_index() as usize);
     }
+
+    pub fn can_castle_kingside(&self, side: Side) -> bool {
+        let castling_rights = self.castling_rights();
+        return match side {
+            Side::White => castling_rights & CastlingAvailability::WHITE_KINGSIDE != 0,
+            Side::Black => castling_rights & CastlingAvailability::BLACK_KINGSIDE != 0,
+            Side::Both => panic!("Cannot check if both sides can castle kingside"),
+        };
+    }
+
+    pub fn can_castle_queenside(&self, side: Side) -> bool {
+        let castling_rights = self.castling_rights();
+        return match side {
+            Side::White => castling_rights & CastlingAvailability::WHITE_QUEENSIDE != 0,
+            Side::Black => castling_rights & CastlingAvailability::BLACK_QUEENSIDE != 0,
+            Side::Both => panic!("Cannot check if both sides can castle queenside"),
+        };
+    }
 }
 
 #[cfg(test)]
