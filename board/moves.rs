@@ -102,6 +102,19 @@ impl Move {
         Self { move_info }
     }
 
+    pub fn new_castle(king_from: &Square, king_to: &Square) -> Self {
+        let king_from_index = to_square(king_from.file as u8, king_from.rank as u8) as u32;
+        let king_to_index = to_square(king_to.file as u8, king_to.rank as u8) as u32;
+
+        let move_info = (Piece::None as u32) << MOVE_INFO_CAPTURED_PIECE_SHIFT
+            | (Piece::King as u32) << MOVE_INFO_PIECE_SHIFT
+            | (king_from_index << MOVE_INFO_FROM_SHIFT)
+            | (king_to_index << MOVE_INFO_TO_SHIFT)
+            | Flags::CASTLE as u32;
+
+        return Self { move_info };
+    }
+
     /// Returns the from [`Square`] of the move.
     pub fn from(&self) -> u8 {
         return ((self.move_info & MOVE_INFO_FROM_MASK) >> MOVE_INFO_FROM_SHIFT) as u8;

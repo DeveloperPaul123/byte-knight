@@ -17,7 +17,7 @@ use crate::{
     bitboard_helpers,
     board::Board,
     definitions::{
-        File, NumberOf, Rank, Side, BISHOP_BLOCKER_PERMUTATIONS, ROOK_BLOCKER_PERMUTATIONS,
+        File, NumberOf, Rank, Side, Squares, BISHOP_BLOCKER_PERMUTATIONS, ROOK_BLOCKER_PERMUTATIONS,
     },
     magics::{MagicNumber, BISHOP_MAGIC_VALUES, ROOK_MAGIC_VALUES},
     move_list::MoveList,
@@ -473,7 +473,7 @@ impl MoveGenerator {
         self.get_castling_moves(board, move_list);
     }
 
-    fn get_castling_moves(&self, board: &Board, move_list: &MoveList) {
+    fn get_castling_moves(&self, board: &Board, move_list: &mut MoveList) {
         // TODO
         // for castling, the king and rook must not have moved
         // the squares between the king and rook must be empty
@@ -484,18 +484,16 @@ impl MoveGenerator {
 
         // white king side castling
         if board.can_castle_kingside(Side::White) {
-            let king_from = Square::from_square_index(4); // e1
-            let king_to = Square::from_square_index(6); // g1
-            let rook_from = Square::from_square_index(7); // h1
-            let rook_to = Square::from_square_index(5); // f1
+            let king_from = Square::from_square_index(Squares::E1); // e1
+            let king_to = Square::from_square_index(Squares::G1); // g1
 
-            if !self.is_square_attacked(board, king_from, Side::Black)
-                && !self.is_square_attacked(board, Square::from_square_index(5), Side::Black)
-                && !self.is_square_attacked(board, king_to, Side::Black)
-                && board.is_square_empty(Square::from_square_index(5))
-                && board.is_square_empty(king_to)
+            if !self.is_square_attacked(board, &king_from, Side::Black)
+                && !self.is_square_attacked(board, &Square::from_square_index(5), Side::Black)
+                && !self.is_square_attacked(board, &king_to, Side::Black)
+                && board.is_square_empty(&Square::from_square_index(5))
+                && board.is_square_empty(&king_to)
             {
-                move_list.push(Move::new_castle(&king_from, &king_to, &rook_from, &rook_to));
+                move_list.push(Move::new_castle(&king_from, &king_to));
             }
         }
     }
@@ -720,7 +718,7 @@ impl MoveGenerator {
     ///
     /// # Returns
     /// - true if the square is attacked, false otherwise
-    pub fn is_square_attacked(&self, board: &Board, square: Square, attacking_side: Side) -> bool {
+    pub fn is_square_attacked(&self, board: &Board, square: &Square, attacking_side: Side) -> bool {
         let king_bb = board.piece_bitboard(Piece::King, attacking_side);
         let knight_bb = board.piece_bitboard(Piece::Knight, attacking_side);
         let bishop_bb = board.piece_bitboard(Piece::Bishop, attacking_side);
