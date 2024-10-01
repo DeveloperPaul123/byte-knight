@@ -345,7 +345,7 @@ impl Board {
     }
 
     pub fn is_square_empty(&self, square: &Square) -> bool {
-        return self
+        return !self
             .all_pieces()
             .is_square_occupied(square.to_square_index() as usize);
     }
@@ -419,5 +419,17 @@ mod board_tests {
         assert!(Board::is_square_on_rank(Squares::A1, Rank::R1 as u8));
         assert!(!Board::is_square_on_rank(Squares::A1, Rank::R2 as u8));
         assert!(Board::is_square_on_rank(Squares::C5, Rank::R5 as u8));
+    }
+
+    #[test]
+    fn check_square_is_empty() {
+        let board = Board::default_board();
+        // all of these squares should be empty.
+        for rank in (Rank::R3 as u8)..=(Rank::R6 as u8) {
+            for file in (File::A as u8)..=(File::H as u8) {
+                let square = square::to_square_object(file, rank);
+                assert!(board.is_square_empty(&square));
+            }
+        }
     }
 }
