@@ -201,6 +201,10 @@ impl Bitboard {
         Bitboard { data: 0 }
     }
 
+    pub const fn from_square(square: u8) -> Self {
+        Bitboard { data: 1 << square }
+    }
+
     /// Check if a square is occupied.
     pub fn is_square_occupied(&self, square: usize) -> bool {
         self.data & (1 << square) != 0
@@ -246,6 +250,8 @@ impl Display for Bitboard {
 
 #[cfg(test)]
 mod tests {
+    use crate::definitions::Squares;
+
     use super::*;
 
     #[test]
@@ -300,5 +306,18 @@ mod tests {
 
         // NOT
         assert_eq!((!bb1), 0x0F0F0F0F0F0F0F0F);
+    }
+
+    #[test]
+    fn from_square() {
+        let bb_a8 = Bitboard::from_square(Squares::A8);
+        let bb_g8 = Bitboard::from_square(Squares::G8);
+        let bb_h8 = Bitboard::from_square(Squares::H8);
+        let bb = Bitboard::from_square(Squares::D5);
+        
+        assert_eq!(bb_a8.data, 72057594037927936);
+        assert_eq!(bb_g8.data, 4611686018427387904);
+        assert_eq!(bb_h8.data, 9223372036854775808);
+        assert_eq!(bb.data, 34359738368);
     }
 }

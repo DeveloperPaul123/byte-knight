@@ -4,13 +4,15 @@
  * Created Date: Wednesday, August 28th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Sun Sep 01 2024
+ * Last Modified: Wed Oct 02 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
  *
  */
+
+use rand_chacha::rand_core::block;
 
 use crate::{
     bitboard::Bitboard,
@@ -458,7 +460,15 @@ impl MoveGenerator {
         return bishop_rays_bb & !edges;
     }
 
+    /// Generates pseudo-legal moves for the current board state.
+    /// This function does not check for legality of the moves.
+    /// 
+    /// # Arguments
+    /// - board - The current board state
+    /// - move_list - The list of moves to append to.
+    /// - move_type - The type of moves to generate
     pub fn generate_moves(&self, board: &Board, move_list: &mut MoveList, move_type: &MoveType) {
+        // get moves for each piece except pawns
         for piece in [
             Piece::King,
             Piece::Knight,
@@ -468,39 +478,111 @@ impl MoveGenerator {
         ] {
             self.get_piece_moves(piece, board, move_list, move_type);
         }
+        // handle pawn moves separately
         self.get_pawn_moves(board, move_list, move_type);
-        // TODO: handle castling moves
+        // handle castling moves
         self.get_castling_moves(board, move_list);
     }
 
     fn get_castling_moves(&self, board: &Board, move_list: &mut MoveList) {
-        // TODO
-        // for castling, the king and rook must not have moved
-        // the squares between the king and rook must be empty
-        // the squares the king moves through must not be under attack
-        // the king must not be in check
-        // the king must not move through check
-        // the king must not end up in check
+        /*
+         * For castling, the king and rook must not have moved.
+         * The squares between the king and rook must be empty.
+         * The squares the king moves through must not be under attack (including start and end).
+         * The king must not be in check.
+         * The king must not move through check.
+         * The king must not end up in check.
+         *
+         * FIDE Laws of Chess:
+         * 3.8.2.1 The right to castle has been lost:
+         *     3.8.2.1.1 if the king has already moved, or
+         *     3.8.2.1.2 with a rook that has already moved.
+         *
+         * 3.8.2.2 Castling is prevented temporarily:
+         *     3.8.2.2.1 if the square on which the king stands, or the square which it must cross, or the square which it is to occupy, is attacked by one or more of the opponent's pieces, or
+         *     3.8.2.2.2 if there is any piece between the king and the rook with which castling is to be effected.
+         */
+
+        let occupancy = board.all_pieces();
 
         // white king side castling
         if board.can_castle_kingside(Side::White) {
             let king_from = Square::from_square_index(Squares::E1); // e1
             let king_to = Square::from_square_index(Squares::G1); // g1
+            let blockers = Bitboard::from_square(Squares::F1) | Bitboard::from_square(Squares::G1);
+            let king_ray = [Squares::E1, Squares::F1, Squares::G1];
 
-            if !self.is_square_attacked(board, &king_from, Side::Black)
-                && !self.is_square_attacked(
-                    board,
-                    &Square::from_square_index(Squares::F1),
-                    Side::Black,
-                )
-                && !self.is_square_attacked(
-                    board,
-                    &Square::from_square_index(Squares::G1),
-                    Side::Black,
-                )
+            let is_blocked = (blockers & occupancy) > 0;
+            let are_any_attacked = king_ray.iter().any(|&square| {
+                self.is_square_attacked(board, &Square::from_square_index(square), Side::Black)
+            });
+
+            if !is_blocked
+                && !are_any_attacked
+                && !self.is_square_attacked(board, &king_from, Side::Black)
                 && !self.is_square_attacked(board, &king_to, Side::Black)
-                && board.is_square_empty(&Square::from_square_index(Squares::F1))
-                && board.is_square_empty(&king_to)
+            {
+                move_list.push(Move::new_castle(&king_from, &king_to));
+            }
+        }
+
+        if board.can_castle_queenside(Side::White) {
+            let king_from = Square::from_square_index(Squares::E1);
+            let king_to = Square::from_square_index(Squares::C1);
+            let blockers = Bitboard::from_square(Squares::D1)
+                | Bitboard::from_square(Squares::C1)
+                | Bitboard::from_square(Squares::B1);
+            let king_ray = [Squares::E1, Squares::D1, Squares::C1];
+
+            let is_blocked = (blockers & occupancy) > 0;
+            let are_any_attacked = king_ray.iter().any(|&square| {
+                self.is_square_attacked(board, &Square::from_square_index(square), Side::Black)
+            });
+
+            if !is_blocked
+                && !are_any_attacked
+                && !self.is_square_attacked(board, &king_from, Side::Black)
+                && !self.is_square_attacked(board, &king_to, Side::Black)
+            {
+                move_list.push(Move::new_castle(&king_from, &king_to));
+            }
+        }
+
+        if board.can_castle_kingside(Side::Black) {
+            let king_from = Square::from_square_index(Squares::E8);
+            let king_to = Square::from_square_index(Squares::G8);
+            let blockers = Bitboard::from_square(Squares::F8) | Bitboard::from_square(Squares::G8);
+            let king_ray = [Squares::E8, Squares::F8, Squares::G8];
+            let is_blocked = (blockers & occupancy) > 0;
+            let are_any_attacked = king_ray.iter().any(|&square| {
+                self.is_square_attacked(board, &Square::from_square_index(square), Side::White)
+            });
+
+            if !is_blocked
+                && !are_any_attacked
+                && !self.is_square_attacked(board, &king_from, Side::White)
+                && !self.is_square_attacked(board, &king_to, Side::White)
+            {
+                move_list.push(Move::new_castle(&king_from, &king_to));
+            }
+        }
+
+        if board.can_castle_queenside(Side::Black) {
+            let king_from = Square::from_square_index(Squares::E8);
+            let king_to = Square::from_square_index(Squares::C8);
+            let blockers = Bitboard::from_square(Squares::D8)
+                | Bitboard::from_square(Squares::C8)
+                | Bitboard::from_square(Squares::B8);
+            let king_ray = [Squares::E8, Squares::D8, Squares::C8];
+            let is_blocked = (blockers & occupancy) > 0;
+            let are_any_attacked = king_ray.iter().any(|&square| {
+                self.is_square_attacked(board, &Square::from_square_index(square), Side::White)
+            });
+
+            if !is_blocked
+                && !are_any_attacked
+                && !self.is_square_attacked(board, &king_from, Side::White)
+                && !self.is_square_attacked(board, &king_to, Side::White)
             {
                 move_list.push(Move::new_castle(&king_from, &king_to));
             }
@@ -742,8 +824,9 @@ impl MoveGenerator {
         let bishop_attacks =
             self.get_slider_moves(Piece::Bishop, square.to_square_index(), &occupancy);
         let queen_attacks = rook_attacks | bishop_attacks;
-        let pawn_attacks =
-            self.pawn_attacks[attacking_side as usize][square.to_square_index() as usize];
+        // note we use the opposite side for the pawn attacks
+        let pawn_attacks = self.pawn_attacks[Side::opposite(attacking_side) as usize]
+            [square.to_square_index() as usize];
 
         return (king_attacks & *king_bb) > 0
             || (knight_attacks & *knight_bb) > 0
@@ -760,6 +843,37 @@ mod tests {
     use crate::move_generation;
 
     use super::*;
+
+    #[test]
+    fn check_is_square_attacked() {
+        let board = Board::default_board();
+        let move_gen = MoveGenerator::new();
+        // loop through all the occupied squares and check if they are attacked
+        let mut occupancy = board.all_pieces();
+        let mut sq = bitboard_helpers::next_bit(&mut occupancy);
+        while sq > 0 {
+            let square = Square::from_square_index(sq as u8);
+            let is_attacked = move_gen.is_square_attacked(&board, &square, Side::White);
+            assert!(!is_attacked);
+            sq = bitboard_helpers::next_bit(&mut occupancy);
+        }
+
+        // now generate moves and check if the squares that pieces can move to are attacked
+        let mut move_list = MoveList::new();
+        move_gen.generate_moves(&board, &mut move_list, &MoveType::All);
+        let side_to_move = board.side_to_move();
+        // we ignore pawn two up moves because they are not "attacks"
+        for mv in move_list.iter().filter(|mv| !mv.is_pawn_two_up()) {
+            let to = mv.to();
+            let is_attacked =
+                move_gen.is_square_attacked(&board, &Square::from_square_index(to), side_to_move);
+            assert!(
+                is_attacked,
+                "Square {} is not attacked by move\n\t{}",
+                to, mv
+            );
+        }
+    }
 
     #[test]
     fn check_basic_construction() {
