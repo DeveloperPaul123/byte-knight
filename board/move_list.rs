@@ -31,4 +31,8 @@ impl MoveList {
     pub fn iter(&self) -> impl Iterator<Item = &Move> {
         self.moves.iter().take(self.size)
     }
+
+    pub fn clear(&mut self) {
+        self.size = 0;
+    }
 }
