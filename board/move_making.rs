@@ -13,6 +13,7 @@
  */
 
 use crate::{
+    bitboard::Bitboard,
     bitboard_helpers,
     board::Board,
     definitions::{CastlingAvailability, Side, Squares},
@@ -48,13 +49,25 @@ impl Board {
 
         if captured_piece.is_some() {
             let cap = captured_piece.unwrap();
-            // remove the captured piece
+            // remove the captured piece from the board
             self.remove_piece(them, cap, to, update_zobrist_hash);
             // reset half move clock
             self.set_half_move_clock(0);
             //check for need to update castling rights
             if cap == Piece::Rook {
-                // TODO: determine what castling rights need to be updated
+                // check if the rook was on a corner square
+                // if so, remove the castling rights for that side
+                let corners = [
+                    Squares::A8 as u8,
+                    Squares::H8 as u8,
+                    Squares::A1 as u8,
+                    Squares::H1 as u8,
+                ];
+                if corners.iter().any(|sq| *sq == to) {
+                    self.set_castling_rights(
+                        self.castling_rights() & !(get_casting_right_to_remove(them, to)),
+                    );
+                }
             }
         }
 
@@ -69,25 +82,46 @@ impl Board {
             self.add_piece(us, piece_to_add, to, update_zobrist_hash);
 
             if mv.is_en_passant_capture() {
-                // remove the captured pawn
-                // ^8 flips the square
-                self.remove_piece(them, Piece::Pawn, to ^ 8, update_zobrist_hash);
+                // remove the "captured" pawn
+                // this pawn should be either one rank above or below the destination square
+                // depending on the side to move
+                // if white, the pawn is one rank below the destination square
+                // if black, the pawn is one rank above the destination square
+                let en_passant_pawn_location = if us == Side::White {
+                    to - 8u8
+                } else {
+                    to + 8u8
+                };
+                let pawns = self.piece_bitboard(Piece::Pawn, them);
+                debug_assert!(pawns.is_square_occupied(en_passant_pawn_location as usize));
+                self.remove_piece(
+                    them,
+                    Piece::Pawn,
+                    en_passant_pawn_location as u8,
+                    update_zobrist_hash,
+                );
             }
             // check if this is a double pawn push
             // if so, set the en passant square
             if mv.is_pawn_two_up() {
                 // get the en passant square from the new move
-                // TODO: Is this right?
-                self.set_en_passant_square(Some(to ^ 8));
+                // if white, the en passant square is one rank below the destination square
+                // if black, the en passant square is one rank above the destination square
+                let en_passant_square = if us == Side::White {
+                    to - 8u8
+                } else {
+                    to + 8u8
+                };
+                self.set_en_passant_square(Some(en_passant_square));
             }
         } else {
             // just move the piece
             self.move_piece(us, piece, from, to, update_zobrist_hash)
         }
 
-        // todo:update the castling rights
+        // update the castling rights
         if can_castle && (piece == Piece::King || piece == Piece::Rook) {
-            // TODO: update castling rights
+            // we moved our king or rook, so we need to update the castling rights
             self.set_castling_rights(
                 self.castling_rights() & !(get_casting_right_to_remove(us, from)),
             );
@@ -129,8 +163,10 @@ impl Board {
             }
         }
 
+        // switch side to move
         self.switch_side();
 
+        // update full move number
         if us == Side::Black {
             self.set_full_move_number(self.half_move_clock() + 1);
         }
