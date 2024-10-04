@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Sat Aug 31 2024
+ * Last Modified: Thu Oct 03 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -13,10 +13,13 @@
  */
 
 use crate::{
+    bitboard_helpers,
     board::Board,
     definitions::{CastlingAvailability, Side, Squares},
+    move_generation::MoveGenerator,
     moves::Move,
     pieces::Piece,
+    square::Square,
 };
 
 impl Board {
@@ -27,7 +30,7 @@ impl Board {
     /// This function will return an error if the move is illegal. The passed in moves are assumed to be pseudo-legal,
     /// hence why the check has to be done after making the move. This function will make the move, check for legality
     /// and then undo the move if it is illegal.
-    pub fn make_move(&mut self, mv: &Move) -> Result<(), &'static str> {
+    pub fn make_move(&mut self, mv: &Move, move_gen: &MoveGenerator) -> Result<(), &'static str> {
         let mut current_state = self.board_state().clone();
         current_state.next_move = mv.clone();
         // update history before modifying the current state
@@ -134,9 +137,16 @@ impl Board {
 
         // pseudo legal check
         // check if we are in check
-        // TODO: Implement this; we will need to check if the king is in check
-        // To do this, we need to check if the king is attacked by the opponent's pieces
-        // We don't have attack tables yet, so we'll need to implement them
+        // get the kings location and check if that square is attacked by the opponent
+        let mut king_bb = self.piece_bitboard(Piece::King, us).clone();
+        let king_square = bitboard_helpers::next_bit(&mut king_bb) as u8;
+        let is_legal_move =
+            !move_gen.is_square_attacked(self, &Square::from_square_index(king_square), them);
+
+        if !is_legal_move {
+            self.unmake_move()?;
+            return Err("Illegal move");
+        }
 
         return Ok(());
     }
