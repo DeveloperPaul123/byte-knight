@@ -373,6 +373,7 @@ impl Board {
 mod board_tests {
     use crate::{
         definitions::{File, Rank, Squares},
+        move_generation::MoveGenerator,
         moves::Move,
         square::Square,
     };
@@ -388,7 +389,7 @@ mod board_tests {
     #[test]
     fn make_and_unmake_move_changes_hash() {
         static FEN: &str = "6nr/pp3p1p/k1p5/8/1QN5/2P1P3/4KPqP/8 b - - 5 26";
-
+        let move_gen = MoveGenerator::new();
         let mut board = Board::from_fen(FEN).unwrap();
         let hash = board.zobrist_hash();
         let chess_move = Move::new(
@@ -398,7 +399,7 @@ mod board_tests {
             Piece::Pawn,
             None,
         );
-        let mut mv_ok = board.make_move(&chess_move);
+        let mut mv_ok = board.make_move(&chess_move, &move_gen);
         assert!(mv_ok.is_ok());
         assert_ne!(hash, board.zobrist_hash());
         let move_hash = board.zobrist_hash();
