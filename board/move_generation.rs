@@ -462,7 +462,7 @@ impl MoveGenerator {
 
     /// Generates pseudo-legal moves for the current board state.
     /// This function does not check for legality of the moves.
-    /// 
+    ///
     /// # Arguments
     /// - board - The current board state
     /// - move_list - The list of moves to append to.
@@ -480,8 +480,11 @@ impl MoveGenerator {
         }
         // handle pawn moves separately
         self.get_pawn_moves(board, move_list, move_type);
-        // handle castling moves
-        self.get_castling_moves(board, move_list);
+
+        if *move_type == MoveType::All || *move_type == MoveType::Quiet {
+            // handle castling moves
+            self.get_castling_moves(board, move_list);
+        }
     }
 
     fn get_castling_moves(&self, board: &Board, move_list: &mut MoveList) {
