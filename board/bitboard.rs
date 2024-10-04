@@ -250,7 +250,7 @@ impl Display for Bitboard {
 
 #[cfg(test)]
 mod tests {
-    use crate::definitions::Squares;
+    use crate::{bitboard_helpers, definitions::Squares};
 
     use super::*;
 
@@ -314,10 +314,26 @@ mod tests {
         let bb_g8 = Bitboard::from_square(Squares::G8);
         let bb_h8 = Bitboard::from_square(Squares::H8);
         let bb = Bitboard::from_square(Squares::D5);
-        
+
         assert_eq!(bb_a8.data, 72057594037927936);
         assert_eq!(bb_g8.data, 4611686018427387904);
         assert_eq!(bb_h8.data, 9223372036854775808);
         assert_eq!(bb.data, 34359738368);
+    }
+
+    #[test]
+    fn square_shifting() {
+        let mut bb = Bitboard::from_square(Squares::B4);
+        let mut bb_front = bb << 8;
+        let mut bb_back = bb >> 8;
+        println!("{}\n{}\n{}", bb, bb_front, bb_back);
+
+        let original_square = bitboard_helpers::next_bit(&mut bb) as u8;
+        let front_square = bitboard_helpers::next_bit(&mut bb_front) as u8;
+        let back_square = bitboard_helpers::next_bit(&mut bb_back) as u8;
+
+        assert_eq!(original_square, Squares::B4);
+        assert_eq!(front_square, Squares::B5);
+        assert_eq!(back_square, Squares::B3);
     }
 }
