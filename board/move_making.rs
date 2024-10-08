@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Oct 03 2024
+ * Last Modified: Mon Oct 07 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -199,16 +199,19 @@ impl Board {
         if maybe_state.is_none() {
             return Err("No move to unmake");
         }
+
+        // note that we don't update the zobrist hash here as we are
+        // undoing moves because it gets restored from the game state
         let update_zobrist_hash = false;
+        // restore the board state
         let state = maybe_state.unwrap();
         self.set_board_state(state);
 
-        // restore the board state
         let us = self.side_to_move();
         let them = Side::opposite(us);
         // this is move that we're unmaking
         let chess_move = state.next_move;
-        // TODO: Handle null moves
+        // handle null moves
         if chess_move.is_null_move() {
             //nothing else to undo except swapping the side to move
             self.switch_side();
@@ -222,7 +225,7 @@ impl Board {
         let promoted_piece = chess_move.promotion_piece();
         if promoted_piece.is_some() {
             // remove the promoted piece
-            // TODO: Don't update the zobrist hash here
+            // note that we don't update the zobrist hash here
             self.remove_piece(them, promoted_piece.unwrap(), to, update_zobrist_hash);
             // put the pawn back
             self.add_piece(us, Piece::Pawn, from, update_zobrist_hash);
@@ -231,17 +234,32 @@ impl Board {
         }
 
         if chess_move.is_castle() {
-            // TODO: Undo castling
+            self.undo_move(us, piece, from, to, update_zobrist_hash);
+
+            // also need to move the rook back
+            let (rook_from, rook_to) = match to {
+                Squares::G1 => (Squares::H1, Squares::F1),
+                Squares::C1 => (Squares::A1, Squares::D1),
+                Squares::G8 => (Squares::H8, Squares::F8),
+                Squares::C8 => (Squares::A8, Squares::D8),
+                _ => panic!("Invalid castling move"),
+            };
+
+            self.undo_move(us, Piece::Rook, rook_from, rook_to, update_zobrist_hash);
+            // we don't need to update the castling rights here as it is restored from the game state
         }
 
-        if captured_piece.is_some() {
-            // TODO: Restore the captured piece to the board
+        if captured_piece.is_some() && !chess_move.is_en_passant_capture() {
+            // Restore the captured piece to the board
             self.add_piece(them, captured_piece.unwrap(), to, update_zobrist_hash);
-        }
-
-        if chess_move.is_en_passant_capture() {
-            // why does ^ 8 work here?
-            self.add_piece(them, Piece::Pawn, to ^ 8, update_zobrist_hash);
+        } else if chess_move.is_en_passant_capture() {
+            let en_passant_square: u8 = if us == Side::White {
+                to - 8u8
+            } else {
+                to + 8u8
+            };
+            self.add_piece(them, Piece::Pawn, en_passant_square, update_zobrist_hash);
+            // we don't need to set the en passant square here as it is restored from the game state
         }
 
         return Ok(());
