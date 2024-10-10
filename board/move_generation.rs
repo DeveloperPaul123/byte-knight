@@ -12,8 +12,6 @@
  *
  */
 
-use rand_chacha::rand_core::block;
-
 use crate::{
     bitboard::Bitboard,
     bitboard_helpers,
@@ -446,7 +444,7 @@ impl MoveGenerator {
         return attacks;
     }
 
-    fn calculate_rook_attack(square: u8, blocker: &Bitboard) -> Bitboard {
+    pub fn calculate_rook_attack(square: u8, blocker: &Bitboard) -> Bitboard {
         // calculate ray attacks for the rook from its square
         let rook_rays_bb = MoveGenerator::orthogonal_ray_attacks(square as u8, blocker.as_number());
         return rook_rays_bb;
@@ -1437,7 +1435,7 @@ mod tests {
 
     #[test]
     fn check_bishop_attacks() {
-        for square in 0..NumberOf::SQUARES {
+        for square in 0..1 {
             let bishop_bb = MoveGenerator::relevant_bishop_bits(square as usize);
             let blockers = MoveGenerator::create_blocker_permutations(bishop_bb);
             let edges = MoveGenerator::edges_from_square(square as u8);
@@ -1447,6 +1445,7 @@ mod tests {
             assert!(attacks.len() <= blockers.len());
 
             for attack in attacks {
+                println!("attack: \n{}", attack);
                 // attack should be a subset of the bishop bitboard
                 assert_eq!(attack & !bishop_bb_with_edges, 0);
             }

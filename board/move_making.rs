@@ -13,7 +13,6 @@
  */
 
 use crate::{
-    bitboard::Bitboard,
     bitboard_helpers,
     board::Board,
     definitions::{CastlingAvailability, Side, Squares},

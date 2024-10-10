@@ -189,7 +189,8 @@ impl MagicNumber {
         let blockers = occupancy & self.relevant_bits_mask;
         // need to shift
         let blocker_num = blockers.as_number();
-        return ((blocker_num.wrapping_mul(self.magic_value) >> self.shift) + self.offset) as usize;
+        let hash = blocker_num.wrapping_mul(self.magic_value);
+        return ((hash >> self.shift) + self.offset) as usize;
     }
 }
 
