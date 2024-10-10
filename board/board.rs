@@ -17,6 +17,7 @@ use std::iter::zip;
 use crate::board_state::BoardState;
 use crate::definitions::{CastlingAvailability, SPACE};
 use crate::fen::FenError;
+use crate::move_generation::MoveGenerator;
 use crate::move_history::BoardHistory;
 use crate::square::Square;
 use crate::zobrist::{ZobristHash, ZobristRandomValues};
@@ -366,6 +367,21 @@ impl Board {
             Side::Black => castling_rights & CastlingAvailability::BLACK_QUEENSIDE != 0,
             Side::Both => panic!("Cannot check if both sides can castle queenside"),
         };
+    }
+
+    pub fn is_in_check(&self, move_gen: &MoveGenerator) -> bool {
+        // pseudo legal check
+        // check if we are in check
+        // get the kings location and check if that square is attacked by the opponent
+        let mut king_bb = self
+            .piece_bitboard(Piece::King, self.side_to_move())
+            .clone();
+        let king_square = bitboard_helpers::next_bit(&mut king_bb) as u8;
+        return move_gen.is_square_attacked(
+            self,
+            &Square::from_square_index(king_square),
+            Side::opposite(self.side_to_move()),
+        );
     }
 }
 
