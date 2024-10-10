@@ -50,6 +50,8 @@ mod perft_tests {
 
         {
             let mut board = Board::from_fen("8/8/8/2k5/2pP4/8/B7/4K3 b - d3 0 3").unwrap();
+            assert_eq!(board.side_to_move(), Side::Black);
+            assert!(board.is_in_check(&move_gen));
             let total_moves = perft(&mut board, &move_gen, 1).unwrap();
             assert_eq!(total_moves, 8);
         }
