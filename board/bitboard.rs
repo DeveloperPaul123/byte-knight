@@ -14,6 +14,7 @@
 
 use std::{
     fmt::Display,
+    hash::Hash,
     ops::{
         BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, ShlAssign, Shr,
         ShrAssign,
@@ -187,6 +188,12 @@ impl ShrAssign for Bitboard {
 impl ShrAssign<u64> for Bitboard {
     fn shr_assign(&mut self, rhs: u64) {
         self.data >>= rhs;
+    }
+}
+
+impl Hash for Bitboard {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.data.hash(state);
     }
 }
 
