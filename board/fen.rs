@@ -1,5 +1,7 @@
 use std::fmt::{Display, Formatter};
 
+use thiserror::Error;
+
 use crate::{
     board::Board,
     definitions::{CastlingAvailability, Side, DASH, EM_DASH},
@@ -30,7 +32,7 @@ impl Display for FenPart {
     }
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub struct FenError {
     offending_parts: Option<Vec<FenPart>>,
     message: String,

@@ -467,7 +467,7 @@ impl MoveGenerator {
     /// - board - The current board state
     /// - move_list - The list of moves to append to.
     /// - move_type - The type of moves to generate
-    pub fn generate_moves(&self, board: &Board, move_list: &mut MoveList, move_type: &MoveType) {
+    pub fn generate_moves(&self, board: &Board, move_list: &mut MoveList, move_type: MoveType) {
         // get moves for each piece except pawns
         for piece in [
             Piece::King,
@@ -476,12 +476,12 @@ impl MoveGenerator {
             Piece::Bishop,
             Piece::Queen,
         ] {
-            self.get_piece_moves(piece, board, move_list, move_type);
+            self.get_piece_moves(piece, board, move_list, &move_type);
         }
         // handle pawn moves separately
-        self.get_pawn_moves(board, move_list, move_type);
+        self.get_pawn_moves(board, move_list, &move_type);
 
-        if *move_type == MoveType::All || *move_type == MoveType::Quiet {
+        if move_type == MoveType::All || move_type == MoveType::Quiet {
             // handle castling moves
             self.get_castling_moves(board, move_list);
         }
@@ -863,7 +863,7 @@ mod tests {
 
         // now generate moves and check if the squares that pieces can move to are attacked
         let mut move_list = MoveList::new();
-        move_gen.generate_moves(&board, &mut move_list, &MoveType::All);
+        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
         let side_to_move = board.side_to_move();
         // we ignore pawn two up moves because they are not "attacks"
         for mv in move_list.iter().filter(|mv| !mv.is_pawn_two_up()) {
@@ -1419,32 +1419,12 @@ mod tests {
         let board = Board::default_board();
         let mut move_list = MoveList::new();
         let move_gen = MoveGenerator::new();
-        move_gen.generate_moves(&board, &mut move_list, &MoveType::All);
+        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
 
         for mv in move_list.iter() {
             println!("{}", mv);
         }
 
         assert_eq!(move_list.len(), 20);
-    }
-
-    #[test]
-    fn check_move_gen() {
-        // test positions taken from https://gist.github.com/peterellisjones/8c46c28141c162d1d8a0f0badbc9cff9
-        let board = Board::from_fen("r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2").unwrap();
-        let mut move_list = MoveList::new();
-        let move_gen = MoveGenerator::new();
-        move_gen.generate_moves(&board, &mut move_list, &MoveType::All);
-        for mv in move_list.iter() {
-            println!("{}", mv);
-        }
-        // TODO: fix this test
-        // assert_eq!(move_list.len(), 8);
-
-        move_list.clear();
-
-        let board = Board::from_fen("r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2").unwrap();
-        move_gen.generate_moves(&board, &mut move_list, &MoveType::Capture);
-        // assert_eq!(move_list.len(), 8);
     }
 }

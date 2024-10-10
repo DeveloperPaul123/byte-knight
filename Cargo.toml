@@ -10,16 +10,19 @@ path = "board/lib.rs"
 test = true
 
 [dependencies]
+anyhow = "1.0.89"
 chess = "3.2.0"
 clap = { version = "4.5.9", features = ["derive"] }
 console = { version = "0.15.8", features = ["windows-console-colors"] }
 csv = "1.3.0"
 indicatif = { version = "0.17.8", features = ["rayon"] }
+itertools = "0.13.0"
 rand = { version = "0.8.5", features = ["small_rng"] }
 rand_chacha = "0.3.1"
 rayon = "1.10.0"
 serde = { version = "1.0.209", features = ["derive"] }
 stopwatch = "0.0.7"
+thiserror = "1.0.64"
 vampirc-uci = { version = "0.11.1", features = ["chess"] }
 zstd = "0.13.2"
 

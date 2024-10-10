@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Oct 07 2024
+ * Last Modified: Tue Oct 08 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -22,6 +22,7 @@ use crate::{
     pieces::Piece,
     square::Square,
 };
+use anyhow::{bail, Result};
 
 impl Board {
     /// Make a move on the board and update the board state
@@ -31,7 +32,7 @@ impl Board {
     /// This function will return an error if the move is illegal. The passed in moves are assumed to be pseudo-legal,
     /// hence why the check has to be done after making the move. This function will make the move, check for legality
     /// and then undo the move if it is illegal.
-    pub fn make_move(&mut self, mv: &Move, move_gen: &MoveGenerator) -> Result<(), &'static str> {
+    pub fn make_move(&mut self, mv: &Move, move_gen: &MoveGenerator) -> Result<()> {
         let mut current_state = self.board_state().clone();
         current_state.next_move = mv.clone();
         // update history before modifying the current state
@@ -181,7 +182,7 @@ impl Board {
 
         if !is_legal_move {
             self.unmake_move()?;
-            return Err("Illegal move");
+            bail!("Illegal move");
         }
 
         return Ok(());
@@ -194,10 +195,10 @@ impl Board {
     ///
     /// This function will return an error if it is unable to undo the last move. This can happen if
     /// no moves have been made on the board.
-    pub fn unmake_move(&mut self) -> Result<(), &'static str> {
+    pub fn unmake_move(&mut self) -> Result<()> {
         let maybe_state = self.history.pop();
         if maybe_state.is_none() {
-            return Err("No move to unmake");
+            bail!("No move to unmake");
         }
 
         // note that we don't update the zobrist hash here as we are
