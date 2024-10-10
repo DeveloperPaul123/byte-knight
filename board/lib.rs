@@ -24,6 +24,7 @@ pub mod move_history;
 pub mod move_list;
 pub mod move_making;
 pub mod moves;
+pub mod perft;
 pub mod pieces;
 pub mod square;
 pub mod zobrist;
