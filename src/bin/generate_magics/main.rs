@@ -4,7 +4,7 @@
  * Created Date: Friday, August 30th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Sep 11 2024
+ * Last Modified: Wed Oct 09 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -33,7 +33,6 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
     let mut offset = 0;
 
     println!("Finding magic numbers for {}", piece);
-
     for sq in 0..NumberOf::SQUARES {
         let rook_mask = MoveGenerator::relevant_rook_bits(sq);
         let bishop_mask = MoveGenerator::relevant_bishop_bits(sq);
@@ -57,7 +56,7 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
         } else {
             bishop_attacks
         };
-        assert_eq!(attacks.len(), blocker_bitboards.len());
+        assert!(attacks.len() <= blocker_bitboards.len());
 
         // flag that stops the loop
         let mut found = false;
@@ -70,7 +69,7 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
             // generate a random magic value
             // we & the values together to try and reduce the number of bits
             let mgc = rng.gen::<u64>() & rng.gen::<u64>() & rng.gen::<u64>();
-            let test = (use_mask.as_number() * mgc) & 0xFF00000000000000;
+            let test = ((use_mask.as_number() as u128 * mgc as u128) & 0xFF00000000000000) as u64;
             if test.count_ones() < 6 {
                 continue;
             }
@@ -126,8 +125,8 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
 }
 
 fn main() {
-    let magic_rook_numbers = find_magic_numbers(Piece::Rook);
     let magic_bishop_numbers = find_magic_numbers(Piece::Bishop);
+    let magic_rook_numbers = find_magic_numbers(Piece::Rook);
 
     println!("\nBishop magic values:\n");
     for magic in magic_bishop_numbers {
