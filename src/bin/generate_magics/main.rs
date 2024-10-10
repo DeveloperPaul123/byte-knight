@@ -37,16 +37,28 @@ impl Display for TableFillError {
     }
 }
 
+fn generate_random_u64<R: Rng>(rng: &mut R) -> u64 {
+    rng.gen::<u64>() & rng.gen::<u64>() & rng.gen::<u64>()
+}
+
+fn is_valid_random_number(random_num: u64, relevant_bb: Bitboard) -> bool {
+    let test = ((random_num as u128 * relevant_bb.as_number() as u128) & 0xFF00000000000000) as u64;
+    test.count_ones() >= 6
+}
+
 fn find_magic<R: Rng>(
     piece: Piece,
     relevant_bb: Bitboard,
-    offset: u64,
     rng: &mut R,
     square: u8,
 ) -> Result<MagicNumber> {
-    let random_num = rng.gen::<u64>() & rng.gen::<u64>() & rng.gen::<u64>();
+    let mut random_num = generate_random_u64(rng);
+    while !is_valid_random_number(random_num, relevant_bb) {
+        random_num = generate_random_u64(rng);
+    }
+
     let bits = relevant_bb.as_number().count_ones();
-    let magic_entry = MagicNumber::new(relevant_bb, 64 - bits as u8, offset, random_num);
+    let magic_entry = MagicNumber::new(relevant_bb, 64 - bits as u8, 0, random_num);
 
     let blocker_permutations = MoveGenerator::create_blocker_permutations(relevant_bb);
     let total_permutations = 2u64.pow(bits);
@@ -71,6 +83,13 @@ fn try_to_make_table(
             Piece::Bishop => MoveGenerator::calculate_bishop_attack(square, blocker),
             _ => panic!("Invalid piece type"),
         };
+
+        let index = magic.index(*blocker);
+        if index >= table.len() {
+            bail!(TableFillError {
+                message: "Index out of bounds".to_string(),
+            });
+        }
 
         let entry = &mut table[magic.index(*blocker)];
         if *entry == Bitboard::default() {
@@ -111,10 +130,12 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
         // Using `loop` and `break` didn't work here and caused the loop to break early or never end.
 
         while !found {
-            let magic_result = find_magic(piece, use_mask, offset, &mut rng, sq as u8);
+            let magic_result = find_magic(piece, use_mask, &mut rng, sq as u8);
             match magic_result {
-                Ok(magic) => {
+                Ok(mut magic) => {
                     found = true;
+                    // set the offset before saving it
+                    magic.offset = offset;
                     magic_numbers.push(magic);
                 }
                 Err(_) => {}
