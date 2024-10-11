@@ -111,18 +111,16 @@ fn initialize_knight_attacks(square: u8, attacks: &mut [Bitboard; NumberOf::SQUA
     let not_gh_file = !FILE_BITBOARDS[File::G as usize] & !FILE_BITBOARDS[File::H as usize];
     let not_ab_file = !FILE_BITBOARDS[File::A as usize] & !FILE_BITBOARDS[File::B as usize];
     let not_a_file = !FILE_BITBOARDS[File::A as usize];
-    let not_r8r7_rank = !RANK_BITBOARDS[Rank::R8 as usize] & !RANK_BITBOARDS[Rank::R7 as usize];
-    let not_r1r2_rank = !RANK_BITBOARDS[Rank::R1 as usize] & !RANK_BITBOARDS[Rank::R2 as usize];
 
-    attacks_bb |= (bb & not_h_file & not_r8r7_rank) << NORTH_NORTH_EAST;
-    attacks_bb |= (bb & not_gh_file & not_r8r7_rank) << EAST_NORTH_EAST;
-    attacks_bb |= (bb & not_a_file & not_r8r7_rank) << NORTH_NORTH_WEST;
-    attacks_bb |= (bb & not_ab_file & not_r8r7_rank) << WEST_NORTH_WEST;
+    attacks_bb |= (bb & not_h_file) << NORTH_NORTH_EAST;
+    attacks_bb |= (bb & not_gh_file) << EAST_NORTH_EAST;
+    attacks_bb |= (bb & not_a_file) << NORTH_NORTH_WEST;
+    attacks_bb |= (bb & not_ab_file) << WEST_NORTH_WEST;
 
-    attacks_bb |= (bb & not_h_file & not_r1r2_rank) >> SOUTH_SOUTH_EAST;
-    attacks_bb |= (bb & not_gh_file & not_r1r2_rank) >> EAST_SOUTH_EAST;
-    attacks_bb |= (bb & not_a_file & not_r1r2_rank) >> SOUTH_SOUTH_WEST;
-    attacks_bb |= (bb & not_ab_file & not_r1r2_rank) >> WEST_SOUTH_WEST;
+    attacks_bb |= (bb & not_h_file) >> SOUTH_SOUTH_EAST;
+    attacks_bb |= (bb & not_gh_file) >> EAST_SOUTH_EAST;
+    attacks_bb |= (bb & not_a_file) >> SOUTH_SOUTH_WEST;
+    attacks_bb |= (bb & not_ab_file) >> WEST_SOUTH_WEST;
 
     attacks[square as usize] = attacks_bb;
 }
@@ -715,7 +713,16 @@ impl MoveGenerator {
                     Side::Black => Board::is_square_on_rank(from_square, Rank::R7 as u8),
                     Side::Both => panic!("Both side not allowed"),
                 };
-                let bb_double_push = if can_double_push {
+
+                // note that the single push square has to be empty in addition to the double push square being empty
+                let is_double_push_unobstructed = if can_double_push {
+                    !occupancy.is_square_occupied(to_square as u8)
+                        && !occupancy.is_square_occupied(double_push_square as u8)
+                } else {
+                    false
+                };
+
+                let bb_double_push = if can_double_push && is_double_push_unobstructed {
                     Bitboard::new(1u64 << double_push_square) & empty
                 } else {
                     Bitboard::default()
@@ -766,8 +773,7 @@ impl MoveGenerator {
                 None => false,
             };
 
-            let is_capture: bool =
-                enemy_pieces.is_square_occupied(to_square as usize) || en_passant;
+            let is_capture: bool = enemy_pieces.is_square_occupied(to_square) || en_passant;
             // 2 rows = 16 squares
             let is_double_move = piece == Piece::Pawn
                 && (to_square as i8 - from.to_square_index() as i8).abs() == 16;
@@ -1019,14 +1025,14 @@ mod tests {
             5277696,
             10489856,
             4202496,
-            33816576,
-            84410368,
-            168886272,
-            337772544,
-            675545088,
-            1351090176,
-            2685403136,
-            1075838976,
+            33816580,
+            84410376,
+            168886289,
+            337772578,
+            675545156,
+            1351090312,
+            2685403152,
+            1075839008,
             8657044482,
             21609056261,
             43234889994,
@@ -1059,14 +1065,14 @@ mod tests {
             5802888705324613632,
             11533718717099671552,
             4620693356194824192,
-            4406636445696,
-            8817567858688,
-            18734647345152,
-            37469294690304,
-            74938589380608,
-            149877178761216,
-            18279380811776,
-            35459249995776,
+            288234782788157440,
+            576469569871282176,
+            1224997833292120064,
+            2449995666584240128,
+            4899991333168480256,
+            9799982666336960512,
+            1152939783987658752,
+            2305878468463689728,
             1128098930098176,
             2257297371824128,
             4796069720358912,
