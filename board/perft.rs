@@ -23,15 +23,13 @@ pub fn perft(board: &mut Board, move_gen: &MoveGenerator, depth: usize) -> Resul
 }
 
 #[cfg(test)]
-mod perft_tests {
-    use crate::{
-        board::Board, definitions::Side, move_generation::MoveGenerator, move_list::MoveList,
-        perft::perft,
-    };
+mod tests {
+    use crate::{board::Board, definitions::Side, move_generation::MoveGenerator, perft::perft};
     #[test]
     fn default_board() {
         let mut board = Board::default_board();
         let move_gen = MoveGenerator::new();
+        assert!(board.en_passant_square().is_none());
         let result = perft(&mut board, &move_gen, 1).unwrap();
         assert_eq!(result, 20);
     }
