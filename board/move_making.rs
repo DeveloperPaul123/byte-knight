@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Oct 08 2024
+ * Last Modified: Fri Oct 11 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -47,7 +47,8 @@ impl Board {
         let can_castle = self.castling_rights() > 0;
         let update_zobrist_hash = true;
 
-        if captured_piece.is_some() {
+        // en passant capture is handled separately
+        if captured_piece.is_some() && !mv.is_en_passant_capture() {
             let cap = captured_piece.unwrap();
             // remove the captured piece from the board
             self.remove_piece(them, cap, to, update_zobrist_hash);
@@ -113,8 +114,14 @@ impl Board {
                     to + 8u8
                 };
                 self.set_en_passant_square(Some(en_passant_square));
+            } else {
+                self.set_en_passant_square(None);
             }
         } else {
+            // reset the en passant square if it exists
+            if self.en_passant_square().is_some() {
+                self.set_en_passant_square(None);
+            }
             // just move the piece
             self.move_piece(us, piece, from, to, update_zobrist_hash)
         }
