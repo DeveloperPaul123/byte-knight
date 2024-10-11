@@ -43,5 +43,10 @@
             "**.md",
             "*.toml"
         ]
-    }
+    },
+    "cSpell.words": [
+        "bitboard",
+        "perft",
+        "zobrist"
+    ]
 }

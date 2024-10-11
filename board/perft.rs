@@ -23,15 +23,13 @@ pub fn perft(board: &mut Board, move_gen: &MoveGenerator, depth: usize) -> Resul
 }
 
 #[cfg(test)]
-mod perft_tests {
-    use crate::{
-        board::Board, definitions::Side, move_generation::MoveGenerator, move_list::MoveList,
-        perft::perft,
-    };
+mod tests {
+    use crate::{board::Board, definitions::Side, move_generation::MoveGenerator, perft::perft};
     #[test]
     fn default_board() {
         let mut board = Board::default_board();
         let move_gen = MoveGenerator::new();
+        assert!(board.en_passant_square().is_none());
         let result = perft(&mut board, &move_gen, 1).unwrap();
         assert_eq!(result, 20);
     }
@@ -50,6 +48,8 @@ mod perft_tests {
 
         {
             let mut board = Board::from_fen("8/8/8/2k5/2pP4/8/B7/4K3 b - d3 0 3").unwrap();
+            assert_eq!(board.side_to_move(), Side::Black);
+            assert!(board.is_in_check(&move_gen));
             let total_moves = perft(&mut board, &move_gen, 1).unwrap();
             assert_eq!(total_moves, 8);
         }
