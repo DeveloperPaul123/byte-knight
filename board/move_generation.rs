@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 28th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Oct 09 2024
+ * Last Modified: Fri Oct 11 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -21,7 +21,7 @@ use crate::{
     },
     magics::{MagicNumber, BISHOP_MAGIC_VALUES, ROOK_MAGIC_VALUES},
     move_list::MoveList,
-    moves::{Flags, Move, MoveType},
+    moves::{Move, MoveDescriptor, MoveType, PromotionDescriptor},
     pieces::{Piece, SQUARE_NAME},
     square::{self, Square},
 };
@@ -277,6 +277,7 @@ impl MoveGenerator {
         return edges;
     }
 
+    #[allow(dead_code)]
     fn edges_from_square(square: u8) -> Bitboard {
         let (file, rank) = square::from_square(square as u8);
         return MoveGenerator::edges(file, rank);
@@ -693,7 +694,12 @@ impl MoveGenerator {
             let attack_bb = self.pawn_attacks[us as usize][from_square as usize];
 
             let mut bb_moves = Bitboard::default();
-            let to_square = from_square as u64 + direction;
+            let to_square = match us {
+                Side::White => from_square as u64 + direction,
+                Side::Black => from_square as u64 - direction,
+                Side::Both => panic!("Both side not allowed"),
+            };
+
             let double_push_square = match us {
                 Side::White => to_square + direction,
                 Side::Black => to_square - direction,
@@ -703,9 +709,17 @@ impl MoveGenerator {
             // pawn non-capture moves
             if *move_type == MoveType::All || *move_type == MoveType::Quiet {
                 let bb_push = Bitboard::new(1u64 << to_square);
-                println!("push: \n{}", bb_push);
                 let bb_single_push = bb_push & empty;
-                let bb_double_push = Bitboard::new(1u64 << double_push_square) & empty;
+                let can_double_push = match us {
+                    Side::White => Board::is_square_on_rank(from_square, Rank::R2 as u8),
+                    Side::Black => Board::is_square_on_rank(from_square, Rank::R7 as u8),
+                    Side::Both => panic!("Both side not allowed"),
+                };
+                let bb_double_push = if can_double_push {
+                    Bitboard::new(1u64 << double_push_square) & empty
+                } else {
+                    Bitboard::default()
+                };
                 bb_moves |= bb_single_push | bb_double_push;
             }
 
@@ -714,10 +728,9 @@ impl MoveGenerator {
                 let bb_capture = attack_bb & their_pieces;
                 // en passant
                 let bb_en_passant = match board.en_passant_square() {
-                    Some(en_passant_square) => Bitboard::new(en_passant_square as u64),
+                    Some(en_passant_square) => Bitboard::from_square(en_passant_square),
                     None => Bitboard::default(),
                 };
-
                 bb_moves |= bb_capture | bb_en_passant;
             }
 
@@ -748,30 +761,34 @@ impl MoveGenerator {
             let to_square = bitboard_helpers::next_bit(&mut bb) as u8;
             let (file, rank) = square::from_square(to_square as u8);
 
-            let en_passant = match board.board_state().en_passant_square {
+            let en_passant = match board.en_passant_square() {
                 Some(en_passant_square) => en_passant_square == to_square && piece == Piece::Pawn,
                 None => false,
             };
 
-            let is_capture = enemy_pieces.is_square_occupied(to_square as usize) || en_passant;
+            let is_capture: bool =
+                enemy_pieces.is_square_occupied(to_square as usize) || en_passant;
             // 2 rows = 16 squares
             let is_double_move = piece == Piece::Pawn
                 && (to_square as i8 - from.to_square_index() as i8).abs() == 16;
             let is_promotion =
                 piece == Piece::Pawn && Board::is_square_on_rank(to_square, promotion_rank as u8);
 
-            let mut flags = Flags::NONE;
+            if is_double_move && en_passant {
+                panic!("Double move and en passant should not happen");
+            }
 
+            let mut move_desc = MoveDescriptor::None;
             if is_double_move {
-                flags |= Flags::PAWN_TWO_UP;
+                move_desc = MoveDescriptor::PawnTwoUp;
+            } else if en_passant {
+                move_desc = MoveDescriptor::EnPassantCapture;
             }
 
-            if en_passant {
-                flags |= Flags::EN_PASSANT_CAPTURE;
-            }
-
-            let capture_piece = if is_capture {
+            let capture_piece = if is_capture && !en_passant {
                 Some(board.piece_on_square(to_square as usize).unwrap().0)
+            } else if en_passant {
+                Some(Piece::Pawn)
             } else {
                 None
             };
@@ -779,23 +796,24 @@ impl MoveGenerator {
             let to_square = square::to_square_object(file, rank);
             if is_promotion {
                 // we have to add 4 moves for each promotion type
-                for promotion_flag in [
-                    Flags::PROMOTE_TO_BISHOP,
-                    Flags::PROMOTE_TO_KNIGHT,
-                    Flags::PROMOTE_TO_QUEEN,
-                    Flags::PROMOTE_TO_ROOK,
+                for promotion_type in [
+                    PromotionDescriptor::Queen,
+                    PromotionDescriptor::Rook,
+                    PromotionDescriptor::Bishop,
+                    PromotionDescriptor::Knight,
                 ] {
                     let mv = Move::new(
                         &from,
                         &to_square,
-                        flags | promotion_flag,
+                        move_desc,
                         piece,
                         capture_piece,
+                        Some(promotion_type.to_piece()),
                     );
                     move_list.push(mv);
                 }
             } else {
-                let mv = Move::new(&from, &to_square, flags, piece, capture_piece);
+                let mv = Move::new(&from, &to_square, move_desc, piece, capture_piece, None);
                 move_list.push(mv);
             }
         }
@@ -823,15 +841,7 @@ impl MoveGenerator {
         let queen_bb = board.piece_bitboard(Piece::Queen, attacking_side);
         let pawn_bb = board.piece_bitboard(Piece::Pawn, attacking_side);
 
-        println!("king_bb: \n{}", king_bb);
-        println!("knight_bb: \n{}", knight_bb);
-        println!("bishop_bb: \n{}", bishop_bb);
-        println!("rook_bb: \n{}", rook_bb);
-        println!("queen_bb: \n{}", queen_bb);
-        println!("pawn_bb: \n{}", pawn_bb);
-
         let occupancy = board.all_pieces();
-        println!("occupancy: \n{}", occupancy);
 
         let king_attacks = self.get_non_slider_moves(Piece::King, square.to_square_index());
         let knight_attacks = self.get_non_slider_moves(Piece::Knight, square.to_square_index());
@@ -842,13 +852,6 @@ impl MoveGenerator {
         // note we use the opposite side for the pawn attacks
         let pawn_attacks = self.pawn_attacks[Side::opposite(attacking_side) as usize]
             [square.to_square_index() as usize];
-
-        println!("king_attacks: \n{}", king_attacks);
-        println!("knight_attacks: \n{}", knight_attacks);
-        println!("rook_attacks: \n{}", rook_attacks);
-        println!("bishop_attacks: \n{}", bishop_attacks);
-        println!("queen_attacks: \n{}", queen_attacks);
-        println!("pawn_attacks: \n{}", pawn_attacks);
 
         return (king_attacks & *king_bb) > 0
             || (knight_attacks & *knight_bb) > 0
@@ -1461,6 +1464,9 @@ mod tests {
 
         for mv in move_list.iter() {
             println!("{}", mv);
+            assert!(!mv.is_castle());
+            assert!(!mv.is_en_passant_capture());
+            assert!(!mv.is_promotion());
         }
 
         assert_eq!(move_list.len(), 20);

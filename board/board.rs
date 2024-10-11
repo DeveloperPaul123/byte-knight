@@ -390,7 +390,7 @@ mod board_tests {
     use crate::{
         definitions::{File, Rank, Squares},
         move_generation::MoveGenerator,
-        moves::Move,
+        moves::{Move, MoveDescriptor},
         square::Square,
     };
 
@@ -411,8 +411,9 @@ mod board_tests {
         let chess_move = Move::new(
             &Square::new(File::F, Rank::R7),
             &Square::new(File::F, Rank::R5),
-            0,
+            MoveDescriptor::PawnTwoUp,
             Piece::Pawn,
+            None,
             None,
         );
         let mut mv_ok = board.make_move(&chess_move, &move_gen);
