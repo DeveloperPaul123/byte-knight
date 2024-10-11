@@ -213,18 +213,18 @@ impl Bitboard {
     }
 
     /// Check if a square is occupied.
-    pub fn is_square_occupied(&self, square: usize) -> bool {
+    pub fn is_square_occupied(&self, square: u8) -> bool {
         self.data & (1 << square) != 0
     }
 
     /// Mark a square as occupied.
-    pub fn set_square(&mut self, square: usize) {
+    pub fn set_square(&mut self, square: u8) {
         self.clear_square(square);
         self.data |= 1 << square;
     }
 
     /// Clear a given square.
-    pub fn clear_square(&mut self, square: usize) {
+    pub fn clear_square(&mut self, square: u8) {
         self.data &= !(1 << square);
     }
 

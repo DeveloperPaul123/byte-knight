@@ -68,7 +68,7 @@ const WEST_SOUTH_WEST: u64 = 10;
 const SOUTH_SOUTH_EAST: u64 = 15;
 const EAST_SOUTH_EAST: u64 = 6;
 
-fn initialize_king_attacks(square: usize, attacks: &mut [Bitboard; NumberOf::SQUARES]) {
+fn initialize_king_attacks(square: u8, attacks: &mut [Bitboard; NumberOf::SQUARES]) {
     let mut bb = Bitboard::default();
     let mut attacks_bb = Bitboard::default();
 
@@ -97,7 +97,7 @@ fn initialize_king_attacks(square: usize, attacks: &mut [Bitboard; NumberOf::SQU
     attacks[square as usize] = attacks_bb;
 }
 
-fn initialize_knight_attacks(square: usize, attacks: &mut [Bitboard; NumberOf::SQUARES]) {
+fn initialize_knight_attacks(square: u8, attacks: &mut [Bitboard; NumberOf::SQUARES]) {
     let mut bb = Bitboard::default();
     let mut attacks_bb = Bitboard::default();
 
@@ -128,11 +128,11 @@ fn initialize_knight_attacks(square: usize, attacks: &mut [Bitboard; NumberOf::S
 }
 
 fn initialize_pawn_attacks(
-    square: usize,
+    square: u8,
     attacks: &mut [[Bitboard; NumberOf::SQUARES]; NumberOf::SIDES],
 ) {
     let mut bb = Bitboard::default();
-    bb.set_square(square);
+    bb.set_square(square as u8);
 
     let mut attacks_w_bb = Bitboard::default();
     let mut attacks_b_bb = Bitboard::default();
@@ -147,8 +147,8 @@ fn initialize_pawn_attacks(
     attacks_b_bb |= (bb & not_a_file) >> SOUTH_WEST;
     attacks_b_bb |= (bb & not_h_file) >> SOUTH_EAST;
 
-    attacks[Side::White as usize][square] = attacks_w_bb;
-    attacks[Side::Black as usize][square] = attacks_b_bb;
+    attacks[Side::White as usize][square as usize] = attacks_w_bb;
+    attacks[Side::Black as usize][square as usize] = attacks_b_bb;
 }
 
 pub struct MoveGenerator {
@@ -181,7 +181,7 @@ impl MoveGenerator {
     }
 
     fn initialize_attack_boards(&mut self) {
-        for square in 0..NumberOf::SQUARES {
+        for square in 0..NumberOf::SQUARES as u8 {
             initialize_king_attacks(square, &mut self.king_attacks);
             initialize_knight_attacks(square, &mut self.knight_attacks);
             initialize_pawn_attacks(square, &mut self.pawn_attacks);
@@ -195,7 +195,7 @@ impl MoveGenerator {
         assert!(piece == Piece::Rook || piece == Piece::Bishop);
         let mut offset = 0;
 
-        for square in 0..NumberOf::SQUARES {
+        for square in 0..NumberOf::SQUARES as u8 {
             let rook_relevant_bits = MoveGenerator::relevant_rook_bits(square);
             let bishop_relevant_bits = MoveGenerator::relevant_bishop_bits(square);
             let use_mask = if piece == Piece::Rook {
@@ -381,7 +381,7 @@ impl MoveGenerator {
         attacks
     }
 
-    pub fn relevant_rook_bits(square: usize) -> Bitboard {
+    pub fn relevant_rook_bits(square: u8) -> Bitboard {
         let mut bb = Bitboard::default();
         bb.set_square(square);
 
@@ -394,7 +394,7 @@ impl MoveGenerator {
         return rook_rays_bb & !edges & !bb;
     }
 
-    pub fn relevant_bishop_bits(square: usize) -> Bitboard {
+    pub fn relevant_bishop_bits(square: u8) -> Bitboard {
         let mut bb = Bitboard::default();
         bb.set_square(square);
 
@@ -786,7 +786,7 @@ impl MoveGenerator {
             }
 
             let capture_piece = if is_capture && !en_passant {
-                Some(board.piece_on_square(to_square as usize).unwrap().0)
+                Some(board.piece_on_square(to_square).unwrap().0)
             } else if en_passant {
                 Some(Piece::Pawn)
             } else {
@@ -1305,7 +1305,7 @@ mod tests {
         let mut offset_sum: u64 = 0;
         const BASE: u64 = 2 as u64;
         for square in 0..NumberOf::SQUARES {
-            let rook_bits = move_generation::MoveGenerator::relevant_rook_bits(square);
+            let rook_bits = move_generation::MoveGenerator::relevant_rook_bits(square as u8);
             assert_eq!(rook_bits.as_number(), rook_relevant_bit_expected[square]);
 
             offset_sum += BASE.pow(rook_bits.as_number().count_ones());
@@ -1386,7 +1386,7 @@ mod tests {
         const BASE: u64 = 2 as u64;
 
         for square in 0..NumberOf::SQUARES {
-            let bishop_bits = move_generation::MoveGenerator::relevant_bishop_bits(square);
+            let bishop_bits = move_generation::MoveGenerator::relevant_bishop_bits(square as u8);
             assert_eq!(
                 bishop_bits.as_number(),
                 bishop_relevant_bit_expected[square]
@@ -1403,7 +1403,7 @@ mod tests {
         const BASE: u64 = 2 as u64;
 
         for sq in 0..NumberOf::SQUARES {
-            let rook_bb = MoveGenerator::relevant_rook_bits(sq);
+            let rook_bb = MoveGenerator::relevant_rook_bits(sq as u8);
             let permutations = MoveGenerator::create_blocker_permutations(rook_bb);
             let total_permutations = BASE.pow(rook_bb.as_number().count_ones());
             assert_eq!(permutations.len(), total_permutations as usize);
@@ -1419,7 +1419,7 @@ mod tests {
     #[test]
     fn check_rook_attacks() {
         for square in 0..NumberOf::SQUARES {
-            let rook_bb = MoveGenerator::relevant_rook_bits(square as usize);
+            let rook_bb = MoveGenerator::relevant_rook_bits(square as u8);
             let blockers = MoveGenerator::create_blocker_permutations(rook_bb);
             let edges = MoveGenerator::edges_from_square(square as u8);
             let rook_bb_with_edges = rook_bb | edges;
@@ -1439,7 +1439,7 @@ mod tests {
     #[test]
     fn check_bishop_attacks() {
         for square in 0..1 {
-            let bishop_bb = MoveGenerator::relevant_bishop_bits(square as usize);
+            let bishop_bb = MoveGenerator::relevant_bishop_bits(square as u8);
             let blockers = MoveGenerator::create_blocker_permutations(bishop_bb);
             let edges = MoveGenerator::edges_from_square(square as u8);
             let bishop_bb_with_edges = bishop_bb | edges;

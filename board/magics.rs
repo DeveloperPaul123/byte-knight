@@ -4,7 +4,7 @@
  * Created Date: Friday, August 30th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Oct 09 2024
+ * Last Modified: Fri Oct 11 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -213,7 +213,7 @@ mod tests {
     #[test]
     fn test_magic_number_index() {
         // test a1 for the rook
-        let relevant_bits = MoveGenerator::relevant_rook_bits(Squares::A1 as usize);
+        let relevant_bits = MoveGenerator::relevant_rook_bits(Squares::A1);
         let blockers = MoveGenerator::create_blocker_permutations(relevant_bits);
         let magic_value = 684547693657194778;
         let magic = MagicNumber::new(

@@ -233,14 +233,14 @@ impl Board {
         return &mut self.piece_bitboards[side as usize][piece as usize];
     }
 
-    pub(crate) fn set_piece_square(&mut self, piece: usize, side: usize, square: usize) {
+    pub(crate) fn set_piece_square(&mut self, piece: usize, side: usize, square: u8) {
         self.piece_bitboards[side][piece].set_square(square);
     }
 
     /// Find what piece is on a given square.
     ///
     /// Returns an optional tuple of the piece and the side that the piece belongs to.
-    pub fn piece_on_square(&self, square: usize) -> Option<(Piece, Side)> {
+    pub fn piece_on_square(&self, square: u8) -> Option<(Piece, Side)> {
         for piece in 0..NumberOf::PIECE_TYPES {
             for side in 0..NumberOf::SIDES {
                 if self.piece_bitboards[side][piece].is_square_occupied(square) {
@@ -348,7 +348,7 @@ impl Board {
     pub fn is_square_empty(&self, square: &Square) -> bool {
         return !self
             .all_pieces()
-            .is_square_occupied(square.to_square_index() as usize);
+            .is_square_occupied(square.to_square_index());
     }
 
     pub fn can_castle_kingside(&self, side: Side) -> bool {

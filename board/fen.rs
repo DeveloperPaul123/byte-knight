@@ -149,7 +149,7 @@ fn parse_piece_placement(board: &mut Board, part: &str) -> FenResult {
                 };
 
                 let square = to_square(file as u8, rank);
-                board.set_piece_square(piece as usize, side as usize, square as usize);
+                board.set_piece_square(piece as usize, side as usize, square);
 
                 file += 1;
             }
@@ -174,7 +174,7 @@ pub(crate) fn piece_placement_to_fen(board: &Board) -> String {
         let mut empty_squares = 0;
         for file in 0..8 {
             let square = to_square(file, rank);
-            let maybe_piece = board.piece_on_square(square as usize);
+            let maybe_piece = board.piece_on_square(square);
             if let Some(piece) = maybe_piece {
                 if empty_squares > 0 {
                     fen.push_str(&empty_squares.to_string());

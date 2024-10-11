@@ -94,7 +94,7 @@ impl Board {
                     to + 8u8
                 };
                 let pawns = self.piece_bitboard(Piece::Pawn, them);
-                debug_assert!(pawns.is_square_occupied(en_passant_pawn_location as usize));
+                debug_assert!(pawns.is_square_occupied(en_passant_pawn_location));
                 self.remove_piece(
                     them,
                     Piece::Pawn,
@@ -289,7 +289,7 @@ impl Board {
     /// Add a piece to the board for a given side and square. Will also update the zobrist hash.
     fn add_piece(&mut self, side: Side, piece: Piece, square: u8, update_zobrist_hash: bool) {
         let bb = self.mut_piece_bitboard(piece, side);
-        bb.set_square(square as usize);
+        bb.set_square(square);
         if update_zobrist_hash {
             self.update_zobrist_hash_for_piece(square, piece, side)
         }
@@ -298,7 +298,7 @@ impl Board {
     /// Remove a piece from the board for a given side and square. Will also update the zobrist hash.
     fn remove_piece(&mut self, side: Side, piece: Piece, square: u8, update_zobrist_hash: bool) {
         let bb = self.mut_piece_bitboard(piece, side);
-        bb.clear_square(square as usize);
+        bb.clear_square(square);
         if update_zobrist_hash {
             self.update_zobrist_hash_for_piece(square, piece, side)
         }
