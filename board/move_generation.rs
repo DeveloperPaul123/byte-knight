@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 28th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 11 2024
+ * Last Modified: Sun Oct 13 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -735,7 +735,17 @@ impl MoveGenerator {
                 let bb_capture = attack_bb & their_pieces;
                 // en passant
                 let bb_en_passant = match board.en_passant_square() {
-                    Some(en_passant_square) => Bitboard::from_square(en_passant_square),
+                    Some(en_passant_square) => {
+                        // we only want to add the en passant square if it is within range of the pawn
+                        // this means that the en passant square is within 1 rank of the pawn and the en passant square
+                        // is in the pawn's attack table
+                        let is_in_range = attack_bb ^ Bitboard::from_square(en_passant_square) == 0;
+                        if is_in_range {
+                            Bitboard::from_square(en_passant_square)
+                        } else {
+                            Bitboard::default()
+                        }
+                    }
                     None => Bitboard::default(),
                 };
                 bb_moves |= bb_capture | bb_en_passant;
