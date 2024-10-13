@@ -170,7 +170,7 @@ impl Board {
     }
 
     /// Convert the board to a FEN string.
-    pub fn to_fen(self) -> String {
+    pub fn to_fen(&self) -> String {
         let mut fen = String::new();
         // Piece placement
         fen.push_str(&fen::piece_placement_to_fen(&self));
