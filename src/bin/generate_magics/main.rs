@@ -4,7 +4,7 @@
  * Created Date: Friday, August 30th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Oct 09 2024
+ * Last Modified: Fri Oct 11 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -112,7 +112,7 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
     let mut offset = 0;
 
     println!("Finding magic numbers for {}", piece);
-    for sq in 0..NumberOf::SQUARES {
+    for sq in 0..NumberOf::SQUARES as u8 {
         let rook_mask = MoveGenerator::relevant_rook_bits(sq);
         let bishop_mask = MoveGenerator::relevant_bishop_bits(sq);
 

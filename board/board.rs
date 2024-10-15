@@ -390,7 +390,8 @@ mod board_tests {
     use crate::{
         definitions::{File, Rank, Squares},
         move_generation::MoveGenerator,
-        moves::{Move, MoveDescriptor},
+        move_list::MoveList,
+        moves::{Move, MoveDescriptor, MoveType},
         square::Square,
     };
 
@@ -449,5 +450,21 @@ mod board_tests {
                 assert!(board.is_square_empty(&square));
             }
         }
+    }
+
+    #[test]
+    fn make_move_updates_piece_boards() {
+        let move_gen = MoveGenerator::new();
+        let mut move_list = MoveList::new();
+        let mut board =
+            Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
+        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        let mv = move_list
+            .iter()
+            .find(|mv| mv.to_short_algebraic() == "b1c3")
+            .unwrap();
+        assert!(board.make_move(mv, &move_gen).is_ok());
+        let rook_bb = board.piece_bitboard(Piece::Rook, Side::Black);
+        println!("{}", rook_bb);
     }
 }

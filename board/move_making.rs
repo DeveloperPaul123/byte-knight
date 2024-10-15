@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 11 2024
+ * Last Modified: Mon Oct 14 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -183,10 +183,10 @@ impl Board {
         // get the kings location and check if that square is attacked by the opponent
         let mut king_bb = self.piece_bitboard(Piece::King, us).clone();
         let king_square = bitboard_helpers::next_bit(&mut king_bb) as u8;
-        let is_legal_move =
-            !move_gen.is_square_attacked(self, &Square::from_square_index(king_square), them);
+        let is_king_in_check =
+            move_gen.is_square_attacked(self, &Square::from_square_index(king_square), them);
 
-        if !is_legal_move {
+        if is_king_in_check {
             self.unmake_move()?;
             bail!("Illegal move");
         }
@@ -218,10 +218,10 @@ impl Board {
         let them = Side::opposite(us);
         // this is move that we're unmaking
         let chess_move = state.next_move;
+        self.switch_side();
         // handle null moves
         if chess_move.is_null_move() {
-            //nothing else to undo except swapping the side to move
-            self.switch_side();
+            //nothing else to undo...
             return Ok(());
         }
 

@@ -4,7 +4,7 @@
  * Created Date: Monday, August 19th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 11 2024
+ * Last Modified: Sat Oct 12 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -102,9 +102,8 @@ impl Display for Move {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Move: from: {}, to: {}, type: {}, piece: {}, cap: {}, promo: {}",
-            SQUARE_NAME[self.from() as usize],
-            SQUARE_NAME[self.to() as usize],
+            "{}, type: {}, piece: {}, cap: {}, promo: {}",
+            self.to_short_algebraic(),
             self.move_descriptor() as u8,
             self.piece(),
             self.captured_piece().unwrap_or(Piece::None),
@@ -256,6 +255,13 @@ impl Move {
         // the reason for this is that a move at a minimum should always have a to and from square
         // and a piece. So if there is no information about the move, it is a null move
         return self.move_info == 0;
+    }
+
+    pub fn to_short_algebraic(&self) -> String {
+        let from = SQUARE_NAME[self.from() as usize];
+        let to = SQUARE_NAME[self.to() as usize];
+        // TODO: Do we need to handle promotion too?
+        format!("{}{}", from, to)
     }
 }
 

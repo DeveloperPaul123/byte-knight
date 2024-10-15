@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 28th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Sun Oct 13 2024
+ * Last Modified: Mon Oct 14 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -869,6 +869,27 @@ impl MoveGenerator {
         let pawn_attacks = self.pawn_attacks[Side::opposite(attacking_side) as usize]
             [square.to_square_index() as usize];
 
+        let is_king_attacker = (king_attacks & *king_bb) > 0;
+        let is_knight_attacker = (knight_attacks & *knight_bb) > 0;
+        let is_rook_attacker = (rook_attacks & *rook_bb) > 0;
+        let is_bishop_attacker = (bishop_attacks & *bishop_bb) > 0;
+        let is_queen_attacker = (queen_attacks & *queen_bb) > 0;
+        let is_pawn_attacker = (pawn_attacks & *pawn_bb) > 0;
+
+        println!(
+            "Square: {} - King: {} Knight: {} Rook: {} Bishop: {} Queen: {} Pawn: {}",
+            SQUARE_NAME[square.to_square_index() as usize],
+            is_king_attacker,
+            is_knight_attacker,
+            is_rook_attacker,
+            is_bishop_attacker,
+            is_queen_attacker,
+            is_pawn_attacker
+        );
+
+        println!("{}", rook_attacks);
+        println!("{}", rook_bb);
+
         return (king_attacks & *king_bb) > 0
             || (knight_attacks & *knight_bb) > 0
             || (rook_attacks & *rook_bb) > 0
@@ -924,6 +945,29 @@ mod tests {
                 &board,
                 &Square::from_square_index(square),
                 Side::opposite(board.side_to_move())
+            ));
+        }
+
+        {
+            let mut board =
+                Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
+                    .unwrap();
+            move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+            let mv = move_list
+                .iter()
+                .find(|mv| mv.to_short_algebraic() == "b1c3")
+                .unwrap();
+            assert!(board.make_move(mv, &move_gen).is_ok());
+
+            // did we leave the king in check?
+            let mut king_bb = *board.piece_bitboard(Piece::King, Side::White);
+            let square = bitboard_helpers::next_bit(&mut king_bb) as u8;
+            assert_eq!(board.side_to_move(), Side::Black);
+            // there should be no attacks on the king
+            assert!(!move_gen.is_square_attacked(
+                &board,
+                &Square::from_square_index(square),
+                Side::Black
             ));
         }
     }
