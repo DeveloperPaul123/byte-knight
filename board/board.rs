@@ -388,7 +388,7 @@ impl Board {
 #[cfg(test)]
 mod board_tests {
     use crate::{
-        definitions::{File, Rank, Squares},
+        definitions::{File, Rank, Squares, DEFAULT_FEN},
         move_generation::MoveGenerator,
         move_list::MoveList,
         moves::{Move, MoveDescriptor, MoveType},
@@ -401,6 +401,7 @@ mod board_tests {
     fn test_default_board() {
         let board = Board::default_board();
         assert_eq!(board.all_pieces(), 0xFFFF00000000FFFF);
+        assert_eq!(board.to_fen(), DEFAULT_FEN);
     }
 
     #[test]
