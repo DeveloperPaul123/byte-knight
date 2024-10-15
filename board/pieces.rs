@@ -21,7 +21,8 @@ pub const PIECE_NAMES: [&str; NumberOf::PIECE_TYPES] =
     ["King", "Queen", "Rook", "Bishop", "Knight", "Pawn"];
 
 /// Short names for pieces. Use [Pieces] to index into this array.
-pub const PIECE_SHORT_NAMES: [char; NumberOf::PIECE_TYPES] = ['K', 'Q', 'R', 'B', 'N', 'P'];
+pub const PIECE_SHORT_NAMES: [char; NumberOf::PIECE_TYPES + 1] =
+    ['K', 'Q', 'R', 'B', 'N', 'P', ' '];
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
