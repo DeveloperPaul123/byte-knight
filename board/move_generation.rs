@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 28th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Sun Oct 13 2024
+ * Last Modified: Tue Oct 15 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -511,7 +511,7 @@ impl MoveGenerator {
         let occupancy = board.all_pieces();
 
         // white king side castling
-        if board.can_castle_kingside(Side::White) {
+        if board.can_castle_kingside(Side::White) && board.side_to_move() == Side::White {
             let king_from = Square::from_square_index(Squares::E1); // e1
             let king_to = Square::from_square_index(Squares::G1); // g1
             let blockers = Bitboard::from_square(Squares::F1) | Bitboard::from_square(Squares::G1);
@@ -531,7 +531,7 @@ impl MoveGenerator {
             }
         }
 
-        if board.can_castle_queenside(Side::White) {
+        if board.can_castle_queenside(Side::White) && board.side_to_move() == Side::White {
             let king_from = Square::from_square_index(Squares::E1);
             let king_to = Square::from_square_index(Squares::C1);
             let blockers = Bitboard::from_square(Squares::D1)
@@ -553,7 +553,7 @@ impl MoveGenerator {
             }
         }
 
-        if board.can_castle_kingside(Side::Black) {
+        if board.can_castle_kingside(Side::Black) && board.side_to_move() == Side::Black {
             let king_from = Square::from_square_index(Squares::E8);
             let king_to = Square::from_square_index(Squares::G8);
             let blockers = Bitboard::from_square(Squares::F8) | Bitboard::from_square(Squares::G8);
@@ -572,7 +572,7 @@ impl MoveGenerator {
             }
         }
 
-        if board.can_castle_queenside(Side::Black) {
+        if board.can_castle_queenside(Side::Black) && board.side_to_move() == Side::Black {
             let king_from = Square::from_square_index(Squares::E8);
             let king_to = Square::from_square_index(Squares::C8);
             let blockers = Bitboard::from_square(Squares::D8)
@@ -675,6 +675,8 @@ impl MoveGenerator {
         }
     }
 
+    #[cfg_attr(not(debug_assertions), inline(always))]
+    #[cfg_attr(debug_assertions, inline(never))]
     fn get_pawn_moves(&self, board: &Board, move_list: &mut MoveList, move_type: &MoveType) {
         let us = board.side_to_move();
         let them = Side::opposite(us);
@@ -698,12 +700,6 @@ impl MoveGenerator {
                 Side::Both => panic!("Both side not allowed"),
             };
 
-            let double_push_square = match us {
-                Side::White => to_square + direction,
-                Side::Black => to_square - direction,
-                Side::Both => panic!("Both side not allowed"),
-            };
-
             // pawn non-capture moves
             if *move_type == MoveType::All || *move_type == MoveType::Quiet {
                 let bb_push = Bitboard::new(1u64 << to_square);
@@ -714,16 +710,40 @@ impl MoveGenerator {
                     Side::Both => panic!("Both side not allowed"),
                 };
 
+                let double_push_square = if can_double_push {
+                    match us {
+                        Side::White => {
+                            let (value, did_overflow) = to_square.overflowing_add(direction);
+                            if did_overflow {
+                                None
+                            } else {
+                                Some(value)
+                            }
+                        }
+                        Side::Black => {
+                            let (value, did_overflow) = to_square.overflowing_sub(direction);
+                            if did_overflow {
+                                None
+                            } else {
+                                Some(value)
+                            }
+                        }
+                        Side::Both => panic!("Both side not allowed"),
+                    }
+                } else {
+                    None
+                };
+
                 // note that the single push square has to be empty in addition to the double push square being empty
-                let is_double_push_unobstructed = if can_double_push {
+                let is_double_push_unobstructed = if double_push_square.is_some() {
                     !occupancy.is_square_occupied(to_square as u8)
-                        && !occupancy.is_square_occupied(double_push_square as u8)
+                        && !occupancy.is_square_occupied(double_push_square.unwrap() as u8)
                 } else {
                     false
                 };
 
                 let bb_double_push = if can_double_push && is_double_push_unobstructed {
-                    Bitboard::new(1u64 << double_push_square) & empty
+                    Bitboard::new(1u64 << double_push_square.unwrap()) & empty
                 } else {
                     Bitboard::default()
                 };
@@ -739,9 +759,11 @@ impl MoveGenerator {
                         // we only want to add the en passant square if it is within range of the pawn
                         // this means that the en passant square is within 1 rank of the pawn and the en passant square
                         // is in the pawn's attack table
-                        let is_in_range = attack_bb ^ Bitboard::from_square(en_passant_square) == 0;
+                        let en_passant_bb = Bitboard::from_square(en_passant_square);
+                        let result = en_passant_bb & !(attack_bb);
+                        let is_in_range = result == 0;
                         if is_in_range {
-                            Bitboard::from_square(en_passant_square)
+                            en_passant_bb
                         } else {
                             Bitboard::default()
                         }
@@ -869,6 +891,27 @@ impl MoveGenerator {
         let pawn_attacks = self.pawn_attacks[Side::opposite(attacking_side) as usize]
             [square.to_square_index() as usize];
 
+        let is_king_attacker = (king_attacks & *king_bb) > 0;
+        let is_knight_attacker = (knight_attacks & *knight_bb) > 0;
+        let is_rook_attacker = (rook_attacks & *rook_bb) > 0;
+        let is_bishop_attacker = (bishop_attacks & *bishop_bb) > 0;
+        let is_queen_attacker = (queen_attacks & *queen_bb) > 0;
+        let is_pawn_attacker = (pawn_attacks & *pawn_bb) > 0;
+
+        // println!(
+        //     "Square: {} - King: {} Knight: {} Rook: {} Bishop: {} Queen: {} Pawn: {}",
+        //     SQUARE_NAME[square.to_square_index() as usize],
+        //     is_king_attacker,
+        //     is_knight_attacker,
+        //     is_rook_attacker,
+        //     is_bishop_attacker,
+        //     is_queen_attacker,
+        //     is_pawn_attacker
+        // );
+
+        // println!("{}", rook_attacks);
+        // println!("{}", rook_bb);
+
         return (king_attacks & *king_bb) > 0
             || (knight_attacks & *knight_bb) > 0
             || (rook_attacks & *rook_bb) > 0
@@ -924,6 +967,29 @@ mod tests {
                 &board,
                 &Square::from_square_index(square),
                 Side::opposite(board.side_to_move())
+            ));
+        }
+
+        {
+            let mut board =
+                Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
+                    .unwrap();
+            move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+            let mv = move_list
+                .iter()
+                .find(|mv| mv.to_long_algebraic() == "b1c3")
+                .unwrap();
+            assert!(board.make_move(mv, &move_gen).is_ok());
+
+            // did we leave the king in check?
+            let mut king_bb = *board.piece_bitboard(Piece::King, Side::White);
+            let square = bitboard_helpers::next_bit(&mut king_bb) as u8;
+            assert_eq!(board.side_to_move(), Side::Black);
+            // there should be no attacks on the king
+            assert!(!move_gen.is_square_attacked(
+                &board,
+                &Square::from_square_index(square),
+                Side::Black
             ));
         }
     }
@@ -1486,5 +1552,19 @@ mod tests {
         }
 
         assert_eq!(move_list.len(), 20);
+    }
+
+    #[test]
+    fn check_en_passant_capture_move_gen() {
+        let board = Board::from_fen("8/8/8/2k5/2pP4/8/B7/4K3 b - d3 0 3").unwrap();
+        assert!(board.en_passant_square().is_some());
+
+        assert_eq!(board.side_to_move(), Side::Black);
+        let mut move_list = MoveList::new();
+        let move_gen = MoveGenerator::new();
+        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        let en_passant_move = move_list.iter().find(|mv| mv.is_en_passant_capture());
+        assert!(en_passant_move.is_some());
+        assert!(move_list.len() >= 8);
     }
 }

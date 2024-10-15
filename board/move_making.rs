@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 11 2024
+ * Last Modified: Tue Oct 15 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -18,7 +18,7 @@ use crate::{
     definitions::{CastlingAvailability, Side, Squares},
     move_generation::MoveGenerator,
     moves::Move,
-    pieces::Piece,
+    pieces::{Piece, SQUARE_NAME},
     square::Square,
 };
 use anyhow::{bail, Result};
@@ -31,6 +31,8 @@ impl Board {
     /// This function will return an error if the move is illegal. The passed in moves are assumed to be pseudo-legal,
     /// hence why the check has to be done after making the move. This function will make the move, check for legality
     /// and then undo the move if it is illegal.
+    #[cfg_attr(not(debug_assertions), inline(always))]
+    #[cfg_attr(debug_assertions, inline(never))]
     pub fn make_move(&mut self, mv: &Move, move_gen: &MoveGenerator) -> Result<()> {
         let mut current_state = self.board_state().clone();
         current_state.next_move = mv.clone();
@@ -183,10 +185,10 @@ impl Board {
         // get the kings location and check if that square is attacked by the opponent
         let mut king_bb = self.piece_bitboard(Piece::King, us).clone();
         let king_square = bitboard_helpers::next_bit(&mut king_bb) as u8;
-        let is_legal_move =
-            !move_gen.is_square_attacked(self, &Square::from_square_index(king_square), them);
+        let is_king_in_check =
+            move_gen.is_square_attacked(self, &Square::from_square_index(king_square), them);
 
-        if !is_legal_move {
+        if is_king_in_check {
             self.unmake_move()?;
             bail!("Illegal move");
         }
@@ -201,6 +203,8 @@ impl Board {
     ///
     /// This function will return an error if it is unable to undo the last move. This can happen if
     /// no moves have been made on the board.
+    #[cfg_attr(not(debug_assertions), inline(always))]
+    #[cfg_attr(debug_assertions, inline(never))]
     pub fn unmake_move(&mut self) -> Result<()> {
         let maybe_state = self.history.pop();
         if maybe_state.is_none() {
@@ -218,10 +222,10 @@ impl Board {
         let them = Side::opposite(us);
         // this is move that we're unmaking
         let chess_move = state.next_move;
+
         // handle null moves
         if chess_move.is_null_move() {
-            //nothing else to undo except swapping the side to move
-            self.switch_side();
+            //nothing else to undo...
             return Ok(());
         }
 
@@ -233,7 +237,7 @@ impl Board {
         if promoted_piece.is_some() {
             // remove the promoted piece
             // note that we don't update the zobrist hash here
-            self.remove_piece(them, promoted_piece.unwrap(), to, update_zobrist_hash);
+            self.remove_piece(us, promoted_piece.unwrap(), to, update_zobrist_hash);
             // put the pawn back
             self.add_piece(us, Piece::Pawn, from, update_zobrist_hash);
         } else {
@@ -241,8 +245,6 @@ impl Board {
         }
 
         if chess_move.is_castle() {
-            self.undo_move(us, piece, from, to, update_zobrist_hash);
-
             // also need to move the rook back
             let (rook_from, rook_to) = match to {
                 Squares::G1 => (Squares::H1, Squares::F1),
@@ -281,12 +283,20 @@ impl Board {
         self.switch_side();
     }
 
+    
     fn undo_move(&mut self, side: Side, piece: Piece, from: u8, to: u8, update_zobrist_hash: bool) {
         self.remove_piece(side, piece, to, update_zobrist_hash);
         self.add_piece(side, piece, from, update_zobrist_hash);
     }
 
-    /// Add a piece to the board for a given side and square. Will also update the zobrist hash.
+    /// Add a piece to the board for a given side and square.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `side` - The side to add the piece for.
+    /// * `piece` - The piece to add.
+    /// * `square` - The square to add the piece to.
+    /// * `update_zobrist_hash` - Whether to update the zobrist hash for the addition of the piece.
     fn add_piece(&mut self, side: Side, piece: Piece, square: u8, update_zobrist_hash: bool) {
         let bb = self.mut_piece_bitboard(piece, side);
         bb.set_square(square);
@@ -295,9 +305,23 @@ impl Board {
         }
     }
 
-    /// Remove a piece from the board for a given side and square. Will also update the zobrist hash.
+    /// Remove a piece from the board for a given side and square.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `side` - The side to remove the piece for.
+    /// * `piece` - The piece to remove.
+    /// * `square` - The square to remove the piece from.
+    /// * `update_zobrist_hash` - Whether to update the zobrist hash for the removal of the piece.
     fn remove_piece(&mut self, side: Side, piece: Piece, square: u8, update_zobrist_hash: bool) {
         let bb = self.mut_piece_bitboard(piece, side);
+        if !bb.is_square_occupied(square) {
+            println!(
+                "square {} not occupied by {}\n{}",
+                SQUARE_NAME[square as usize], piece, bb
+            )
+        }
+        debug_assert!(bb.is_square_occupied(square));
         bb.clear_square(square);
         if update_zobrist_hash {
             self.update_zobrist_hash_for_piece(square, piece, side)
