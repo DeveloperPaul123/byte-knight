@@ -281,12 +281,20 @@ impl Board {
         self.switch_side();
     }
 
+    
     fn undo_move(&mut self, side: Side, piece: Piece, from: u8, to: u8, update_zobrist_hash: bool) {
         self.remove_piece(side, piece, to, update_zobrist_hash);
         self.add_piece(side, piece, from, update_zobrist_hash);
     }
 
-    /// Add a piece to the board for a given side and square. Will also update the zobrist hash.
+    /// Add a piece to the board for a given side and square.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `side` - The side to add the piece for.
+    /// * `piece` - The piece to add.
+    /// * `square` - The square to add the piece to.
+    /// * `update_zobrist_hash` - Whether to update the zobrist hash for the addition of the piece.
     fn add_piece(&mut self, side: Side, piece: Piece, square: u8, update_zobrist_hash: bool) {
         let bb = self.mut_piece_bitboard(piece, side);
         bb.set_square(square);
@@ -295,7 +303,14 @@ impl Board {
         }
     }
 
-    /// Remove a piece from the board for a given side and square. Will also update the zobrist hash.
+    /// Remove a piece from the board for a given side and square.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `side` - The side to remove the piece for.
+    /// * `piece` - The piece to remove.
+    /// * `square` - The square to remove the piece from.
+    /// * `update_zobrist_hash` - Whether to update the zobrist hash for the removal of the piece.
     fn remove_piece(&mut self, side: Side, piece: Piece, square: u8, update_zobrist_hash: bool) {
         let bb = self.mut_piece_bitboard(piece, side);
         bb.clear_square(square);
