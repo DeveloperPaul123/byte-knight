@@ -11,10 +11,13 @@ pub struct SplitPerftResult {
     pub nodes: u64,
 }
 
+#[cfg_attr(not(debug_assertions), inline(always))]
+#[cfg_attr(debug_assertions, inline(never))]
 pub fn split_perft(
     board: &mut Board,
     move_gen: &MoveGenerator,
     depth: usize,
+    print_moves: bool,
 ) -> Result<Vec<SplitPerftResult>> {
     let mut move_list = MoveList::new();
     move_gen.generate_moves(&board, &mut move_list, MoveType::All);
@@ -22,12 +25,18 @@ pub fn split_perft(
     let mut results = Vec::new();
     for mv in move_list.iter() {
         // first ensure the move is legal
-        println!("mv - {}", mv.to_short_algebraic());
+        if print_moves {
+            println!("mv - {}", mv.to_long_algebraic());
+        }
         let move_res = board.make_move(mv, &move_gen);
         if !move_res.is_err() {
-            println!("node - {}", mv.to_short_algebraic());
-            let nodes: u64 = perft(board, move_gen, depth - 1, true).unwrap();
-            println!("---");
+            if print_moves {
+                println!("node - {}", mv.to_long_algebraic());
+            }
+            let nodes: u64 = perft(board, move_gen, depth - 1, print_moves)?;
+            if print_moves {
+                println!("---");
+            }
             board.unmake_move()?;
             results.push(SplitPerftResult { mv: *mv, nodes });
         } else {
@@ -36,7 +45,7 @@ pub fn split_perft(
     }
 
     // sort results alphabetically
-    results.sort_by(|a, b| a.mv.to_short_algebraic().cmp(&b.mv.to_short_algebraic()));
+    results.sort_by(|a, b| a.mv.to_long_algebraic().cmp(&b.mv.to_long_algebraic()));
 
     Ok(results)
 }
@@ -99,6 +108,7 @@ mod tests {
             let mut board = Board::from_fen("8/8/8/2k5/2pP4/8/B7/4K3 b - d3 0 3").unwrap();
             assert_eq!(board.side_to_move(), Side::Black);
             assert!(board.is_in_check(&move_gen));
+            assert!(board.en_passant_square().is_some());
             let total_moves = perft(&mut board, &move_gen, 1, false).unwrap();
             assert_eq!(total_moves, 8);
         }
@@ -165,6 +175,99 @@ mod tests {
             let total_moves = perft(&mut board, &move_gen, 3, false).unwrap();
             // TODO: This is VERY broken
             assert_eq!(total_moves, 62379);
+        }
+
+        {
+            let mut board = Board::from_fen(
+                "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+            )
+            .unwrap();
+            let total_moves = perft(&mut board, &move_gen, 3, false).unwrap();
+            assert_eq!(total_moves, 89890);
+        }
+
+        {
+            let mut board = Board::from_fen("3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1").unwrap();
+            let total_moves = perft(&mut board, &move_gen, 6, false).unwrap();
+            assert_eq!(total_moves, 1134888);
+        }
+
+        {
+            let mut board = Board::from_fen("8/8/4k3/8/2p5/8/B2P2K1/8 w - - 0 1").unwrap();
+            let total_moves = perft(&mut board, &move_gen, 6, false).unwrap();
+            assert_eq!(total_moves, 1015133);
+        }
+
+        {
+            let mut board = Board::from_fen("8/8/1k6/2b5/2pP4/8/5K2/8 b - d3 0 1").unwrap();
+            let total_moves = perft(&mut board, &move_gen, 6, false).unwrap();
+            assert_eq!(total_moves, 1440467);
+        }
+
+        {
+            let mut board = Board::from_fen("5k2/8/8/8/8/8/8/4K2R w K - 0 1").unwrap();
+            let total_moves = perft(&mut board, &move_gen, 6, false).unwrap();
+            assert_eq!(total_moves, 661072);
+        }
+
+        {
+            let mut board = Board::from_fen("3k4/8/8/8/8/8/8/R3K3 w Q - 0 1").unwrap();
+            let total_moves = perft(&mut board, &move_gen, 6, false).unwrap();
+            assert_eq!(total_moves, 803711);
+        }
+
+        {
+            let mut board = Board::from_fen("r3k2r/1b4bq/8/8/8/8/7B/R3K2R w KQkq - 0 1").unwrap();
+            let total_moves = perft(&mut board, &move_gen, 4, false).unwrap();
+            assert_eq!(total_moves, 1274206);
+        }
+
+        {
+            let mut board = Board::from_fen("r3k2r/8/3Q4/8/8/5q2/8/R3K2R b KQkq - 0 1").unwrap();
+            let total_moves = perft(&mut board, &move_gen, 4, false).unwrap();
+            assert_eq!(total_moves, 1720476);
+        }
+
+        {
+            let mut board = Board::from_fen("2K2r2/4P3/8/8/8/8/8/3k4 w - - 0 1").unwrap();
+            let total_moves = perft(&mut board, &move_gen, 6, false).unwrap();
+            assert_eq!(total_moves, 3821001);
+        }
+
+        {
+            let mut board = Board::from_fen("8/8/1P2K3/8/2n5/1q6/8/5k2 b - - 0 1").unwrap();
+            let total_moves = perft(&mut board, &move_gen, 5, false).unwrap();
+            assert_eq!(total_moves, 1004658);
+        }
+
+        {
+            let mut board = Board::from_fen("4k3/1P6/8/8/8/8/K7/8 w - - 0 1").unwrap();
+            let total_moves = perft(&mut board, &move_gen, 6, false).unwrap();
+            assert_eq!(total_moves, 217342);
+        }
+
+        {
+            let mut board = Board::from_fen("8/P1k5/K7/8/8/8/8/8 w - - 0 1").unwrap();
+            let total_moves = perft(&mut board, &move_gen, 6, false).unwrap();
+            assert_eq!(total_moves, 92683);
+        }
+
+        {
+            let mut board = Board::from_fen("K1k5/8/P7/8/8/8/8/8 w - - 0 1").unwrap();
+            let total_moves = perft(&mut board, &move_gen, 6, false).unwrap();
+            assert_eq!(total_moves, 2217);
+        }
+
+        {
+            let mut board = Board::from_fen("8/k1P5/8/1K6/8/8/8/8 w - - 0 1").unwrap();
+            let total_moves = perft(&mut board, &move_gen, 7, false).unwrap();
+            assert_eq!(total_moves, 567584);
+        }
+
+        {
+            let mut board = Board::from_fen("8/8/2k5/5q2/5n2/8/5K2/8 b - - 0 1").unwrap();
+            let total_moves = perft(&mut board, &move_gen, 4, false).unwrap();
+            assert_eq!(total_moves, 23527);
         }
     }
 }

@@ -4,7 +4,7 @@
  * Created Date: Monday, August 19th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Sat Oct 12 2024
+ * Last Modified: Tue Oct 15 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -15,7 +15,7 @@
 use std::fmt::Display;
 
 use crate::{
-    pieces::{Piece, SQUARE_NAME},
+    pieces::{Piece, PIECE_SHORT_NAMES, SQUARE_NAME},
     square::{to_square, Square},
 };
 const MOVE_INFO_CAPTURED_PIECE_SHIFT: u32 = 20;
@@ -103,7 +103,7 @@ impl Display for Move {
         write!(
             f,
             "{}, type: {}, piece: {}, cap: {}, promo: {}",
-            self.to_short_algebraic(),
+            self.to_long_algebraic(),
             self.move_descriptor() as u8,
             self.piece(),
             self.captured_piece().unwrap_or(Piece::None),
@@ -257,11 +257,19 @@ impl Move {
         return self.move_info == 0;
     }
 
-    pub fn to_short_algebraic(&self) -> String {
+    pub fn to_long_algebraic(&self) -> String {
         let from = SQUARE_NAME[self.from() as usize];
         let to = SQUARE_NAME[self.to() as usize];
-        // TODO: Do we need to handle promotion too?
-        format!("{}{}", from, to)
+        // TODO: Do we need to handle promotion too? yes
+        let promotion_piece = self.promotion_piece().unwrap_or(Piece::None);
+        format!(
+            "{}{}{}",
+            from,
+            to,
+            PIECE_SHORT_NAMES[promotion_piece as usize].to_ascii_lowercase()
+        )
+        .trim()
+        .to_string()
     }
 }
 

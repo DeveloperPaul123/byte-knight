@@ -18,6 +18,9 @@ struct Args {
     fen: String,
     #[arg(short, long)]
     split_perft: bool,
+
+    #[arg(short, long, default_value_t = false)]
+    print_moves: bool,
 }
 
 fn main() {
@@ -25,9 +28,11 @@ fn main() {
     let mut board = Board::from_fen(&args.fen).unwrap();
     let move_generation = MoveGenerator::new();
     let result = if args.split_perft {
-        let move_results = perft::split_perft(&mut board, &move_generation, args.depth).unwrap();
+        println!("running split perft at depth {}", args.depth);
+        let move_results =
+            perft::split_perft(&mut board, &move_generation, args.depth, args.print_moves).unwrap();
         for res in &move_results {
-            println!("{}: {}", res.mv.to_short_algebraic(), res.nodes);
+            println!("{}: {}", res.mv.to_long_algebraic(), res.nodes);
         }
         println!();
         // print the total nodes
@@ -36,4 +41,6 @@ fn main() {
         let nodes = perft::perft(&mut board, &move_generation, args.depth, false).unwrap();
         println!("{}", nodes);
     };
+
+    // println!("{:?}", result);
 }
