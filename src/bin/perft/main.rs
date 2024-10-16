@@ -1,3 +1,11 @@
+use std::{
+    fs,
+    io::{self, BufRead},
+    path::Path,
+};
+
+use rayon::prelude::*;
+
 use byte_board::{
     board::Board,
     definitions::DEFAULT_FEN,
@@ -5,6 +13,7 @@ use byte_board::{
     perft::{self},
 };
 use clap::Parser;
+use console::Emoji;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -21,13 +30,64 @@ struct Args {
 
     #[arg(short, long, default_value_t = false)]
     print_moves: bool,
+
+    #[arg(short, long)]
+    epd_file: Option<String>,
 }
+
+fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<fs::File>>>
+where
+    P: AsRef<Path>,
+{
+    let file = fs::File::open(filename)?;
+    let reader = io::BufReader::new(file);
+    Ok(reader.lines())
+}
+
+static CHECK_BOX: Emoji = Emoji("✅", "");
+static CROSS_MARK: Emoji = Emoji("❌", "");
 
 fn main() {
     let args = Args::parse();
     let mut board = Board::from_fen(&args.fen).unwrap();
     let move_generation = MoveGenerator::new();
-    let result = if args.split_perft {
+    if args.epd_file.is_some() {
+        let path = args.epd_file.as_ref().unwrap();
+        let lines = read_lines(path).unwrap();
+        let now = std::time::Instant::now();
+        lines.par_bridge().for_each(|line| {
+            let line = line.unwrap();
+            let parts: Vec<&str> = line.split(";").collect();
+            let fen = parts[0];
+            let mut failures = Vec::new();
+            for part in parts.iter().skip(1) {
+                let parts = part.split_whitespace().collect::<Vec<&str>>();
+                let depth = parts[0].replace("D", "").parse::<usize>().unwrap();
+                let expected_nodes = parts[1].parse::<u64>().unwrap();
+                let mut board = Board::from_fen(fen).unwrap();
+                let nodes = perft::perft(&mut board, &move_generation, depth, false).unwrap();
+                if expected_nodes != nodes {
+                    println!(
+                        "{:<30}: {:2} {:^10} != {:^10} {}",
+                        fen, depth, expected_nodes, nodes, CROSS_MARK
+                    );
+                    failures.push((fen.to_string(), depth, expected_nodes, nodes));
+                } else {
+                    println!(
+                        "{:<30}: {:2} {:^10} == {:^10} {}",
+                        fen, depth, expected_nodes, nodes, CHECK_BOX
+                    );
+                }
+            }
+        });
+        let elapsed = now.elapsed();
+
+        println!(
+            "Summary:\n\t{} failed\n\t{:.2} seconds",
+            0,
+            elapsed.as_secs_f64()
+        );
+    } else if args.split_perft {
         println!("running split perft at depth {}", args.depth);
         let move_results =
             perft::split_perft(&mut board, &move_generation, args.depth, args.print_moves).unwrap();
