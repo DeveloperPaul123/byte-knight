@@ -898,26 +898,12 @@ impl MoveGenerator {
         let is_queen_attacker = (queen_attacks & *queen_bb) > 0;
         let is_pawn_attacker = (pawn_attacks & *pawn_bb) > 0;
 
-        // println!(
-        //     "Square: {} - King: {} Knight: {} Rook: {} Bishop: {} Queen: {} Pawn: {}",
-        //     SQUARE_NAME[square.to_square_index() as usize],
-        //     is_king_attacker,
-        //     is_knight_attacker,
-        //     is_rook_attacker,
-        //     is_bishop_attacker,
-        //     is_queen_attacker,
-        //     is_pawn_attacker
-        // );
-
-        // println!("{}", rook_attacks);
-        // println!("{}", rook_bb);
-
-        return (king_attacks & *king_bb) > 0
-            || (knight_attacks & *knight_bb) > 0
-            || (rook_attacks & *rook_bb) > 0
-            || (bishop_attacks & *bishop_bb) > 0
-            || (queen_attacks & *queen_bb) > 0
-            || (pawn_attacks & *pawn_bb) > 0;
+        return is_king_attacker
+            || is_knight_attacker
+            || is_rook_attacker
+            || is_bishop_attacker
+            || is_queen_attacker
+            || is_pawn_attacker;
     }
 }
 
