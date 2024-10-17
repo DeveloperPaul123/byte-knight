@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Oct 16 2024
+ * Last Modified: Thu Oct 17 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -48,6 +48,21 @@ pub enum File {
     H = 7,
 }
 
+impl File {
+    pub fn to_char(&self) -> char {
+        match self {
+            Self::A => 'a',
+            Self::B => 'b',
+            Self::C => 'c',
+            Self::D => 'd',
+            Self::E => 'e',
+            Self::F => 'f',
+            Self::G => 'g',
+            Self::H => 'h',
+        }
+    }
+}
+
 impl TryFrom<u8> for File {
     type Error = ();
 
@@ -61,6 +76,24 @@ impl TryFrom<u8> for File {
             5 => Ok(Self::F),
             6 => Ok(Self::G),
             7 => Ok(Self::H),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<char> for File {
+    type Error = ();
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            'a' => Ok(Self::A),
+            'b' => Ok(Self::B),
+            'c' => Ok(Self::C),
+            'd' => Ok(Self::D),
+            'e' => Ok(Self::E),
+            'f' => Ok(Self::F),
+            'g' => Ok(Self::G),
+            'h' => Ok(Self::H),
             _ => Err(()),
         }
     }
@@ -86,6 +119,18 @@ impl Rank {
             Side::Black => Rank::R1,
             _ => Rank::R1,
         }
+    }
+
+    pub fn pawn_start_rank(side: Side) -> Rank {
+        match side {
+            Side::White => Rank::R2,
+            Side::Black => Rank::R7,
+            _ => panic!("Invalid side"),
+        }
+    }
+
+    pub fn as_number(&self) -> u8 {
+        *self as u8 + 1u8
     }
 }
 

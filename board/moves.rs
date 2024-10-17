@@ -4,7 +4,7 @@
  * Created Date: Monday, August 19th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Oct 16 2024
+ * Last Modified: Thu Oct 17 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -166,6 +166,10 @@ impl Move {
             None,
             None,
         );
+    }
+
+    pub fn new_short_move(from: &Square, to: &Square, promotion: Option<Piece>) -> Self {
+        Self::new(from, to, MoveDescriptor::None, Piece::None, None, promotion)
     }
 
     /// Returns the from [`Square`] of the move.

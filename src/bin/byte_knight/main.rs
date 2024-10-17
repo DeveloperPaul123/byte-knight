@@ -22,16 +22,19 @@ mod timer;
 pub use base_engine::ChessEngine;
 pub use evil_bot::EvilBot;
 pub use timer::Timer;
+use uci_parser::{parse_uci_command, UciCommand, UciInfo, UciMove, UciResponse, UciSearchOptions};
 
-use std::{slice::Iter, str::FromStr};
+use std::{process::exit, slice::Iter, str::FromStr};
 
 use byte_board::{
     board::Board,
     definitions::{About, Side},
+    move_generation::MoveGenerator,
+    moves::Move,
+    pieces::SQUARE_NAME,
 };
 use clap::{Parser, Subcommand};
 use std::io::{self, BufRead, Write};
-use vampirc_uci::{parse, UciMessage, UciMove, UciTimeControl};
 
 #[derive(Parser)]
 #[command(
@@ -39,16 +42,15 @@ use vampirc_uci::{parse, UciMessage, UciMove, UciTimeControl};
 )]
 struct Options {
     #[command(subcommand)]
-    command: Command,
+    command: Option<Command>,
+
+    #[arg(long, short, default_value = "EvilBot")]
+    engine: String,
 }
 
 #[derive(Subcommand)]
 #[command(about = "Available commands")]
 enum Command {
-    Uci {
-        #[arg(long, short)]
-        engine: String,
-    },
     // prints out what engines are available
     Engines,
 }
@@ -60,101 +62,106 @@ fn engine_for_type(engine_type: EngineType) -> Box<dyn ChessEngine> {
     }
 }
 
+fn square_index_to_uci_square(square: u8) -> uci_parser::Square {
+    uci_parser::Square::from_str(SQUARE_NAME[square as usize]).unwrap()
+}
+
+fn move_to_uci_move(mv: &Move) -> UciMove {
+    let promotion = mv.promotion_piece().map(|p| p.as_char());
+
+    match promotion {
+        Some(promotion) => UciMove {
+            src: square_index_to_uci_square(mv.from()),
+            dst: square_index_to_uci_square(mv.to()),
+            promote: Some(uci_parser::Piece::from_str(&promotion.to_string()).unwrap()),
+        },
+        None => UciMove {
+            src: square_index_to_uci_square(mv.from()),
+            dst: square_index_to_uci_square(mv.to()),
+            promote: None,
+        },
+    }
+}
+
 fn run_uci(engine_name: &String) {
     let stdin: io::Stdin = io::stdin();
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
     let mut input = stdin.lock().lines();
-
     let mut board = Board::default_board();
 
-    // already in UCI mode, so output the engine info
-    writeln!(stdout, "{}", UciMessage::id_name(About::NAME)).unwrap();
-    writeln!(stdout, "{}", UciMessage::id_author(About::AUTHORS)).unwrap();
-
-    writeln!(stdout, "{}", UciMessage::UciOk).unwrap();
     let engine_type = EngineType::from_str(&engine_name).expect("Invalid engine name");
     let mut engine = engine_for_type(engine_type);
-
+    let move_gen = MoveGenerator::new();
     loop {
         if let Some(Ok(line)) = input.next() {
-            let message = parse(&line);
-            for msg in message.iter() {
-                match msg {
-                    UciMessage::UciNewGame => {
-                        board = Board::default_board();
-                        engine = engine_for_type(engine_type);
-                    }
-                    UciMessage::IsReady => {
-                        writeln!(stdout, "{}", UciMessage::ReadyOk).unwrap();
-                    }
-                    UciMessage::Position {
-                        startpos,
-                        fen,
-                        moves,
-                    } => {
-                        match startpos {
-                            true => {
-                                board = Board::default_board();
-                            }
-                            false => {
-                                if let Some(fen) = fen {
-                                    board = Board::from_fen(fen.as_str()).unwrap();
-                                }
-                            }
-                        }
-
-                        // TODO: Apply moves to the board
-
-                        // TODO: String output of board
-                        // writeln!(stdout, "{}", Board::to_string(&board)).unwrap();
-                    }
-                    UciMessage::Go {
-                        time_control,
-                        search_control: _,
-                    } => {
-                        // TODO: Implement time control
-                        let tc: &UciTimeControl = time_control.as_ref().unwrap();
-                        let timer;
-                        match tc {
-                            UciTimeControl::TimeLeft {
-                                white_time,
-                                black_time,
-                                white_increment: _,
-                                black_increment: _,
-                                moves_to_go: _,
-                            } => match board.side_to_move() {
-                                Side::Black => {
-                                    timer = Timer::new(black_time.unwrap().num_milliseconds());
-                                }
-                                Side::White => {
-                                    timer = Timer::new(white_time.unwrap().num_milliseconds());
-                                }
-                                _ => {
-                                    panic!("Invalid side to move");
-                                }
-                            },
-                            _ => {
-                                // TODO: Log error
-                                timer = Timer::new(0);
-                            }
-                        }
-
-                        let best_move = engine.think(&mut board, &timer);
-                        if let Some(bot_move) = best_move {
-                            // TODO: Convert to UciMove
-
-                            // writeln!(stdout, "{}", UciMessage::best_move(bot_move).to_string())
-                            //     .unwrap();
-                        } else {
-                            // TODO Handle the case when best_move is None.
-                        }
-                    }
-                    UciMessage::Quit => {
-                        break;
-                    }
-                    _ => (),
+            let (_msg, command) = parse_uci_command(&line).unwrap();
+            match command {
+                UciCommand::Uci => {
+                    let id = UciResponse::Id {
+                        name: About::NAME,
+                        author: About::AUTHORS,
+                    };
+                    writeln!(stdout, "{}", id).unwrap();
+                    writeln!(stdout, "{}", UciResponse::<String>::UciOk).unwrap();
                 }
+                UciCommand::Quit => {
+                    exit(0);
+                }
+                UciCommand::UciNewGame => {
+                    board = Board::default_board();
+                    engine = engine_for_type(engine_type);
+                }
+                UciCommand::IsReady => {
+                    writeln!(stdout, "{}", UciResponse::<String>::ReadyOk).unwrap();
+                }
+                UciCommand::Position { fen, moves } => {
+                    match fen {
+                        None => {
+                            board = Board::default_board();
+                        }
+                        Some(fen) => {
+                            board = Board::from_fen(fen.as_str()).unwrap();
+                        }
+                    }
+
+                    for mv in moves {
+                        board.make_uci_move(&mv.to_string(), &move_gen).unwrap();
+                    }
+
+                    // TODO: String output of board
+                    // writeln!(stdout, "{}", Board::to_string(&board)).unwrap();
+                }
+                UciCommand::Go(search_options) => {
+                    let timer = match board.side_to_move() {
+                        Side::Black => Timer::new(search_options.btime.unwrap().as_millis() as i64),
+                        Side::White => Timer::new(search_options.wtime.unwrap().as_millis() as i64),
+                        _ => {
+                            panic!("Invalid side to move");
+                        }
+                    };
+
+                    let info = UciInfo::default().string("Starting search...").depth(1);
+                    writeln!(stdout, "{}", UciResponse::<String>::Info(Box::new(info))).unwrap();
+
+                    let best_move = engine.think(&mut board, &timer);
+
+                    if let Some(bot_move) = best_move {
+                        writeln!(
+                            stdout,
+                            "{}",
+                            // TODO: Ponder
+                            UciResponse::BestMove {
+                                bestmove: Some(move_to_uci_move(&bot_move).to_string()),
+                                ponder: None
+                            }
+                        )
+                        .unwrap();
+                    } else {
+                        // TODO Handle the case when best_move is None.
+                    }
+                }
+                _ => (),
             }
 
             stdout.flush().unwrap();
@@ -199,14 +206,15 @@ impl ToString for EngineType {
 fn main() {
     let args = Options::parse();
     match args.command {
-        Command::Uci { engine } => {
-            run_uci(&engine);
-        }
-        Command::Engines {} => {
-            println!("Available engines:");
-            for engine in EngineType::iter() {
-                println!("  🤖 {}", engine.to_string());
+        Some(command) => match command {
+            Command::Engines => {
+                println!("Available engines:");
+                for engine in EngineType::iter() {
+                    println!("  🤖 {}", engine.to_string());
+                }
+                exit(0);
             }
-        }
+        },
+        None => run_uci(&args.engine),
     }
 }

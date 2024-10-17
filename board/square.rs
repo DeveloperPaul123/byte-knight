@@ -4,7 +4,7 @@
  * Created Date: Friday, August 16th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Sat Aug 31 2024
+ * Last Modified: Thu Oct 17 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -23,15 +23,38 @@ impl Square {
     pub fn new(file: File, rank: Rank) -> Self {
         Self { file, rank }
     }
+
+    pub fn from_file_rank(file: char, rank: u8) -> Result<Self, ()> {
+        let file = File::try_from(file)?;
+        let rank = Rank::try_from(rank)?;
+        Ok(Self { file, rank })
+    }
+
     pub fn to_square_index(&self) -> u8 {
         to_square(self.file as u8, self.rank as u8)
     }
+
     pub fn from_square_index(square: u8) -> Self {
         let (file, rank) = from_square(square);
         Self {
             file: File::try_from(file).unwrap(),
             rank: Rank::try_from(rank).unwrap(),
         }
+    }
+}
+
+impl TryFrom<&str> for Square {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        if value.len() != 2 {
+            return Err(());
+        }
+
+        let file = value.chars().nth(0).unwrap();
+        let rank = value.chars().nth(1).unwrap();
+
+        Ok(Square::from_file_rank(file, rank as u8)?)
     }
 }
 

@@ -50,6 +50,43 @@ impl Display for Piece {
     }
 }
 
+impl Default for Piece {
+    fn default() -> Self {
+        Piece::None
+    }
+}
+
+impl TryFrom<u8> for Piece {
+    type Error = ();
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Piece::King),
+            1 => Ok(Piece::Queen),
+            2 => Ok(Piece::Rook),
+            3 => Ok(Piece::Bishop),
+            4 => Ok(Piece::Knight),
+            5 => Ok(Piece::Pawn),
+            6 => Ok(Piece::None),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<char> for Piece {
+    type Error = ();
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value.to_ascii_uppercase() {
+            'K' => Ok(Piece::King),
+            'Q' => Ok(Piece::Queen),
+            'R' => Ok(Piece::Rook),
+            'B' => Ok(Piece::Bishop),
+            'N' => Ok(Piece::Knight),
+            'P' => Ok(Piece::Pawn),
+            _ => Err(()),
+        }
+    }
+}
+
 impl Piece {
     /// Returns `true` if the piece is [`KING`].
     ///
@@ -106,26 +143,8 @@ impl Piece {
     pub fn is_none(&self) -> bool {
         matches!(self, Self::None)
     }
-}
 
-impl Default for Piece {
-    fn default() -> Self {
-        Piece::None
-    }
-}
-
-impl TryFrom<u8> for Piece {
-    type Error = ();
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0 => Ok(Piece::King),
-            1 => Ok(Piece::Queen),
-            2 => Ok(Piece::Rook),
-            3 => Ok(Piece::Bishop),
-            4 => Ok(Piece::Knight),
-            5 => Ok(Piece::Pawn),
-            6 => Ok(Piece::None),
-            _ => Err(()),
-        }
+    pub fn as_char(&self) -> char {
+        PIECE_SHORT_NAMES[*self as usize].to_ascii_lowercase()
     }
 }

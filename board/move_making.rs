@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Oct 16 2024
+ * Last Modified: Thu Oct 17 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -15,7 +15,7 @@
 use crate::{
     bitboard_helpers,
     board::Board,
-    definitions::{CastlingAvailability, Side, Squares},
+    definitions::{CastlingAvailability, Rank, Side, Squares},
     move_generation::MoveGenerator,
     moves::Move,
     pieces::{Piece, SQUARE_NAME},
@@ -24,6 +24,82 @@ use crate::{
 use anyhow::{bail, Result};
 
 impl Board {
+    /// Make a move using UCI notation.
+    ///
+    /// This function will make a move on the board using UCI notation. It will first parse the move and then try to determine
+    /// the move type and other information about it. It will then make the move on the board and update the board state.
+    ///
+    /// # Arguments
+    ///
+    /// * `mv` - The move to make in UCI notation.
+    ///
+    ///
+    pub fn make_uci_move(&mut self, mv: &str, move_gen: &MoveGenerator) -> Result<()> {
+        // parse the move to and from squares
+        // also check if this is a promotion if there is a promotion piece at the end of the move
+        let from =
+            Square::try_from(&mv[0..2]).map_err(|_| anyhow::anyhow!("Invalid from square"))?;
+        let to = Square::try_from(&mv[2..4]).map_err(|_| anyhow::anyhow!("Invalid to square"))?;
+
+        let has_promotion_piece = mv.len() >= 5 && mv.chars().nth(4).unwrap() != ' ';
+        let promotion_piece = if has_promotion_piece {
+            let promotion_piece_char = mv.chars().nth(4).unwrap();
+            Some(
+                Piece::try_from(promotion_piece_char)
+                    .map_err(|_| anyhow::anyhow!("Invalid promotion piece"))?,
+            )
+        } else {
+            None
+        };
+
+        let (piece, side) = self
+            .piece_on_square(from.to_square_index())
+            .ok_or_else(|| anyhow::anyhow!("No piece on square"))?;
+        let captured_piece = match self.piece_on_square(to.to_square_index()) {
+            Some((piece, _)) => Some(piece),
+            None => None,
+        };
+
+        // now just figure out the move descriptor
+        // need to check if the move is a castle, en passant, promotion or a pawn two up move
+        let can_double_push = piece == Piece::Pawn
+            && Board::is_square_on_rank(
+                from.to_square_index(),
+                Rank::pawn_start_rank(side).as_number(),
+            );
+
+        let is_double_push = can_double_push
+            && (from.rank.as_number() as i8).abs_diff(to.rank.as_number() as i8) == 2;
+        let is_castle = piece == Piece::King && (from.file as i8).abs_diff(to.file as i8) == 2;
+        let is_en_passant = piece == Piece::Pawn
+            && self.en_passant_square().is_some()
+            && self.en_passant_square().unwrap() == to.to_square_index();
+
+        let states = [is_double_push, is_castle, is_en_passant];
+        if states.iter().filter(|&&x| x).count() > 1 {
+            bail!("Invalid move, only 1 move state can be true");
+        }
+        let move_desc = if is_double_push {
+            crate::moves::MoveDescriptor::PawnTwoUp
+        } else if is_castle {
+            crate::moves::MoveDescriptor::Castle
+        } else if is_en_passant {
+            crate::moves::MoveDescriptor::EnPassantCapture
+        } else {
+            crate::moves::MoveDescriptor::None
+        };
+
+        let mv = Move::new(
+            &from,
+            &to,
+            move_desc,
+            piece,
+            captured_piece,
+            promotion_piece,
+        );
+        self.make_move(&mv, move_gen)
+    }
+
     /// Make a move on the board and update the board state
     ///
     /// # Errors
@@ -287,16 +363,15 @@ impl Board {
         self.switch_side();
     }
 
-    
     fn undo_move(&mut self, side: Side, piece: Piece, from: u8, to: u8, update_zobrist_hash: bool) {
         self.remove_piece(side, piece, to, update_zobrist_hash);
         self.add_piece(side, piece, from, update_zobrist_hash);
     }
 
     /// Add a piece to the board for a given side and square.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `side` - The side to add the piece for.
     /// * `piece` - The piece to add.
     /// * `square` - The square to add the piece to.
@@ -310,9 +385,9 @@ impl Board {
     }
 
     /// Remove a piece from the board for a given side and square.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `side` - The side to remove the piece for.
     /// * `piece` - The piece to remove.
     /// * `square` - The square to remove the piece from.
