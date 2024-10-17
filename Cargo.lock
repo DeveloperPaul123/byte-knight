@@ -635,11 +635,12 @@ dependencies = [
 
 [[package]]
 name = "uci-parser"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdb75a02e5fbf683348b8b22be219ef369e94ef53beecb5b24c9f7690e103727"
+checksum = "780d78872a6442e6a82d420ad0d65e98de1a83561024811cdb8a9847d7eedd8c"
 dependencies = [
  "nom",
+ "thiserror",
 ]
 
 [[package]]

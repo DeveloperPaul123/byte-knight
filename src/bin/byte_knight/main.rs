@@ -22,7 +22,7 @@ mod timer;
 pub use base_engine::ChessEngine;
 pub use evil_bot::EvilBot;
 pub use timer::Timer;
-use uci_parser::{parse_uci_command, UciCommand, UciInfo, UciMove, UciResponse, UciSearchOptions};
+use uci_parser::{UciCommand, UciInfo, UciMove, UciResponse};
 
 use std::{process::exit, slice::Iter, str::FromStr};
 
@@ -95,7 +95,7 @@ fn run_uci(engine_name: &String) {
     let move_gen = MoveGenerator::new();
     loop {
         if let Some(Ok(line)) = input.next() {
-            let (_msg, command) = parse_uci_command(&line).unwrap();
+            let command = UciCommand::from_str(line.as_str()).unwrap();
             match command {
                 UciCommand::Uci => {
                     let id = UciResponse::Id {

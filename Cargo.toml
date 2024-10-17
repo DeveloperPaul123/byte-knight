@@ -23,7 +23,7 @@ rayon = "1.10.0"
 serde = { version = "1.0.209", features = ["derive"] }
 stopwatch = "0.0.7"
 thiserror = "1.0.64"
-uci-parser = {version = "0.1.0", features = ["parse-go-perft", "parse-position-kiwipete", "types"]}
+uci-parser = {version = "0.2.0", features = ["parse-go-perft", "parse-position-kiwipete", "types"]}
 zstd = "0.13.2"
 
 [profile.dev]
