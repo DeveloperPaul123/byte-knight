@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified:
+ * Last Modified: Wed Oct 16 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -12,7 +12,6 @@
  *
  */
 
-use std::backtrace;
 use std::iter::zip;
 
 use crate::board_state::BoardState;
