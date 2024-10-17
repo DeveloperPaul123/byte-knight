@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 28th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Oct 15 2024
+ * Last Modified: Wed Oct 16 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -434,7 +434,7 @@ impl MoveGenerator {
     ///
     /// # Returns
     ///
-    /// A vector of *unique* bitboards representing the rook attacks for each blocker permutation.
+    /// A vector of bitboards representing the rook attacks for each blocker permutation.
     pub fn rook_attacks(square: u8, blockers: &Vec<Bitboard>) -> Vec<Bitboard> {
         let mut attacks = Vec::with_capacity(blockers.len());
         for blocker in blockers {
@@ -636,7 +636,7 @@ impl MoveGenerator {
         }
     }
 
-    fn get_non_slider_moves(&self, piece: Piece, from_square: u8) -> Bitboard {
+    pub(crate) fn get_non_slider_moves(&self, piece: Piece, from_square: u8) -> Bitboard {
         assert!(
             piece == Piece::King || piece == Piece::Knight,
             "Piece must be non-slider and not pawn"
@@ -871,15 +871,19 @@ impl MoveGenerator {
     ///
     /// # Returns
     /// - true if the square is attacked, false otherwise
-    pub fn is_square_attacked(&self, board: &Board, square: &Square, attacking_side: Side) -> bool {
+    pub fn is_square_attacked_with_occupancy(
+        &self,
+        board: &Board,
+        square: &Square,
+        attacking_side: Side,
+        occupancy: &Bitboard,
+    ) -> bool {
         let king_bb = board.piece_bitboard(Piece::King, attacking_side);
         let knight_bb = board.piece_bitboard(Piece::Knight, attacking_side);
         let bishop_bb = board.piece_bitboard(Piece::Bishop, attacking_side);
         let rook_bb = board.piece_bitboard(Piece::Rook, attacking_side);
         let queen_bb = board.piece_bitboard(Piece::Queen, attacking_side);
-        let pawn_bb = board.piece_bitboard(Piece::Pawn, attacking_side);
-
-        let occupancy = board.all_pieces();
+        let pawn_bb: &Bitboard = board.piece_bitboard(Piece::Pawn, attacking_side);
 
         let king_attacks = self.get_non_slider_moves(Piece::King, square.to_square_index());
         let knight_attacks = self.get_non_slider_moves(Piece::Knight, square.to_square_index());
@@ -904,6 +908,15 @@ impl MoveGenerator {
             || is_bishop_attacker
             || is_queen_attacker
             || is_pawn_attacker;
+    }
+
+    pub fn is_square_attacked(&self, board: &Board, square: &Square, attacking_side: Side) -> bool {
+        return self.is_square_attacked_with_occupancy(
+            board,
+            square,
+            attacking_side,
+            &board.all_pieces(),
+        );
     }
 }
 

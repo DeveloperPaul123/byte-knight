@@ -396,6 +396,42 @@ impl Board {
         );
     }
 
+    pub fn is_checkmate(&self, move_gen: &MoveGenerator) -> bool {
+        // if the side to move is not in check, it's not checkmate
+        if !self.is_in_check(move_gen) {
+            return false;
+        }
+
+        let king_bb = self.piece_bitboard(Piece::King, self.side_to_move());
+        let king_sq = bitboard_helpers::next_bit(&mut king_bb.clone());
+
+        // check mate happens when we're in check and all the legal moves are illegal but we
+        // don't want to try all the moves to check their legality
+        // instead we can get king moves only and then check if the possible squares the king can move to are attacked
+
+        let king_attacks = move_gen.get_non_slider_moves(Piece::King, king_sq as u8);
+        let our_pieces = self.pieces(self.side_to_move());
+        let mut king_attacks = king_attacks & !our_pieces;
+        let mut occupancy = self.all_pieces();
+
+        // modify occupancy to exclude the king square
+        occupancy.clear_square(king_sq as u8);
+        
+        // check if the king can move to any of the squares it's attacking
+        while king_attacks > 0 {
+            let square = bitboard_helpers::next_bit(&mut king_attacks);
+            if move_gen.is_square_attacked_with_occupancy(
+                self,
+                &Square::from_square_index(square as u8),
+                Side::opposite(self.side_to_move()),
+                &occupancy,
+            ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /// Get the color of the piece on a given square.
     ///
     /// Returns `Some(Side)` if the square is occupied, otherwise `None`.
@@ -435,12 +471,31 @@ mod tests {
     use crate::{
         definitions::{File, Rank, Squares, DEFAULT_FEN},
         move_generation::MoveGenerator,
-        move_list::{self, MoveList},
-        moves::{Move, MoveDescriptor, MoveType},
-        square::Square,
+        move_list::MoveList,
+        moves::MoveType,
     };
 
     use super::*;
+
+    #[test]
+    fn checkmate() {
+        let move_gen = MoveGenerator::new();
+        {
+            let board =
+                Board::from_fen("r1b1k1nr/pppp1ppp/2n5/4P3/8/2Q2N2/P1P1PPPP/RNq1KB1R w KQkq - 1 9")
+                    .unwrap();
+
+            assert!(board.is_in_check(&move_gen));
+            assert!(board.is_checkmate(&move_gen));
+        }
+        {
+            let board =
+                Board::from_fen("r1b3nr/5ppp/3pk2R/8/2Q5/4R1PB/2PPPP1P/RNB1K1NR b KQ - 0 1")
+                    .unwrap();
+            assert!(board.is_in_check(&move_gen));
+            assert!(board.is_checkmate(&move_gen));
+        }
+    }
 
     #[test]
     fn test_default_board() {
