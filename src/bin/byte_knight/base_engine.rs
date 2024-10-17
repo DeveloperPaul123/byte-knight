@@ -1,6 +1,7 @@
+use byte_board::{board::Board, moves::Move};
+
 use super::Timer;
-use chess::Board;
 
 pub trait ChessEngine {
-    fn think(&self, board: &Board, timer: &Timer) -> Option<chess::ChessMove>;
+    fn think(&self, board: &mut Board, timer: &Timer) -> Option<Move>;
 }

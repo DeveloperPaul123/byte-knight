@@ -4,7 +4,7 @@
  * Created Date: Monday, August 19th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Oct 15 2024
+ * Last Modified: Wed Oct 16 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -109,6 +109,18 @@ impl Display for Move {
             self.captured_piece().unwrap_or(Piece::None),
             self.promotion_piece().unwrap_or(Piece::None)
         )
+    }
+}
+
+impl PartialEq for Move {
+    fn eq(&self, other: &Self) -> bool {
+        return self.move_info == other.move_info;
+    }
+}
+
+impl PartialOrd for Move {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        return self.move_info.partial_cmp(&other.move_info);
     }
 }
 

@@ -12,6 +12,17 @@ pub struct ZobristRandomValues {
     pub side_values: [u64; NumberOf::SIDES],
 }
 
+impl Clone for ZobristRandomValues {
+    fn clone(&self) -> Self {
+        Self {
+            piece_values: self.piece_values.clone(),
+            castling_values: self.castling_values.clone(),
+            en_passant_values: self.en_passant_values.clone(),
+            side_values: self.side_values.clone(),
+        }
+    }
+}
+
 const RANDOM_SEED: [u8; 32] = [115; 32];
 
 impl ZobristRandomValues {

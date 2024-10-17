@@ -13,7 +13,6 @@
  */
 
 mod base_engine;
-mod chess_board_helpers;
 mod engine;
 mod evaluation;
 mod evil_bot;
@@ -26,12 +25,13 @@ pub use timer::Timer;
 
 use std::{slice::Iter, str::FromStr};
 
-use chess::{Board, MoveGen};
-
-use byte_board::definitions::About;
+use byte_board::{
+    board::Board,
+    definitions::{About, Side},
+};
 use clap::{Parser, Subcommand};
 use std::io::{self, BufRead, Write};
-use vampirc_uci::{parse, UciMessage, UciTimeControl};
+use vampirc_uci::{parse, UciMessage, UciMove, UciTimeControl};
 
 #[derive(Parser)]
 #[command(
@@ -55,7 +55,7 @@ enum Command {
 
 fn engine_for_type(engine_type: EngineType) -> Box<dyn ChessEngine> {
     match engine_type {
-        EngineType::EvilBot => Box::new(EvilBot {}),
+        EngineType::EvilBot => Box::new(EvilBot::default()),
         EngineType::ByteKnight => unimplemented!(),
     }
 }
@@ -66,7 +66,7 @@ fn run_uci(engine_name: &String) {
     let mut stdout = stdout.lock();
     let mut input = stdin.lock().lines();
 
-    let mut board = Board::default();
+    let mut board = Board::default_board();
 
     // already in UCI mode, so output the engine info
     writeln!(stdout, "{}", UciMessage::id_name(About::NAME)).unwrap();
@@ -82,7 +82,7 @@ fn run_uci(engine_name: &String) {
             for msg in message.iter() {
                 match msg {
                     UciMessage::UciNewGame => {
-                        board = Board::default();
+                        board = Board::default_board();
                         engine = engine_for_type(engine_type);
                     }
                     UciMessage::IsReady => {
@@ -95,22 +95,19 @@ fn run_uci(engine_name: &String) {
                     } => {
                         match startpos {
                             true => {
-                                board = Board::default();
+                                board = Board::default_board();
                             }
                             false => {
                                 if let Some(fen) = fen {
-                                    board = Board::from_str(fen.as_str()).unwrap();
+                                    board = Board::from_fen(fen.as_str()).unwrap();
                                 }
                             }
                         }
 
-                        for m in moves {
-                            let mut new_board = board.clone();
-                            board.make_move(*m, &mut new_board);
-                            board = new_board;
-                        }
+                        // TODO: Apply moves to the board
 
-                        writeln!(stdout, "{}", Board::to_string(&board)).unwrap();
+                        // TODO: String output of board
+                        // writeln!(stdout, "{}", Board::to_string(&board)).unwrap();
                     }
                     UciMessage::Go {
                         time_control,
@@ -127,11 +124,14 @@ fn run_uci(engine_name: &String) {
                                 black_increment: _,
                                 moves_to_go: _,
                             } => match board.side_to_move() {
-                                chess::Color::Black => {
+                                Side::Black => {
                                     timer = Timer::new(black_time.unwrap().num_milliseconds());
                                 }
-                                chess::Color::White => {
+                                Side::White => {
                                     timer = Timer::new(white_time.unwrap().num_milliseconds());
+                                }
+                                _ => {
+                                    panic!("Invalid side to move");
                                 }
                             },
                             _ => {
@@ -140,16 +140,14 @@ fn run_uci(engine_name: &String) {
                             }
                         }
 
-                        let best_move = engine.think(&board, &timer);
+                        let best_move = engine.think(&mut board, &timer);
                         if let Some(bot_move) = best_move {
-                            writeln!(stdout, "{}", UciMessage::best_move(bot_move).to_string())
-                                .unwrap();
+                            // TODO: Convert to UciMove
+
+                            // writeln!(stdout, "{}", UciMessage::best_move(bot_move).to_string())
+                            //     .unwrap();
                         } else {
-                            // Handle the case when best_move is None.
-                            // Use the first legal move as a fallback
-                            MoveGen::new_legal(&board)
-                                .next()
-                                .map(|m| writeln!(stdout, "{}", UciMessage::best_move(m)).unwrap());
+                            // TODO Handle the case when best_move is None.
                         }
                     }
                     UciMessage::Quit => {

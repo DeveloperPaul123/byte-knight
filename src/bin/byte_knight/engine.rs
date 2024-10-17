@@ -1,4 +1,4 @@
-use chess::{Board, ChessMove};
+use byte_board::{board::Board, moves::Move};
 
 use super::{search, ChessEngine, Timer};
 
@@ -11,14 +11,14 @@ struct ByteKnight {
 impl ByteKnight {
     pub fn new() -> ByteKnight {
         ByteKnight {
-            board: Board::default(),
+            board: Board::default_board(),
             search: search::Search::new(),
         }
     }
 }
 
 impl ChessEngine for ByteKnight {
-    fn think(&self, board: &Board, timer: &Timer) -> Option<ChessMove> {
+    fn think(&self, board: &mut Board, timer: &Timer) -> Option<Move> {
         // TODO
         return None;
     }

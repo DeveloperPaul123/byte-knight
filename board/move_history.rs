@@ -4,6 +4,14 @@ pub(crate) struct BoardHistory {
     board_states: Vec<BoardState>,
 }
 
+impl Clone for BoardHistory {
+    fn clone(&self) -> Self {
+        Self {
+            board_states: self.board_states.clone(),
+        }
+    }
+}
+
 impl BoardHistory {
     pub fn new() -> Self {
         BoardHistory {

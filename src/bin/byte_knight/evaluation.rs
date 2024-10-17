@@ -1,23 +1,29 @@
-use chess::{Board, Piece, ALL_PIECES};
-use chess_board_helpers::is_in_checkmate;
-
-use super::chess_board_helpers::{self, piece_for_color};
+use byte_board::{board::Board, definitions::Side, move_generation::MoveGenerator, pieces::Piece};
 
 struct Evaluation;
 
 impl Evaluation {
-    pub fn evaluate_position(board: &Board) -> i64 {
-        if is_in_checkmate(board) {
-            return if board.side_to_move() == chess::Color::White {
+    pub fn evaluate_position(board: &Board, move_gen: &MoveGenerator) -> i64 {
+        if board.is_in_check(move_gen) {
+            return if board.side_to_move() == Side::White {
                 i64::MIN
             } else {
                 i64::MAX
             };
         }
         let mut sum: i64 = 0;
-        for piece in ALL_PIECES.iter() {
-            let black_bb = piece_for_color(board, piece, chess::Color::Black);
-            let white_bb = piece_for_color(board, piece, chess::Color::White);
+        for piece in [
+            Piece::King,
+            Piece::Bishop,
+            Piece::Knight,
+            Piece::Pawn,
+            Piece::Queen,
+            Piece::Rook,
+        ]
+        .into_iter()
+        {
+            let black_bb = board.piece_bitboard(piece, Side::Black);
+            let white_bb = board.piece_bitboard(piece, Side::White);
             let piece_value = match piece {
                 Piece::Pawn => 1,
                 Piece::Knight => 3,
@@ -25,8 +31,11 @@ impl Evaluation {
                 Piece::Rook => 5,
                 Piece::Queen => 9,
                 Piece::King => 0,
+                Piece::None => 0,
             };
-            sum += (black_bb.popcnt() as i64 - white_bb.popcnt() as i64) * piece_value;
+            sum += (black_bb.as_number().count_ones() as i64
+                - white_bb.as_number().count_ones() as i64)
+                * piece_value;
         }
         return sum;
     }

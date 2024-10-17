@@ -1,4 +1,10 @@
-use chess::{Board, ChessMove, MoveGen};
+use byte_board::{
+    board::Board,
+    move_generation::MoveGenerator,
+    move_list::MoveList,
+    moves::{Move, MoveType},
+};
+use itertools::Itertools;
 
 #[derive(Clone, Copy)]
 struct TranspositionTableEntry {
@@ -6,7 +12,7 @@ struct TranspositionTableEntry {
     depth: i64,
     score: i64,
     flag: i64,
-    board_move: chess::ChessMove,
+    board_move: Move,
 }
 
 impl TranspositionTableEntry {
@@ -16,7 +22,7 @@ impl TranspositionTableEntry {
             depth: 0,
             score: 0,
             flag: 0,
-            board_move: chess::ChessMove::default(),
+            board_move: Move::default(),
         }
     }
 }
@@ -42,14 +48,18 @@ impl TranspositionTable {
 
 pub(crate) struct Search {
     transposition_table: TranspositionTable,
-    best_move: ChessMove,
+    best_move: Move,
+    move_gen: MoveGenerator,
+    move_list: MoveList,
 }
 
 impl Search {
     pub fn new() -> Self {
         Search {
             transposition_table: TranspositionTable::new(),
-            best_move: ChessMove::default(),
+            best_move: Move::default(),
+            move_gen: MoveGenerator::new(),
+            move_list: MoveList::new(),
         }
     }
     fn quiesce(self: &Self, board: &Board, depth: i64, ply: i64, alpha: i64, beta: i64) -> i64 {
@@ -58,7 +68,7 @@ impl Search {
 
     pub(crate) fn search(
         self: &mut Self,
-        board: &Board,
+        board: &mut Board,
         mut depth: i64,
         ply: i64,
         mut alpha: i64,
@@ -67,14 +77,14 @@ impl Search {
     ) -> i64 {
         let quiesce_search = depth <= 0;
         let not_root = ply > 0;
-        let is_in_check = board.status() == chess::BoardStatus::Checkmate;
+        let is_in_check = board.is_in_check(&self.move_gen);
         let not_principle_variation = beta - alpha == 1;
         let can_prune = false;
 
-        if not_root && board.status() == chess::BoardStatus::Stalemate {
+        if not_root && board.is_stalemate(&self.move_gen) {
             return 0;
         } else {
-            let zobrist = board.get_hash();
+            let zobrist = board.zobrist_hash();
             let tt_entry = self.transposition_table.get_entry(zobrist);
             if is_in_check {
                 depth += 1;
@@ -104,32 +114,37 @@ impl Search {
                 // TODO: Implement reverse futility pruning
             }
 
-            let mut moves = MoveGen::new_legal(board).collect::<Vec<ChessMove>>();
-            moves.sort_by_key(|m| {
-                let dest_color = board.color_on(m.get_dest());
-                if tt_entry.board_move == *m {
+            self.move_list.clear();
+            self.move_gen
+                .generate_moves(board, &mut self.move_list, MoveType::All);
+            let sorted_moves = self.move_list.iter().sorted_by_key(|m| {
+                let dest_color = board.color_on(m.to());
+                if tt_entry.board_move == **m {
                     return 9_000_000;
-                } else if dest_color.is_some() && dest_color.unwrap() != board.side_to_move() {
-                    let capture_piece = board.piece_on(m.get_dest()).unwrap();
-                    let move_piece = board.piece_on(m.get_source()).unwrap();
+                } else if m.captured_piece().is_some() {
+                    let capture_piece = m.captured_piece().unwrap();
+                    let move_piece = m.piece();
                     return 1_000_000 * ((capture_piece as i64) - (move_piece as i64));
-                } else if m.get_promotion().is_some() {
+                } else if m.promotion_piece().is_some() {
                     return 10_000;
                 } else {
                     return 0;
                 }
             });
 
-            if !quiesce_search && moves.len() == 0 {
+            if !quiesce_search && self.move_list.len() == 0 {
                 return if is_in_check { -100_000 + ply } else { 0 };
             } else {
                 let starting_alpha = alpha;
                 let moves_searched = 0;
 
-                let mut temp_board = Board::default();
-                for mv in moves {
+                for mv in sorted_moves {
                     // TODO: futility pruning
-                    board.make_move(mv, &mut temp_board);
+                    let result = board.make_move(mv, &self.move_gen);
+                    if result.is_err() {
+                        // TODO: illegal move
+                        continue;
+                    }
                 }
             }
             return 0;
