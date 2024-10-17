@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Oct 15 2024
+ * Last Modified: Wed Oct 16 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -75,6 +75,9 @@ impl Board {
         }
 
         if piece == Piece::Pawn {
+            // reset half move clock
+            self.set_half_move_clock(0);
+
             self.remove_piece(us, piece, from, update_zobrist_hash);
             // take into account the promotion piece if any
             let piece_to_add = if mv.is_promotion() {
@@ -125,7 +128,8 @@ impl Board {
                 self.set_en_passant_square(None);
             }
             // just move the piece
-            self.move_piece(us, piece, from, to, update_zobrist_hash)
+            self.move_piece(us, piece, from, to, update_zobrist_hash);
+            self.set_half_move_clock(self.half_move_clock() + 1);
         }
 
         // update the castling rights
