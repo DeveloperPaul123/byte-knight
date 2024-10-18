@@ -1,4 +1,4 @@
-use byte_board::{board::Board, definitions::Side, move_generation::MoveGenerator, pieces::Piece};
+use byte_board::{board::Board, move_generation::MoveGenerator, pieces::Piece, side::Side};
 
 struct Evaluation;
 
