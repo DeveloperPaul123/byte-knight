@@ -1,6 +1,7 @@
 use std::fmt::Display;
 use crate::{
-    definitions::{CastlingAvailability, Side},
+    definitions::{CastlingAvailability},
+    side::Side,
     moves::Move,
     zobrist::ZobristHash,
 };

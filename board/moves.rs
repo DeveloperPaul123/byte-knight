@@ -4,7 +4,7 @@
  * Created Date: Monday, August 19th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Oct 17 2024
+ * Last Modified: Fri Oct 18 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -291,9 +291,10 @@ impl Move {
 
 #[cfg(test)]
 mod tests {
-    use crate::definitions::{File, Rank};
+    use crate::file::File;
     use crate::moves::{Move, MoveDescriptor};
     use crate::pieces::Piece;
+    use crate::rank::Rank;
     use crate::square::Square;
     #[test]
     fn new_move() {

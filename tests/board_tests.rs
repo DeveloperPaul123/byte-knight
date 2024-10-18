@@ -1,7 +1,10 @@
 use byte_board::{
     board::Board,
-    definitions::{CastlingAvailability, File, Rank, Side, DEFAULT_FEN},
+    definitions::{CastlingAvailability, DEFAULT_FEN},
+    file::File,
     pieces::Piece,
+    rank::Rank,
+    side::Side,
     square::to_square,
 };
 

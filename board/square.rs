@@ -4,7 +4,7 @@
  * Created Date: Friday, August 16th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Oct 17 2024
+ * Last Modified: Fri Oct 18 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -12,7 +12,7 @@
  *
  */
 
-use crate::definitions::{File, Rank};
+use crate::{file::File, rank::Rank};
 
 pub struct Square {
     pub file: File,
@@ -51,10 +51,13 @@ impl TryFrom<&str> for Square {
             return Err(());
         }
 
+        // file can match directly to a char so we don't alter it
         let file = value.chars().nth(0).unwrap();
+        // read the raw rank value (1-8)
         let rank = value.chars().nth(1).unwrap();
-
-        Ok(Square::from_file_rank(file, rank as u8)?)
+        // rank values are 1-8, so we need to convert to 0-7
+        let rank_digit = rank.to_digit(10).unwrap() - 1;
+        Ok(Square::from_file_rank(file, rank_digit as u8)?)
     }
 }
 
@@ -89,4 +92,16 @@ pub const fn from_square(square: u8) -> (u8, u8) {
     let rank = square / 8;
     let file = square % 8;
     return (file, rank);
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{file::File, rank::Rank, square::Square};
+
+    #[test]
+    fn parse_square_from_uci_str() {
+        let square = Square::try_from("e4").unwrap();
+        assert_eq!(square.file, File::E);
+        assert_eq!(square.rank, Rank::R4);
+    }
 }

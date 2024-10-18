@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 28th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Oct 16 2024
+ * Last Modified: Fri Oct 18 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -16,13 +16,14 @@ use crate::{
     bitboard::Bitboard,
     bitboard_helpers,
     board::Board,
-    definitions::{
-        File, NumberOf, Rank, Side, Squares, BISHOP_BLOCKER_PERMUTATIONS, ROOK_BLOCKER_PERMUTATIONS,
-    },
+    definitions::{NumberOf, Squares, BISHOP_BLOCKER_PERMUTATIONS, ROOK_BLOCKER_PERMUTATIONS},
+    file::File,
     magics::{MagicNumber, BISHOP_MAGIC_VALUES, ROOK_MAGIC_VALUES},
     move_list::MoveList,
     moves::{Move, MoveDescriptor, MoveType, PromotionDescriptor},
     pieces::{Piece, SQUARE_NAME},
+    rank::Rank,
+    side::Side,
     square::{self, Square},
 };
 

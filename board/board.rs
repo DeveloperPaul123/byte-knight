@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Oct 16 2024
+ * Last Modified: Fri Oct 18 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -25,8 +25,9 @@ use crate::square::Square;
 use crate::zobrist::{ZobristHash, ZobristRandomValues};
 use crate::{bitboard_helpers, square};
 
-use super::definitions::{NumberOf, Side};
+use super::definitions::NumberOf;
 use super::fen;
+use super::side::Side;
 use super::{bitboard::Bitboard, pieces::Piece};
 
 pub struct Board {
@@ -416,7 +417,7 @@ impl Board {
 
         // modify occupancy to exclude the king square
         occupancy.clear_square(king_sq as u8);
-        
+
         // check if the king can move to any of the squares it's attacking
         while king_attacks > 0 {
             let square = bitboard_helpers::next_bit(&mut king_attacks);
@@ -469,10 +470,7 @@ impl Board {
 #[cfg(test)]
 mod tests {
     use crate::{
-        definitions::{File, Rank, Squares, DEFAULT_FEN},
-        move_generation::MoveGenerator,
-        move_list::MoveList,
-        moves::MoveType,
+        definitions::{Squares, DEFAULT_FEN}, file::File, move_generation::MoveGenerator, move_list::MoveList, moves::MoveType, rank::Rank, side::Side
     };
 
     use super::*;

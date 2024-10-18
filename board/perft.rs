@@ -82,7 +82,7 @@ pub fn perft(
 
 #[cfg(test)]
 mod tests {
-    use crate::{board::Board, definitions::Side, move_generation::MoveGenerator, perft::perft};
+    use crate::{board::Board, move_generation::MoveGenerator, perft::perft, side::Side};
     #[test]
     fn default_board() {
         let mut board = Board::default_board();

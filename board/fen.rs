@@ -4,8 +4,9 @@ use thiserror::Error;
 
 use crate::{
     board::Board,
-    definitions::{CastlingAvailability, Side, DASH, EM_DASH},
+    definitions::{CastlingAvailability, DASH, EM_DASH},
     pieces::{Piece, PIECE_SHORT_NAMES, SQUARE_NAME},
+    side::Side,
     square::to_square,
 };
 
