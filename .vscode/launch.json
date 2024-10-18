@@ -7,11 +7,8 @@
         {
             "type": "cppvsdbg",
             "request": "launch",
-            "name": "Debug",
-            "program": "${fileDirname}/../target/debug/byte-knight.exe",
-            "args": [
-                "engines"
-            ],
+            "name": "byte-knight (Windows)",
+            "program": "${fileDirname}/../target/debug/byte_knight.exe",
             "cwd": "${workspaceRoot}",
         },
         {
