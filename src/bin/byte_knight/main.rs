@@ -22,16 +22,13 @@ mod timer;
 pub use base_engine::ChessEngine;
 pub use evil_bot::EvilBot;
 pub use timer::Timer;
-use uci_parser::{UciCommand, UciInfo, UciMove, UciResponse};
+use uci_parser::{UciCommand, UciInfo, UciMove, UciResponse, UciScore};
 
 use std::{process::exit, slice::Iter, str::FromStr};
 
 use byte_board::{
-    board::Board,
-    definitions::{About, Side},
-    move_generation::MoveGenerator,
-    moves::Move,
-    pieces::SQUARE_NAME,
+    board::Board, definitions::About, move_generation::MoveGenerator, moves::Move,
+    pieces::SQUARE_NAME, side::Side,
 };
 use clap::{Parser, Subcommand};
 use std::io::{self, BufRead, Write};
@@ -134,15 +131,42 @@ fn run_uci(engine_name: &String) {
                 }
                 UciCommand::Go(search_options) => {
                     let timer = match board.side_to_move() {
-                        Side::Black => Timer::new(search_options.btime.unwrap().as_millis() as i64),
-                        Side::White => Timer::new(search_options.wtime.unwrap().as_millis() as i64),
+                        Side::Black => {
+                            assert!(
+                                search_options.btime.is_some(),
+                                "btime is required for black side move"
+                            );
+                            Timer::new(search_options.btime.unwrap().as_millis() as i64)
+                        }
+                        Side::White => {
+                            assert!(
+                                search_options.wtime.is_some(),
+                                "wtime is required for white side move"
+                            );
+                            Timer::new(search_options.wtime.unwrap().as_millis() as i64)
+                        }
                         _ => {
                             panic!("Invalid side to move");
                         }
                     };
 
-                    let info = UciInfo::default().string("Starting search...").depth(1);
+                    let info = UciInfo::default()
+                        .score(UciScore::cp(20))
+                        .depth(1)
+                        .seldepth(1)
+                        .time(1)
+                        .nodes(1)
+                        .nps(0);
                     writeln!(stdout, "{}", UciResponse::<String>::Info(Box::new(info))).unwrap();
+
+                    let board_info =
+                        UciInfo::default().string(format!("searching {}", board.to_fen()));
+                    writeln!(
+                        stdout,
+                        "{}",
+                        UciResponse::<String>::Info(Box::new(board_info))
+                    )
+                    .unwrap();
 
                     let best_move = engine.think(&mut board, &timer);
 
