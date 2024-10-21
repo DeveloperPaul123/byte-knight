@@ -1,14 +1,16 @@
 use byte_board::{board::Board, move_generation::MoveGenerator, pieces::Piece, side::Side};
 
-struct Evaluation;
+use crate::score::Score;
+
+pub struct Evaluation;
 
 impl Evaluation {
-    pub fn evaluate_position(board: &Board, move_gen: &MoveGenerator) -> i64 {
+    pub fn evaluate_position(board: &Board, move_gen: &MoveGenerator) -> Score {
         if board.is_in_check(move_gen) {
             return if board.side_to_move() == Side::White {
-                i64::MIN
+                -Score::INF
             } else {
-                i64::MAX
+                Score::INF
             };
         }
         let mut sum: i64 = 0;
@@ -37,6 +39,13 @@ impl Evaluation {
                 - white_bb.as_number().count_ones() as i64)
                 * piece_value;
         }
-        return sum;
+
+        let score_mult = if board.side_to_move() == Side::White {
+            1
+        } else {
+            -1
+        };
+
+        return Score::new(sum * score_mult);
     }
 }

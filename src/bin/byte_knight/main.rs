@@ -16,10 +16,12 @@ mod base_engine;
 mod engine;
 mod evaluation;
 mod evil_bot;
+mod score;
 mod search;
 mod timer;
 
 pub use base_engine::ChessEngine;
+use engine::ByteKnight;
 pub use evil_bot::EvilBot;
 pub use timer::Timer;
 use uci_parser::{UciCommand, UciInfo, UciMove, UciResponse, UciScore};
@@ -41,7 +43,7 @@ struct Options {
     #[command(subcommand)]
     command: Option<Command>,
 
-    #[arg(long, short, default_value = "EvilBot")]
+    #[arg(long, short, default_value = "ByteKnight")]
     engine: String,
 }
 
@@ -55,7 +57,7 @@ enum Command {
 fn engine_for_type(engine_type: EngineType) -> Box<dyn ChessEngine> {
     match engine_type {
         EngineType::EvilBot => Box::new(EvilBot::default()),
-        EngineType::ByteKnight => unimplemented!(),
+        EngineType::ByteKnight => Box::new(ByteKnight::default()),
     }
 }
 

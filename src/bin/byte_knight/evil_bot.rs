@@ -37,7 +37,7 @@ impl Default for EvilBot {
 }
 
 impl ChessEngine for EvilBot {
-    fn think(self: &Self, board: &mut Board, _: &Timer) -> Option<Move> {
+    fn think(self: &mut Self, board: &mut Board, _: &Timer) -> Option<Move> {
         let mut move_list = MoveList::new();
         self.move_gen
             .generate_moves(board, &mut move_list, MoveType::All);
