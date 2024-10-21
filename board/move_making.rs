@@ -17,7 +17,7 @@ use crate::{
     board::Board,
     definitions::{CastlingAvailability, Squares},
     move_generation::MoveGenerator,
-    moves::Move,
+    moves::{self, Move},
     pieces::{Piece, SQUARE_NAME},
     rank::Rank,
     side::Side,
@@ -90,13 +90,13 @@ impl Board {
             bail!("Invalid move, only 1 move state can be true");
         }
         let move_desc = if is_double_push {
-            crate::moves::MoveDescriptor::PawnTwoUp
+            moves::MoveDescriptor::PawnTwoUp
         } else if is_castle {
-            crate::moves::MoveDescriptor::Castle
+            moves::MoveDescriptor::Castle
         } else if is_en_passant {
-            crate::moves::MoveDescriptor::EnPassantCapture
+            moves::MoveDescriptor::EnPassantCapture
         } else {
-            crate::moves::MoveDescriptor::None
+            moves::MoveDescriptor::None
         };
 
         let mv = Move::new(
@@ -110,6 +110,66 @@ impl Board {
         self.make_move(&mv, move_gen)
     }
 
+    fn check_move_preconditions(&mut self, mv: &Move) -> Result<()> {
+        let from = mv.from();
+        let to: u8 = mv.to();
+        let piece = mv.piece();
+
+        let us = self.side_to_move();
+        let them = Side::opposite(us);
+
+        let piece_and_side = self.piece_on_square(from);
+        if piece_and_side.is_none() {
+            bail!("No piece on square");
+        }
+
+        let (piece_on_square, side) = piece_and_side.unwrap();
+        if piece_on_square != piece || side != us {
+            bail!("Invalid piece on square");
+        }
+
+        if mv.captured_piece().is_some() {
+            let captured_piece = mv.captured_piece().unwrap();
+            let piece_and_side = self.piece_on_square(to);
+            if piece_and_side.is_none() {
+                bail!("No piece on square");
+            }
+
+            let (piece_on_square, side) = piece_and_side.unwrap();
+            // check that the capture piece matches and is not our own
+            if piece_on_square != captured_piece || side != them {
+                bail!("Invalid captured piece on square");
+            }
+
+            if captured_piece == Piece::King {
+                bail!("Invalid move, cannot capture king");
+            }
+        }
+
+        let move_desc = mv.move_descriptor();
+        match move_desc {
+            moves::MoveDescriptor::EnPassantCapture => {
+                if piece != Piece::Pawn {
+                    bail!("Invalid en passant, not a pawn");
+                }
+            }
+            moves::MoveDescriptor::Castle => {
+                if !self.can_castle_kingside(us) && !self.can_castle_queenside(us) {
+                    bail!("Tried to castle without castling rights");
+                }
+            }
+            moves::MoveDescriptor::PawnTwoUp => {
+                if piece != Piece::Pawn {
+                    bail!("Invalid double pawn push, not a pawn");
+                }
+            }
+            // We don't handle None, quiet moves are ok
+            _ => {}
+        }
+
+        Ok(())
+    }
+
     /// Make a move on the board and update the board state
     ///
     /// # Errors
@@ -120,6 +180,9 @@ impl Board {
     #[cfg_attr(not(debug_assertions), inline(always))]
     #[cfg_attr(debug_assertions, inline(never))]
     pub fn make_move(&mut self, mv: &Move, move_gen: &MoveGenerator) -> Result<()> {
+        // validate pre-conditions first before even bothering to go further
+        self.check_move_preconditions(mv)?;
+        
         let mut current_state = self.board_state().clone();
         current_state.next_move = mv.clone();
         // update history before modifying the current state
