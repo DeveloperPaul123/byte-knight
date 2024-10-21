@@ -21,6 +21,8 @@ pub const SLASH: char = '/';
 /// max number of moves in a game from this pos R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1
 pub const MAX_MOVE_LIST_SIZE: usize = 218;
 pub const MAX_MOVES: usize = 3072;
+pub const MAX_MOVE_RULE: u32 = 100;
+
 // see the tests in move_generation.rs for how these numbers were calculated
 pub const ROOK_BLOCKER_PERMUTATIONS: usize = 102_400;
 pub const BISHOP_BLOCKER_PERMUTATIONS: usize = 5_248;
