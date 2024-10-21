@@ -26,4 +26,8 @@ impl BoardHistory {
     pub fn pop(&mut self) -> Option<BoardState> {
         self.board_states.pop()
     }
+
+    pub fn iter(&self) -> std::slice::Iter<BoardState> {
+        self.board_states.iter()
+    }
 }
