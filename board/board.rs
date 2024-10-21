@@ -15,7 +15,7 @@
 use std::iter::zip;
 
 use crate::board_state::BoardState;
-use crate::definitions::{CastlingAvailability, SPACE};
+use crate::definitions::{CastlingAvailability, MAX_MOVE_RULE, SPACE};
 use crate::fen::FenError;
 use crate::move_generation::MoveGenerator;
 use crate::move_history::BoardHistory;
@@ -447,6 +447,44 @@ impl Board {
             None
         }
     }
+    pub fn is_draw(&self, move_gen: &MoveGenerator) -> bool {
+        return self.is_draw_by_fifty_move_rule()
+            || self.is_stalemate(move_gen)
+            || self.insufficient_material()
+            || self.is_repetition();
+    }
+
+    pub fn insufficient_material(&self) -> bool {
+        // TODO
+        false
+    }
+
+    pub fn is_draw_by_fifty_move_rule(&self) -> bool {
+        self.half_move_clock() >= MAX_MOVE_RULE
+    }
+
+    pub fn is_repetition(&self) -> bool {
+        let mut repetition_count = 0;
+        // go through the history and check if the current position has been repeated
+        for previous_state in self.history.iter().rev().skip(1) {
+            // we found a match, increment the repetition count
+            if previous_state.zobrist_hash == self.zobrist_hash() {
+                repetition_count += 1;
+                if repetition_count >= 2 {
+                    // break out early
+                    return true;
+                }
+            } else
+            // we only need to go back up to the last pawn move, castle, or capture as these moves reset the half-move clock
+            // beyond this point, there can't be a repeated position
+            if previous_state.half_move_clock == 0 {
+                return false;
+            }
+        }
+
+        // 2 fold repetition for our engine
+        repetition_count >= 2
+    }
 
     pub fn is_stalemate(&self, move_gen: &MoveGenerator) -> bool {
         // if the side to move is in check, it's not stalemate
@@ -457,7 +495,7 @@ impl Board {
         // if the side to move has no legal moves, it's stalemate
         let mut move_list = MoveList::new();
         move_gen.generate_moves(self, &mut move_list, MoveType::All);
-        return move_list.len() == 0;
+        return self.are_legal(&move_list, move_gen);
     }
 
     pub fn is_legal(&self, mv: &Move, move_gen: &MoveGenerator) -> bool {
@@ -465,12 +503,29 @@ impl Board {
         let mut board_copy = self.clone();
         board_copy.make_move(mv, move_gen).is_ok()
     }
+
+    pub fn are_legal(&self, list: &MoveList, move_gen: &MoveGenerator) -> bool {
+        // check if a list of moves are legal without altering the current board state
+        let mut board_copy = self.clone();
+        for mv in list.iter() {
+            if board_copy.make_move(mv, move_gen).is_err() {
+                return false;
+            }
+        }
+        return true;
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
-        definitions::{Squares, DEFAULT_FEN}, file::File, move_generation::MoveGenerator, move_list::MoveList, moves::MoveType, rank::Rank, side::Side
+        definitions::{Squares, DEFAULT_FEN},
+        file::File,
+        move_generation::MoveGenerator,
+        move_list::MoveList,
+        moves::MoveType,
+        rank::Rank,
+        side::Side,
     };
 
     use super::*;
