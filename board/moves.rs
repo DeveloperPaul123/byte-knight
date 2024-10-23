@@ -168,6 +168,21 @@ impl Move {
         );
     }
 
+    pub fn new_king_move(
+        king_from: &Square,
+        king_to: &Square,
+        captured_piece: Option<Piece>,
+    ) -> Self {
+        return Self::new(
+            king_from,
+            king_to,
+            MoveDescriptor::None,
+            Piece::King,
+            captured_piece,
+            None,
+        );
+    }
+
     pub fn new_short_move(from: &Square, to: &Square, promotion: Option<Piece>) -> Self {
         Self::new(from, to, MoveDescriptor::None, Piece::None, None, promotion)
     }
