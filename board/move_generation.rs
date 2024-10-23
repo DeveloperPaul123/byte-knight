@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 28th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 18 2024
+ * Last Modified: Tue Oct 22 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -461,6 +461,55 @@ impl MoveGenerator {
     pub fn calculate_bishop_attack(square: u8, blocker: &Bitboard) -> Bitboard {
         let bishop_rays_bb = MoveGenerator::diagonal_ray_attacks(square as u8, blocker.as_number());
         return bishop_rays_bb;
+    }
+
+    pub fn generate_legal_moves(&self, board: &Board, move_list: &mut MoveList) {
+        // TODO: Generate legal moves
+        let us = board.side_to_move();
+        let them = Side::opposite(us);
+        let occupancy = board.all_pieces();
+        let our_pieces = board.pieces(us);
+        let their_pieces = board.pieces(them);
+        let empty = !occupancy;
+
+        let mut king_bb = board.piece_bitboard(Piece::King, us).clone();
+        let king_square = bitboard_helpers::next_bit(&mut king_bb) as u8;
+
+        // first we start with king moves
+        // we first need to find all checkers of the king
+        let mut checkers = Bitboard::default();
+        let mut pinned = Bitboard::default();
+
+        let kingless_occupancy = occupancy ^ king_bb;
+
+        // an enemy king cannot check our king, so we ignore it
+        let knight_attacks = self.get_non_slider_moves(Piece::Knight, king_square);
+        let rook_attacks = self.get_slider_moves(Piece::Rook, king_square, &kingless_occupancy);
+        let bishop_attacks = self.get_slider_moves(Piece::Bishop, king_square, &kingless_occupancy);
+        let queen_attacks = rook_attacks | bishop_attacks;
+        // note we use the opposite side for the pawn attacks
+        let pawn_attacks = self.pawn_attacks[Side::opposite(them) as usize][king_square as usize];
+        let attacked_squares =
+            knight_attacks | rook_attacks | bishop_attacks | queen_attacks | pawn_attacks;
+
+        let enemy_pawns = board.piece_bitboard(Piece::Pawn, them);
+        let enemy_knights = board.piece_bitboard(Piece::Knight, them);
+        let enemy_bishops = board.piece_bitboard(Piece::Bishop, them);
+        let enemy_rooks = board.piece_bitboard(Piece::Rook, them);
+        let enemy_queens = board.piece_bitboard(Piece::Queen, them);
+
+        checkers = *enemy_knights & knight_attacks | *enemy_pawns & pawn_attacks;
+        let slider_attacks = rook_attacks | bishop_attacks | queen_attacks;
+
+        // loop through the sliding attacks to check if they are checkers or a pinner
+        let mut slider_bb = slider_attacks;
+        while slider_bb.as_number() > 0 {
+            let from_square = bitboard_helpers::next_bit(&mut slider_bb) as u8;
+            // TODO: Calculate the ray between the from square and the king square (exclusive)
+            // check if the ray is blocked
+            // if it is blocked, then we have a pinner
+            // if it is not blocked, then we have a checker
+        }
     }
 
     /// Generates pseudo-legal moves for the current board state.
