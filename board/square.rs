@@ -14,6 +14,7 @@
 
 use crate::{file::File, rank::Rank};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Square {
     pub file: File,
     pub rank: Rank,
@@ -40,6 +41,12 @@ impl Square {
             file: File::try_from(file).unwrap(),
             rank: Rank::try_from(rank).unwrap(),
         }
+    }
+
+    pub fn offset(&self, file_delta: i8, rank_delta: i8) -> Option<Self> {
+        let new_file = self.file.offset(file_delta)?;
+        let new_rank = self.rank.offset(rank_delta)?;
+        Some(Self::new(new_file, new_rank))
     }
 }
 
@@ -75,6 +82,16 @@ pub const fn to_square(file: u8, rank: u8) -> u8 {
     rank * 8 + file
 }
 
+/// Converts a file and rank index to a [`Square`] object.
+///
+/// # Arguments
+///
+/// * `file` - The file index to convert
+/// * `rank` - The rank index to convert
+///
+/// # Returns
+///
+/// A [`Square`] object corresponding to the given file and rank indices.
 pub fn to_square_object(file: u8, rank: u8) -> Square {
     Square::new(File::try_from(file).unwrap(), Rank::try_from(rank).unwrap())
 }
@@ -96,12 +113,28 @@ pub const fn from_square(square: u8) -> (u8, u8) {
 
 #[cfg(test)]
 mod tests {
-    use crate::{file::File, rank::Rank, square::Square};
+    use crate::{
+        file::File,
+        rank::Rank,
+        square::{self, Square},
+    };
 
     #[test]
     fn parse_square_from_uci_str() {
         let square = Square::try_from("e4").unwrap();
         assert_eq!(square.file, File::E);
         assert_eq!(square.rank, Rank::R4);
+    }
+
+    #[test]
+    fn offset() {
+        let square = Square::try_from("e4").unwrap();
+        let new_square = square.offset(1, 1).unwrap();
+        assert_eq!(new_square.file, File::F);
+        assert_eq!(new_square.rank, Rank::R5);
+
+        let square = Square::try_from("a1").unwrap();
+        let new_square = square.offset(-1, -1);
+        assert!(new_square.is_none());
     }
 }
