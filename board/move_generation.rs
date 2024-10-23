@@ -12,18 +12,22 @@
  *
  */
 
+use core::num;
+
 use crate::{
     bitboard::Bitboard,
     bitboard_helpers,
     board::Board,
-    definitions::{NumberOf, Squares, BISHOP_BLOCKER_PERMUTATIONS, ROOK_BLOCKER_PERMUTATIONS},
+    definitions::{
+        NumberOf, Squares, BISHOP_BLOCKER_PERMUTATIONS, QUEEN_OFFSETS, ROOK_BLOCKER_PERMUTATIONS,
+    },
     file::File,
     magics::{MagicNumber, BISHOP_MAGIC_VALUES, ROOK_MAGIC_VALUES},
     move_list::MoveList,
     moves::{Move, MoveDescriptor, MoveType, PromotionDescriptor},
     pieces::{Piece, SQUARE_NAME},
     rank::Rank,
-    side::Side,
+    side::{self, Side},
     square::{self, Square},
 };
 
@@ -150,6 +154,24 @@ fn initialize_pawn_attacks(
     attacks[Side::Black as usize][square as usize] = attacks_b_bb;
 }
 
+fn initialize_rays_between(rays_between: &mut [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES]) {
+    for sq in 0..NumberOf::SQUARES as u8 {
+        let from_square = Square::from_square_index(sq);
+        for (delta_file, delta_rank) in QUEEN_OFFSETS {
+            let mut ray = Bitboard::default();
+            let mut to = from_square;
+            while let Some(shifted) = to.offset(delta_file, delta_rank) {
+                ray.set_square(to.to_square_index());
+                to = shifted;
+                let from_index = from_square.to_square_index() as usize;
+                let to_index = to.to_square_index() as usize;
+                rays_between[from_index][to_index] =
+                    ray ^ Bitboard::from_square(to.to_square_index());
+            }
+        }
+    }
+}
+
 pub struct MoveGenerator {
     king_attacks: [Bitboard; NumberOf::SQUARES],
     knight_attacks: [Bitboard; NumberOf::SQUARES],
@@ -158,6 +180,7 @@ pub struct MoveGenerator {
     bishop_magics: [MagicNumber; NumberOf::SQUARES],
     rook_attacks: Vec<Bitboard>,
     bishop_attacks: Vec<Bitboard>,
+    rays_between: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES],
 }
 
 impl MoveGenerator {
@@ -173,9 +196,11 @@ impl MoveGenerator {
             bishop_magics: [MagicNumber::default(); NumberOf::SQUARES],
             rook_attacks: vec![Bitboard::default(); ROOK_BLOCKER_PERMUTATIONS],
             bishop_attacks: vec![Bitboard::default(); BISHOP_BLOCKER_PERMUTATIONS],
+            rays_between: [[Bitboard::default(); NumberOf::SQUARES]; NumberOf::SQUARES],
         };
 
         move_gen.initialize_attack_boards();
+        initialize_rays_between(&mut move_gen.rays_between);
         return move_gen;
     }
 
@@ -463,6 +488,10 @@ impl MoveGenerator {
         return bishop_rays_bb;
     }
 
+    pub fn ray_between(&self, from: Square, to: Square) -> Bitboard {
+        return self.rays_between[from.to_square_index() as usize][to.to_square_index() as usize];
+    }
+
     pub fn generate_legal_moves(&self, board: &Board, move_list: &mut MoveList) {
         // TODO: Generate legal moves
         let us = board.side_to_move();
@@ -504,11 +533,98 @@ impl MoveGenerator {
         // loop through the sliding attacks to check if they are checkers or a pinner
         let mut slider_bb = slider_attacks;
         while slider_bb.as_number() > 0 {
-            let from_square = bitboard_helpers::next_bit(&mut slider_bb) as u8;
+            let attacker_sq = bitboard_helpers::next_bit(&mut slider_bb) as u8;
             // TODO: Calculate the ray between the from square and the king square (exclusive)
+            let ray = self.ray_between(
+                Square::from_square_index(king_square),
+                Square::from_square_index(attacker_sq),
+            );
+
             // check if the ray is blocked
             // if it is blocked, then we have a pinner
             // if it is not blocked, then we have a checker
+
+            match (ray & occupancy).as_number().count_ones() {
+                0 => {
+                    checkers |= Bitboard::from_square(attacker_sq);
+                }
+                1 => {
+                    pinned |= ray & our_pieces;
+                }
+                _ => {}
+            }
+        }
+
+        println!("Checkers: {}", checkers);
+        println!("Pinned: {}", pinned);
+
+        // initialize these to all squares on the board by default
+        let mut capture_mask = Bitboard::new(u64::MAX);
+        let mut push_mask = Bitboard::new(u64::MAX);
+
+        // now we generate moves for the king
+        let num_checkers = checkers.as_number().count_ones();
+        if num_checkers == 1 {
+            // if there is only one checker, we can capture it or move the king
+            capture_mask = checkers;
+
+            let checker_sq = bitboard_helpers::next_bit(&mut checkers.clone()) as u8;
+            if let Some((piece, side)) = board.piece_on_square(checker_sq) {
+                debug_assert!(side == them);
+                // check if the piece is a slider
+                if piece.is_bishop() || piece.is_rook() || piece.is_queen() {
+                    // if the piece is a slider, we can evade check by blocking it, so moving (push)
+                    // a piece into the ray between the checker and the king is valid
+                    push_mask = self.ray_between(
+                        Square::from_square_index(king_square),
+                        Square::from_square_index(checker_sq),
+                    );
+                } else {
+                    // we can only capture, so push mask needs to be empty (0)
+                    push_mask = Bitboard::default();
+                }
+            }
+        }
+
+        let king_moves_bb = self.get_non_slider_moves(Piece::King, king_square);
+        let mut king_moves = king_moves_bb & !our_pieces;
+        king_moves &= !attacked_squares;
+        king_moves &= !capture_mask;
+
+        while king_moves.as_number() > 0 {
+            let to = bitboard_helpers::next_bit(&mut king_moves) as u8;
+            let captured_piece = match board.piece_on_square(to) {
+                Some((piece, _)) => Some(piece),
+                None => None,
+            };
+
+            let mv = Move::new_king_move(
+                &Square::from_square_index(king_square),
+                &Square::from_square_index(to),
+                captured_piece,
+            );
+            move_list.push(mv);
+        }
+
+        if num_checkers > 1 {
+            // if there are multiple checkers, the king must move
+            return;
+        }
+
+        // now we generate moves for the rest of the pieces
+        let mut moveable_pieces = our_pieces & !king_bb & !pinned;
+        while moveable_pieces.as_number() > 0 {
+            // Generate moves for each piece
+            let from = bitboard_helpers::next_bit(&mut moveable_pieces) as u8;
+            let piece = match board.piece_on_square(from) {
+                Some((piece, _)) => piece,
+                None => continue,
+            };
+
+            let mut moves = Bitboard::default();
+            // use capture mask if there is a checker
+            // use push mask for non-captures
+            // TODO
         }
     }
 
@@ -976,6 +1092,44 @@ mod tests {
     use crate::move_generation;
 
     use super::*;
+
+    #[test]
+    fn rays_between_verification() {
+        let move_gen = MoveGenerator::new();
+        let from = Square::from_square_index(Squares::A1);
+        let to = Square::from_square_index(Squares::H8);
+        let rays = move_gen.ray_between(from, to);
+
+        let expected = Bitboard::from_square(Squares::A1)
+            | Bitboard::from_square(Squares::B2)
+            | Bitboard::from_square(Squares::C3)
+            | Bitboard::from_square(Squares::D4)
+            | Bitboard::from_square(Squares::E5)
+            | Bitboard::from_square(Squares::F6)
+            | Bitboard::from_square(Squares::G7)
+            | Bitboard::from_square(Squares::H8);
+        assert_eq!(rays, expected);
+
+        let from = Square::from_square_index(Squares::H1);
+        let to = Square::from_square_index(Squares::A8);
+        let rays = move_gen.ray_between(from, to);
+
+        let expected = Bitboard::from_square(Squares::H1)
+            | Bitboard::from_square(Squares::G2)
+            | Bitboard::from_square(Squares::F3)
+            | Bitboard::from_square(Squares::E4)
+            | Bitboard::from_square(Squares::D5)
+            | Bitboard::from_square(Squares::C6)
+            | Bitboard::from_square(Squares::B7)
+            | Bitboard::from_square(Squares::A8);
+        assert_eq!(rays, expected);
+
+        let rays = move_gen.ray_between(
+            Square::from_square_index(Squares::A1),
+            Square::from_square_index(Squares::C2),
+        );
+        assert!(rays == Bitboard::default());
+    }
 
     #[test]
     fn check_is_square_attacked() {
@@ -1600,6 +1754,10 @@ mod tests {
             assert!(!mv.is_promotion());
         }
 
+        assert_eq!(move_list.len(), 20);
+
+        move_list.clear();
+        move_gen.generate_legal_moves(&board, &mut move_list);
         assert_eq!(move_list.len(), 20);
     }
 
