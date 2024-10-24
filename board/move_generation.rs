@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 28th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Oct 22 2024
+ * Last Modified: Thu Oct 24 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -493,6 +493,15 @@ impl MoveGenerator {
         return self.rays_between[from.to_square_index() as usize][to.to_square_index() as usize];
     }
 
+    /// Calculate all squares currently being attacked by a given side.
+    ///
+    /// # Arguments
+    /// - board - The current board state
+    /// - side - The side to calculate the attacked squares for
+    ///
+    /// # Returns
+    ///
+    /// A bitboard representing all squares currently being attacked by the given side.
     fn get_attacked_squares(&self, board: &Board, side: Side) -> Bitboard {
         let mut attacks = Bitboard::default();
         let occupancy = board.all_pieces();
@@ -531,6 +540,16 @@ impl MoveGenerator {
 
         return attacks & !our_pieces;
     }
+
+    /// Calculate 'checkers' and 'pinned' bitboard masks for the current position.
+    ///
+    /// # Arguments
+    /// - board - The current board state
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing the 'checkers' and 'pinned' bitboards in that order.
+    /// Checkers are the squares that are attacking the king, and pinned are squares/pieces that are pinned.
     fn calculate_checkers_and_pinned_masks(&self, board: &Board) -> (Bitboard, Bitboard) {
         let us = board.side_to_move();
         let them = Side::opposite(us);
@@ -601,6 +620,16 @@ impl MoveGenerator {
         (checkers, pinned)
     }
 
+    /// Calculate the capture and push masks for the king in the current position
+    ///
+    /// # Arguments
+    ///
+    /// - board - The current board state
+    /// - checkers - The squares that are attacking the king. See [calculate_checkers_and_pinned_mask][MoveGenerator::calculate_checkers_and_pinned_masks] for more.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing the capture and push masks in that order.
     fn calculate_capture_and_push_masks(
         &self,
         board: &Board,
@@ -676,9 +705,9 @@ impl MoveGenerator {
 
         let pushes = Bitboard::default();
         let attacks = Bitboard::default();
-
         (pushes | attacks) & (*capture_mask | *push_mask) & pawn_pin_mask
     }
+
     fn generate_legal_mobility(
         &self,
         piece: Piece,
@@ -696,6 +725,7 @@ impl MoveGenerator {
                 capture_mask,
                 push_mask,
             ),
+            // TODO: Support other pieces
             _ => Bitboard::default(),
         }
     }
@@ -761,7 +791,14 @@ impl MoveGenerator {
                 None => continue,
             };
 
-            let mut moves = Bitboard::default();
+            let allowed_mobility = self.generate_legal_mobility(
+                piece,
+                &Square::from_square_index(from),
+                board,
+                &pinned,
+                &capture_mask,
+                &push_mask,
+            );
             // use capture mask if there is a checker
             // use push mask for non-captures
             // TODO
@@ -1257,6 +1294,7 @@ mod tests {
             | Bitboard::from_square(Squares::F6)
             | Bitboard::from_square(Squares::G7);
         println!("{}", rays);
+        println!("expected:\n{}", expected);
         assert_eq!(rays, expected);
 
         let from = Square::from_square_index(Squares::H1);
@@ -1269,6 +1307,8 @@ mod tests {
             | Bitboard::from_square(Squares::D5)
             | Bitboard::from_square(Squares::C6)
             | Bitboard::from_square(Squares::B7);
+        println!("{}", rays);
+        println!("expected:\n{}", expected);
         assert_eq!(rays, expected);
 
         let rays = move_gen.ray_between(
