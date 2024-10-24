@@ -21,6 +21,8 @@ use std::{
     },
 };
 
+use crate::square::Square;
+
 /// Bitboard representation of a chess board.
 /// LSB (bit 0) is a1, MSB (bit 63) is h8.
 /// The board is represented as a 64-bit integer.
@@ -197,6 +199,24 @@ impl Hash for Bitboard {
     }
 }
 
+impl From<u64> for Bitboard {
+    fn from(data: u64) -> Self {
+        Bitboard { data }
+    }
+}
+
+impl From<Square> for Bitboard {
+    fn from(square: Square) -> Self {
+        Bitboard::from_square(square.to_square_index())
+    }
+}
+
+impl From<u8> for Bitboard {
+    fn from(square: u8) -> Self {
+        Bitboard::from_square(square)
+    }
+}
+
 impl Bitboard {
     /// Create a new Bitboard with the given data.
     pub const fn new(data: u64) -> Self {
@@ -236,6 +256,10 @@ impl Bitboard {
     /// Convert to a 64-bit unsigned integer.
     pub const fn as_number(&self) -> u64 {
         self.data
+    }
+
+    pub fn intersects(&self, other: impl Into<Self>) -> bool {
+        (*self & other.into()).number_of_occupied_squares() > 0
     }
 }
 
