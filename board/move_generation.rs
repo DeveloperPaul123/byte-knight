@@ -13,6 +13,7 @@
  */
 
 use core::num;
+use std::u64;
 
 use crate::{
     bitboard::Bitboard,
@@ -161,7 +162,7 @@ fn initialize_rays_between(rays_between: &mut [[Bitboard; NumberOf::SQUARES]; Nu
             let mut ray = Bitboard::default();
             let mut to = from_square;
             while let Some(shifted) = to.offset(delta_file, delta_rank) {
-                ray.set_square(to.to_square_index());
+                ray.set_square(shifted.to_square_index());
                 to = shifted;
                 let from_index = from_square.to_square_index() as usize;
                 let to_index = to.to_square_index() as usize;
@@ -492,24 +493,61 @@ impl MoveGenerator {
         return self.rays_between[from.to_square_index() as usize][to.to_square_index() as usize];
     }
 
-    pub fn generate_legal_moves(&self, board: &Board, move_list: &mut MoveList) {
-        // TODO: Generate legal moves
+    fn get_attacked_squares(&self, board: &Board, side: Side) -> Bitboard {
+        let mut attacks = Bitboard::default();
+        let occupancy = board.all_pieces();
+        let our_pieces = board.pieces(side);
+
+        // get the squares attacked by each piece
+        for piece in [
+            Piece::Bishop,
+            Piece::Rook,
+            Piece::Queen,
+            Piece::King,
+            Piece::Knight,
+            Piece::Pawn,
+        ]
+        .iter()
+        {
+            let mut piece_bb = board.piece_bitboard(*piece, side).clone();
+            if piece_bb.as_number() == 0 {
+                continue;
+            }
+
+            while piece_bb.as_number() > 0 {
+                let from = bitboard_helpers::next_bit(&mut piece_bb) as u8;
+                let attacks_bb =
+                    if piece == &Piece::Bishop || piece == &Piece::Queen || piece == &Piece::Rook {
+                        self.get_slider_moves(*piece, from, &occupancy)
+                    } else if piece == &Piece::Pawn {
+                        self.pawn_attacks[side as usize][from as usize]
+                    } else {
+                        self.get_non_slider_moves(*piece, from)
+                    };
+
+                attacks |= attacks_bb;
+            }
+        }
+
+        return attacks & !our_pieces;
+    }
+    fn calculate_checkers_and_pinned_masks(&self, board: &Board) -> (Bitboard, Bitboard) {
         let us = board.side_to_move();
         let them = Side::opposite(us);
         let occupancy = board.all_pieces();
         let our_pieces = board.pieces(us);
-        let their_pieces = board.pieces(them);
-        let empty = !occupancy;
 
-        let mut king_bb = board.piece_bitboard(Piece::King, us).clone();
-        let king_square = bitboard_helpers::next_bit(&mut king_bb) as u8;
+        let king_bb = board.piece_bitboard(Piece::King, us);
+        let king_square = bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
 
         // first we start with king moves
         // we first need to find all checkers of the king
         let mut checkers = Bitboard::default();
         let mut pinned = Bitboard::default();
 
-        let kingless_occupancy = occupancy ^ king_bb;
+        println!("Occupancy:\n{}", occupancy);
+        println!("King BB:\n{}", king_bb);
+        let kingless_occupancy = occupancy & !(*king_bb);
 
         // an enemy king cannot check our king, so we ignore it
         let knight_attacks = self.get_non_slider_moves(Piece::Knight, king_square);
@@ -518,8 +556,6 @@ impl MoveGenerator {
         let queen_attacks = rook_attacks | bishop_attacks;
         // note we use the opposite side for the pawn attacks
         let pawn_attacks = self.pawn_attacks[Side::opposite(them) as usize][king_square as usize];
-        let attacked_squares =
-            knight_attacks | rook_attacks | bishop_attacks | queen_attacks | pawn_attacks;
 
         let enemy_pawns = board.piece_bitboard(Piece::Pawn, them);
         let enemy_knights = board.piece_bitboard(Piece::Knight, them);
@@ -528,23 +564,27 @@ impl MoveGenerator {
         let enemy_queens = board.piece_bitboard(Piece::Queen, them);
 
         checkers = *enemy_knights & knight_attacks | *enemy_pawns & pawn_attacks;
-        let slider_attacks = rook_attacks | bishop_attacks | queen_attacks;
-
+        let mut slider_attacks = rook_attacks & *enemy_rooks
+            | bishop_attacks & *enemy_bishops
+            | queen_attacks & *enemy_queens;
+        println!("Checkers:\n{}", checkers);
         // loop through the sliding attacks to check if they are checkers or a pinner
-        let mut slider_bb = slider_attacks;
-        while slider_bb.as_number() > 0 {
-            let attacker_sq = bitboard_helpers::next_bit(&mut slider_bb) as u8;
-            // TODO: Calculate the ray between the from square and the king square (exclusive)
+        println!("slider:\n{}", slider_attacks);
+        while slider_attacks.as_number() > 0 {
+            let attacker_sq = bitboard_helpers::next_bit(&mut slider_attacks) as u8;
             let ray = self.ray_between(
                 Square::from_square_index(king_square),
                 Square::from_square_index(attacker_sq),
             );
 
+            println!("Ray:\n{}", ray);
+            println!("Occupancy:\n{}", kingless_occupancy);
+            println!("Both:\n{}", kingless_occupancy & ray);
             // check if the ray is blocked
             // if it is blocked, then we have a pinner
             // if it is not blocked, then we have a checker
 
-            match (ray & occupancy).as_number().count_ones() {
+            match (kingless_occupancy & ray).as_number().count_ones() {
                 0 => {
                     checkers |= Bitboard::from_square(attacker_sq);
                 }
@@ -555,9 +595,20 @@ impl MoveGenerator {
             }
         }
 
-        println!("Checkers: {}", checkers);
-        println!("Pinned: {}", pinned);
+        println!("Checkers:\n{}", checkers);
+        println!("Pinned:\n{}", pinned);
 
+        (checkers, pinned)
+    }
+
+    fn calculate_capture_and_push_masks(
+        &self,
+        board: &Board,
+        checkers: &Bitboard,
+    ) -> (Bitboard, Bitboard) {
+        let them = Side::opposite(board.side_to_move());
+        let king_bb = board.piece_bitboard(Piece::King, board.side_to_move());
+        let king_square = bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
         // initialize these to all squares on the board by default
         let mut capture_mask = Bitboard::new(u64::MAX);
         let mut push_mask = Bitboard::new(u64::MAX);
@@ -566,7 +617,7 @@ impl MoveGenerator {
         let num_checkers = checkers.as_number().count_ones();
         if num_checkers == 1 {
             // if there is only one checker, we can capture it or move the king
-            capture_mask = checkers;
+            capture_mask = *checkers;
 
             let checker_sq = bitboard_helpers::next_bit(&mut checkers.clone()) as u8;
             if let Some((piece, side)) = board.piece_on_square(checker_sq) {
@@ -586,10 +637,97 @@ impl MoveGenerator {
             }
         }
 
+        (capture_mask, push_mask)
+    }
+
+    fn generate_legal_pawn_mobility(
+        &self,
+        board: &Board,
+        square: &Square,
+        pinned_mask: &Bitboard,
+        capture_mask: &Bitboard,
+        push_mask: &Bitboard,
+    ) -> Bitboard {
+        // pawns can get complex because of en passant and promotion
+        // also, we need to take into account the pin direction
+
+        let blockers = board.all_pieces();
+        // are we pinned?
+        let is_pinned = pinned_mask.intersects(*square);
+
+        let mut pawn_pin_mask = if is_pinned {
+            Bitboard::default()
+        } else {
+            Bitboard::from(u64::MAX)
+        };
+
+        let king_square = bitboard_helpers::next_bit(
+            &mut board
+                .piece_bitboard(Piece::King, board.side_to_move())
+                .clone(),
+        ) as u8;
+        pawn_pin_mask |= self.ray_between(*square, Square::from_square_index(king_square))
+            | Bitboard::from(*square)
+            | Bitboard::from(king_square);
+
+        // TODO: Calculate an en-passant bb if it's viable
+        // TODO: Calculate all pushes (include double), use push_mask
+        // TODO: Calculate all captures, use capture_mask
+
+        let pushes = Bitboard::default();
+        let attacks = Bitboard::default();
+
+        (pushes | attacks) & (*capture_mask | *push_mask) & pawn_pin_mask
+    }
+    fn generate_legal_mobility(
+        &self,
+        piece: Piece,
+        square: &Square,
+        board: &Board,
+        pinned_mask: &Bitboard,
+        capture_mask: &Bitboard,
+        push_mask: &Bitboard,
+    ) -> Bitboard {
+        match piece {
+            Piece::Pawn => self.generate_legal_pawn_mobility(
+                board,
+                square,
+                pinned_mask,
+                capture_mask,
+                push_mask,
+            ),
+            _ => Bitboard::default(),
+        }
+    }
+    pub fn generate_legal_moves(&self, board: &Board, move_list: &mut MoveList) {
+        let us = board.side_to_move();
+        let them = Side::opposite(us);
+        let our_pieces = board.pieces(us);
+
+        let king_bb = board.piece_bitboard(Piece::King, us);
+        let king_square = bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
+
+        let (checkers, pinned) = self.calculate_checkers_and_pinned_masks(board);
+
+        let (capture_mask, push_mask) = self.calculate_capture_and_push_masks(board, &checkers);
+
+        println!("Capture Mask:\n{}", capture_mask);
+        println!("Push Mask:\n{}", push_mask);
+
+        println!("King Moves:");
+
+        // generate king moves
+        // calculate attacked squares
+        let attacked_squares = self.get_attacked_squares(board, them);
         let king_moves_bb = self.get_non_slider_moves(Piece::King, king_square);
+        println!("{}", king_moves_bb);
         let mut king_moves = king_moves_bb & !our_pieces;
+        println!("{}", king_moves);
         king_moves &= !attacked_squares;
+        println!("attacked squares:\n{}", attacked_squares);
+        println!("King Moves:\n{}", king_moves);
         king_moves &= !capture_mask;
+        println!("King Moves:\n{}", king_moves);
 
         while king_moves.as_number() > 0 {
             let to = bitboard_helpers::next_bit(&mut king_moves) as u8;
@@ -606,13 +744,15 @@ impl MoveGenerator {
             move_list.push(mv);
         }
 
+        let num_checkers = checkers.as_number().count_ones();
+
         if num_checkers > 1 {
             // if there are multiple checkers, the king must move
             return;
         }
 
         // now we generate moves for the rest of the pieces
-        let mut moveable_pieces = our_pieces & !king_bb & !pinned;
+        let mut moveable_pieces = our_pieces & !(*king_bb) & !pinned;
         while moveable_pieces.as_number() > 0 {
             // Generate moves for each piece
             let from = bitboard_helpers::next_bit(&mut moveable_pieces) as u8;
@@ -1094,34 +1234,41 @@ mod tests {
     use super::*;
 
     #[test]
+    fn king_cannot_move_away_from_slider() {
+        let move_gen = MoveGenerator::new();
+        let board = Board::from_fen("4k3/8/8/8/4R3/8/8/4K3 b - - 0 1").unwrap();
+
+        let mut move_list = MoveList::new();
+        move_gen.generate_legal_moves(&board, &mut move_list);
+        assert_eq!(move_list.len(), 4);
+    }
+
+    #[test]
     fn rays_between_verification() {
         let move_gen = MoveGenerator::new();
         let from = Square::from_square_index(Squares::A1);
         let to = Square::from_square_index(Squares::H8);
         let rays = move_gen.ray_between(from, to);
 
-        let expected = Bitboard::from_square(Squares::A1)
-            | Bitboard::from_square(Squares::B2)
+        let expected = Bitboard::from_square(Squares::B2)
             | Bitboard::from_square(Squares::C3)
             | Bitboard::from_square(Squares::D4)
             | Bitboard::from_square(Squares::E5)
             | Bitboard::from_square(Squares::F6)
-            | Bitboard::from_square(Squares::G7)
-            | Bitboard::from_square(Squares::H8);
+            | Bitboard::from_square(Squares::G7);
+        println!("{}", rays);
         assert_eq!(rays, expected);
 
         let from = Square::from_square_index(Squares::H1);
         let to = Square::from_square_index(Squares::A8);
         let rays = move_gen.ray_between(from, to);
 
-        let expected = Bitboard::from_square(Squares::H1)
-            | Bitboard::from_square(Squares::G2)
+        let expected = Bitboard::from_square(Squares::G2)
             | Bitboard::from_square(Squares::F3)
             | Bitboard::from_square(Squares::E4)
             | Bitboard::from_square(Squares::D5)
             | Bitboard::from_square(Squares::C6)
-            | Bitboard::from_square(Squares::B7)
-            | Bitboard::from_square(Squares::A8);
+            | Bitboard::from_square(Squares::B7);
         assert_eq!(rays, expected);
 
         let rays = move_gen.ray_between(
