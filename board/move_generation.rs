@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 28th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Oct 22 2024
+ * Last Modified: Fri Oct 25 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -502,9 +502,8 @@ impl MoveGenerator {
     /// # Returns
     ///
     /// A bitboard representing all squares currently being attacked by the given side.
-    fn get_attacked_squares(&self, board: &Board, side: Side) -> Bitboard {
+    fn get_attacked_squares(&self, board: &Board, side: Side, occupancy: &Bitboard) -> Bitboard {
         let mut attacks = Bitboard::default();
-        let occupancy = board.all_pieces();
         let our_pieces = board.pieces(side);
 
         // get the squares attacked by each piece
@@ -550,24 +549,30 @@ impl MoveGenerator {
     ///
     /// A tuple containing the 'checkers' and 'pinned' bitboards in that order.
     /// Checkers are the squares that are attacking the king, and pinned are squares/pieces that are pinned.
-    fn calculate_checkers_and_pinned_masks(&self, board: &Board) -> (Bitboard, Bitboard) {
+    fn calculate_checkers_and_pinned_masks(
+        &self,
+        board: &Board,
+        occupancy: &Bitboard,
+    ) -> (Bitboard, Bitboard) {
         let us = board.side_to_move();
         let them = Side::opposite(us);
-        let occupancy = board.all_pieces();
         let our_pieces = board.pieces(us);
-
         let king_bb = board.piece_bitboard(Piece::King, us);
         let king_square = bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
 
-        // first we start with king moves
-        // we first need to find all checkers of the king
         let mut checkers = Bitboard::default();
+        // TODO: Fix pinned calculation. We need to:
+        // 1. Calculate opponent sliding piece moves
+        // 2. Calculate sliding piece moves from our king position
+        // 3. Calculate "pinned rays" by overlapping 1 and 2
+        // 4. Calculate pinned pieces by overlapping 3 and our pieces
         let mut pinned = Bitboard::default();
 
         println!("Occupancy:\n{}", occupancy);
         println!("King BB:\n{}", king_bb);
-        let kingless_occupancy = occupancy & !(*king_bb);
-
+        // ensure we definitely don't have the king in the occupancy
+        let kingless_occupancy = *occupancy & !(*king_bb);
+        println!("Kingless Occupancy:\n{}", kingless_occupancy);
         // an enemy king cannot check our king, so we ignore it
         let knight_attacks = self.get_non_slider_moves(Piece::Knight, king_square);
         let rook_attacks = self.get_slider_moves(Piece::Rook, king_square, &kingless_occupancy);
@@ -695,6 +700,50 @@ impl MoveGenerator {
         (capture_mask, push_mask)
     }
 
+    fn calculate_en_passant_bitboard(&self, from: u8, board: &Board) -> Bitboard {
+        let en_passant_sq = board.en_passant_square();
+
+        match en_passant_sq {
+            Some(sq) => {
+                let en_passant_bb = en_passant_sq
+                    .map(|sq| Bitboard::from(sq))
+                    .unwrap_or_default();
+
+                // check for discovered checks
+                // remove the captured and capturing pawns from the bitboard
+                let mut occupancy = board.all_pieces();
+                // remove the attacking pawn
+                occupancy &= !(Bitboard::from_square(from));
+                // remove the captured pawn
+                let captured_sq = match board.side_to_move() {
+                    Side::White => sq - SOUTH as u8,
+                    Side::Black => sq + NORTH as u8,
+                    Side::Both => panic!("Both side not allowed"),
+                };
+                occupancy &= !(Bitboard::from_square(captured_sq));
+                // get the squares attacked by the sliding pieces
+                let (mut checkers, _) = self.calculate_checkers_and_pinned_masks(board, &occupancy);
+                println!("raw ep checkers:\n{}", checkers);
+                // filter checkers to the same rank as the king
+                let king_sq = bitboard_helpers::next_bit(
+                    &mut board
+                        .piece_bitboard(Piece::King, board.side_to_move())
+                        .clone(),
+                ) as u8;
+                let king_rank = square::from_square(king_sq).1;
+                checkers &= RANK_BITBOARDS[king_rank as usize];
+                println!("ep checkers:\n{}", checkers);
+                if checkers.number_of_occupied_squares() == 0 {
+                    // we are now in check, so we cannot use this en passant capture
+                    en_passant_bb
+                } else {
+                    Bitboard::default()
+                }
+            }
+            None => Bitboard::default(),
+        }
+    }
+
     fn generate_legal_pawn_mobility(
         &self,
         board: &Board,
@@ -735,13 +784,12 @@ impl MoveGenerator {
         };
 
         let mut pushes = match to_square {
-            Some(to) => {
-                let mut bb = Bitboard::default();
-                bb.set_square(to as u8);
-                bb
-            }
+            Some(to) => Bitboard::from_square(to),
             None => Bitboard::default(),
         };
+
+        let occupancy = board.all_pieces();
+        let is_unobstructed = pushes & !occupancy == Bitboard::default();
 
         let can_double_push = match us {
             Side::White => Board::is_square_on_rank(from_square, Rank::R2 as u8),
@@ -749,7 +797,8 @@ impl MoveGenerator {
             Side::Both => panic!("Both side not allowed"),
         };
 
-        if can_double_push {
+        // if single push is obstructed, we can't double push
+        if can_double_push && !is_unobstructed {
             let double_push_sq = match us {
                 Side::White => {
                     let (result, did_overflow) = from_square.overflowing_add(2 * NORTH as u8);
@@ -791,17 +840,44 @@ impl MoveGenerator {
             | Bitboard::from(*square)
             | Bitboard::from(king_square);
 
-        let en_passant_bb = board
-            .en_passant_square()
-            .map(|sq| Bitboard::from(sq))
-            .unwrap_or_default();
+        let en_passant_bb = self.calculate_en_passant_bitboard(from_square, board);
 
-        // TODO: Calculate an en-passant bb if it's viable
-
+        let legal_pushes = pushes & !occupancy;
+        println!("legal pushes:\n{}", legal_pushes);
         let attacks = self.pawn_attacks[us as usize][square.to_square_index() as usize]
             & (their_pieces | en_passant_bb);
         println!("Attacks:\n{}", attacks);
-        (pushes | attacks) & (*capture_mask | *push_mask) & pawn_pin_mask
+        (legal_pushes | attacks) & (*capture_mask | *push_mask) & pawn_pin_mask
+    }
+
+    fn generate_normal_piece_legal_mobility(
+        &self,
+        piece: Piece,
+        square: &Square,
+        board: &Board,
+        capture_mask: &Bitboard,
+        push_mask: &Bitboard,
+    ) -> Bitboard {
+        let us = board.side_to_move();
+        let their_pieces = board.pieces(Side::opposite(us));
+        let from_square = square.to_square_index();
+        let mut mobility = Bitboard::default();
+
+        let attacks = match piece {
+            Piece::Knight => self.knight_attacks[from_square as usize],
+            Piece::Bishop => self.get_slider_moves(piece, from_square, &board.all_pieces()),
+            Piece::Rook => self.get_slider_moves(piece, from_square, &board.all_pieces()),
+            Piece::Queen => self.get_slider_moves(piece, from_square, &board.all_pieces()),
+            _ => panic!("Invalid piece for normal piece mobility"),
+        };
+
+        let our_pieces = board.pieces(us);
+        let empty = !(their_pieces | our_pieces);
+        // empty pushes or captures masked by capture mask and push mask in the case that we are
+        // single checked
+        mobility = (attacks & *capture_mask & their_pieces) | (attacks & empty & *push_mask);
+
+        return mobility;
     }
 
     fn generate_legal_mobility(
@@ -821,7 +897,14 @@ impl MoveGenerator {
                 capture_mask,
                 push_mask,
             ),
-            _ => Bitboard::default(),
+            Piece::King => todo!("King mobility"),
+            _ => self.generate_normal_piece_legal_mobility(
+                piece,
+                square,
+                board,
+                capture_mask,
+                push_mask,
+            ),
         }
     }
     pub fn generate_legal_moves(&self, board: &Board, move_list: &mut MoveList) {
@@ -829,11 +912,12 @@ impl MoveGenerator {
         let them = Side::opposite(us);
         let our_pieces = board.pieces(us);
         let their_pieces = board.pieces(them);
+        let occupancy = our_pieces | their_pieces;
 
         let king_bb = board.piece_bitboard(Piece::King, us);
         let king_square = bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
 
-        let (checkers, pinned) = self.calculate_checkers_and_pinned_masks(board);
+        let (checkers, pinned) = self.calculate_checkers_and_pinned_masks(board, &occupancy);
 
         let (capture_mask, push_mask) = self.calculate_capture_and_push_masks(board, &checkers);
 
@@ -844,7 +928,7 @@ impl MoveGenerator {
 
         // generate king moves
         // calculate attacked squares
-        let attacked_squares = self.get_attacked_squares(board, them);
+        let attacked_squares = self.get_attacked_squares(board, them, &(occupancy & !*king_bb));
         let king_moves_bb = self.get_non_slider_moves(Piece::King, king_square);
         println!("{}", king_moves_bb);
         let king_pushes = king_moves_bb & !attacked_squares & !our_pieces & !their_pieces;
@@ -1368,6 +1452,31 @@ mod tests {
     use crate::move_generation;
 
     use super::*;
+    #[test]
+    fn calculate_pinned_pieces() {
+        let move_gen = MoveGenerator::new();
+        let board =
+            Board::from_fen("2kr3r/p1ppqpb1/bn2Qnp1/3PN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQ - 3 2")
+                .unwrap();
+        let occupancy = board.pieces(Side::opposite(board.side_to_move()));
+        let (checkers, pinned) = move_gen.calculate_checkers_and_pinned_masks(&board, &occupancy);
+        assert_eq!(checkers, 0);
+        assert_eq!(pinned, Bitboard::from_square(Squares::D6));
+    }
+
+    #[test]
+    fn en_passant_capture_causes_discovered_check() {
+        let move_gen = MoveGenerator::new();
+        let board = Board::from_fen("8/8/8/8/k2Pp2Q/8/8/3K4 b - d3 0 1").unwrap();
+        let mut move_list = MoveList::new();
+        move_gen.generate_legal_moves(&board, &mut move_list);
+
+        for mv in move_list.iter() {
+            println!("{}", mv);
+        }
+
+        assert_eq!(move_list.len(), 6);
+    }
 
     #[test]
     fn king_cannot_move_away_from_slider() {
@@ -1377,6 +1486,16 @@ mod tests {
         let mut move_list = MoveList::new();
         move_gen.generate_legal_moves(&board, &mut move_list);
         assert_eq!(move_list.len(), 4);
+    }
+
+    #[test]
+    fn king_cannot_slide_away_from_bishop() {
+        let move_gen = MoveGenerator::new();
+        let board = Board::from_fen("r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2").unwrap();
+
+        let mut move_list = MoveList::new();
+        move_gen.generate_legal_moves(&board, &mut move_list);
+        assert_eq!(move_list.len(), 8);
     }
 
     #[test]
