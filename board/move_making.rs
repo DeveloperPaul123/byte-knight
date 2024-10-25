@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 18 2024
+ * Last Modified: Fri Oct 25 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -182,7 +182,7 @@ impl Board {
     pub fn make_move(&mut self, mv: &Move, move_gen: &MoveGenerator) -> Result<()> {
         // validate pre-conditions first before even bothering to go further
         self.check_move_preconditions(mv)?;
-        
+
         let mut current_state = self.board_state().clone();
         current_state.next_move = mv.clone();
         // update history before modifying the current state
@@ -333,20 +333,7 @@ impl Board {
             self.set_full_move_number(self.half_move_clock() + 1);
         }
 
-        // pseudo legal check
-        // check if we are in check
-        // get the kings location and check if that square is attacked by the opponent
-        let mut king_bb = self.piece_bitboard(Piece::King, us).clone();
-        let king_square = bitboard_helpers::next_bit(&mut king_bb) as u8;
-        let is_king_in_check =
-            move_gen.is_square_attacked(self, &Square::from_square_index(king_square), them);
-
-        if is_king_in_check {
-            self.unmake_move()?;
-            bail!("Illegal move");
-        }
-
-        return Ok(());
+        Ok(())
     }
 
     /// Undo the last move made on this [`Board`].
