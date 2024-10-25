@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 28th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Oct 24 2024
+ * Last Modified: Tue Oct 22 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -666,6 +666,32 @@ impl MoveGenerator {
             }
         }
 
+        // Add the enpassant square to our capture mask if it's viable
+        let en_passant_bb = board
+            .en_passant_square()
+            .map(|sq| Bitboard::from(sq))
+            .unwrap_or_default();
+        // we need to first check if the en passant square would capture a checker
+        // if "us" is white, then we whould shift the en passant square left
+        // if "us" is black, then we should shift the en passant square right
+        match board.side_to_move() {
+            Side::White => {
+                let left = en_passant_bb >> SOUTH;
+                if left & *checkers != 0 {
+                    capture_mask |= en_passant_bb;
+                }
+            }
+            Side::Black => {
+                let right = en_passant_bb << NORTH;
+                println!("Right:\n{}", right);
+                println!("Checkers:\n{}", checkers);
+                if right & *checkers != 0 {
+                    capture_mask |= en_passant_bb;
+                }
+            }
+            Side::Both => panic!("Both side not allowed"),
+        }
+
         (capture_mask, push_mask)
     }
 
@@ -679,10 +705,78 @@ impl MoveGenerator {
     ) -> Bitboard {
         // pawns can get complex because of en passant and promotion
         // also, we need to take into account the pin direction
-
-        let blockers = board.all_pieces();
         // are we pinned?
         let is_pinned = pinned_mask.intersects(*square);
+        let us = board.side_to_move();
+        let their_pieces = board.pieces(Side::opposite(us));
+        let direction = match us {
+            Side::White => NORTH as u8,
+            Side::Black => SOUTH as u8,
+            Side::Both => panic!("Both side not allowed"),
+        };
+        let from_square = square.to_square_index();
+
+        let to_square = match us {
+            Side::White => {
+                let (result, did_overflow) = from_square.overflowing_add(direction);
+                match did_overflow {
+                    true => None,
+                    false => Some(result),
+                }
+            }
+            Side::Black => {
+                let (result, did_overflow) = from_square.overflowing_sub(direction);
+                match did_overflow {
+                    true => None,
+                    false => Some(result),
+                }
+            }
+            Side::Both => panic!("Both side not allowed"),
+        };
+
+        let mut pushes = match to_square {
+            Some(to) => {
+                let mut bb = Bitboard::default();
+                bb.set_square(to as u8);
+                bb
+            }
+            None => Bitboard::default(),
+        };
+
+        let can_double_push = match us {
+            Side::White => Board::is_square_on_rank(from_square, Rank::R2 as u8),
+            Side::Black => Board::is_square_on_rank(from_square, Rank::R7 as u8),
+            Side::Both => panic!("Both side not allowed"),
+        };
+
+        if can_double_push {
+            let double_push_sq = match us {
+                Side::White => {
+                    let (result, did_overflow) = from_square.overflowing_add(2 * NORTH as u8);
+                    match did_overflow {
+                        true => None,
+                        false => Some(result),
+                    }
+                }
+                Side::Black => {
+                    let (result, did_overflow) = from_square.overflowing_sub(2 * SOUTH as u8);
+                    match did_overflow {
+                        true => None,
+                        false => Some(result),
+                    }
+                }
+                Side::Both => panic!("Both side not allowed"),
+            };
+
+            match double_push_sq {
+                Some(to) => {
+                    let bb = Bitboard::from_square(to);
+                    // append to our pushes
+                    pushes |= bb;
+                }
+                None => {}
+            }
+        }
 
         let mut pawn_pin_mask = if is_pinned {
             Bitboard::default()
@@ -690,21 +784,23 @@ impl MoveGenerator {
             Bitboard::from(u64::MAX)
         };
 
-        let king_square = bitboard_helpers::next_bit(
-            &mut board
-                .piece_bitboard(Piece::King, board.side_to_move())
-                .clone(),
-        ) as u8;
+        let king_square =
+            bitboard_helpers::next_bit(&mut board.piece_bitboard(Piece::King, us).clone()) as u8;
+
         pawn_pin_mask |= self.ray_between(*square, Square::from_square_index(king_square))
             | Bitboard::from(*square)
             | Bitboard::from(king_square);
 
-        // TODO: Calculate an en-passant bb if it's viable
-        // TODO: Calculate all pushes (include double), use push_mask
-        // TODO: Calculate all captures, use capture_mask
+        let en_passant_bb = board
+            .en_passant_square()
+            .map(|sq| Bitboard::from(sq))
+            .unwrap_or_default();
 
-        let pushes = Bitboard::default();
-        let attacks = Bitboard::default();
+        // TODO: Calculate an en-passant bb if it's viable
+
+        let attacks = self.pawn_attacks[us as usize][square.to_square_index() as usize]
+            & (their_pieces | en_passant_bb);
+        println!("Attacks:\n{}", attacks);
         (pushes | attacks) & (*capture_mask | *push_mask) & pawn_pin_mask
     }
 
@@ -725,7 +821,6 @@ impl MoveGenerator {
                 capture_mask,
                 push_mask,
             ),
-            // TODO: Support other pieces
             _ => Bitboard::default(),
         }
     }
@@ -733,6 +828,7 @@ impl MoveGenerator {
         let us = board.side_to_move();
         let them = Side::opposite(us);
         let our_pieces = board.pieces(us);
+        let their_pieces = board.pieces(them);
 
         let king_bb = board.piece_bitboard(Piece::King, us);
         let king_square = bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
@@ -751,12 +847,10 @@ impl MoveGenerator {
         let attacked_squares = self.get_attacked_squares(board, them);
         let king_moves_bb = self.get_non_slider_moves(Piece::King, king_square);
         println!("{}", king_moves_bb);
-        let mut king_moves = king_moves_bb & !our_pieces;
-        println!("{}", king_moves);
-        king_moves &= !attacked_squares;
+        let king_pushes = king_moves_bb & !attacked_squares & !our_pieces & !their_pieces;
+        let king_attacks = king_moves_bb & capture_mask & their_pieces;
+        let mut king_moves = king_pushes | king_attacks;
         println!("attacked squares:\n{}", attacked_squares);
-        println!("King Moves:\n{}", king_moves);
-        king_moves &= !capture_mask;
         println!("King Moves:\n{}", king_moves);
 
         while king_moves.as_number() > 0 {
@@ -782,7 +876,7 @@ impl MoveGenerator {
         }
 
         // now we generate moves for the rest of the pieces
-        let mut moveable_pieces = our_pieces & !(*king_bb) & !pinned;
+        let mut moveable_pieces = our_pieces & !(*king_bb);
         while moveable_pieces.as_number() > 0 {
             // Generate moves for each piece
             let from = bitboard_helpers::next_bit(&mut moveable_pieces) as u8;
@@ -791,14 +885,19 @@ impl MoveGenerator {
                 None => continue,
             };
 
-            let allowed_mobility = self.generate_legal_mobility(
+            let from_square = Square::from_square_index(from);
+
+            let mut moves = self.generate_legal_mobility(
                 piece,
-                &Square::from_square_index(from),
+                &from_square,
                 board,
                 &pinned,
                 &capture_mask,
                 &push_mask,
             );
+
+            println!("moves:\n{}", moves);
+            self.enumerate_moves(&moves, &from_square, piece, board, move_list);
             // use capture mask if there is a checker
             // use push mask for non-captures
             // TODO
@@ -1281,6 +1380,20 @@ mod tests {
     }
 
     #[test]
+    fn evade_check_with_en_passant_capture() {
+        let move_gen = MoveGenerator::new();
+        let board = Board::from_fen("8/8/8/2k5/3Pp3/8/8/4K3 b - d3 0 1").unwrap();
+        let mut move_list = MoveList::new();
+        move_gen.generate_legal_moves(&board, &mut move_list);
+
+        for mv in move_list.iter() {
+            println!("{}", mv);
+        }
+
+        assert_eq!(move_list.len(), 9);
+    }
+
+    #[test]
     fn rays_between_verification() {
         let move_gen = MoveGenerator::new();
         let from = Square::from_square_index(Squares::A1);
@@ -1294,7 +1407,6 @@ mod tests {
             | Bitboard::from_square(Squares::F6)
             | Bitboard::from_square(Squares::G7);
         println!("{}", rays);
-        println!("expected:\n{}", expected);
         assert_eq!(rays, expected);
 
         let from = Square::from_square_index(Squares::H1);
@@ -1307,8 +1419,6 @@ mod tests {
             | Bitboard::from_square(Squares::D5)
             | Bitboard::from_square(Squares::C6)
             | Bitboard::from_square(Squares::B7);
-        println!("{}", rays);
-        println!("expected:\n{}", expected);
         assert_eq!(rays, expected);
 
         let rays = move_gen.ray_between(
@@ -1945,6 +2055,10 @@ mod tests {
 
         move_list.clear();
         move_gen.generate_legal_moves(&board, &mut move_list);
+
+        for mv in move_list.iter() {
+            println!("{}", mv);
+        }
         assert_eq!(move_list.len(), 20);
     }
 
