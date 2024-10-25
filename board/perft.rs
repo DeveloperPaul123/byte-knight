@@ -4,7 +4,7 @@ use crate::{
     move_list::MoveList,
     moves::{Move, MoveType},
 };
-use anyhow::Result;
+use anyhow::{bail, Result};
 
 pub struct SplitPerftResult {
     pub mv: Move,
@@ -20,7 +20,7 @@ pub fn split_perft(
     print_moves: bool,
 ) -> Result<Vec<SplitPerftResult>> {
     let mut move_list = MoveList::new();
-    move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+    move_gen.generate_legal_moves(&board, &mut move_list);
 
     let mut results = Vec::new();
     for mv in move_list.iter() {
@@ -29,19 +29,23 @@ pub fn split_perft(
             println!("mv - {}", mv.to_long_algebraic());
         }
         let move_res = board.make_move(mv, &move_gen);
-        if !move_res.is_err() {
-            if print_moves {
-                println!("node - {}", mv.to_long_algebraic());
-            }
-            let nodes: u64 = perft(board, move_gen, depth - 1, print_moves)?;
-            if print_moves {
-                println!("---");
-            }
-            board.unmake_move()?;
-            results.push(SplitPerftResult { mv: *mv, nodes });
-        } else {
-            println!("move failed: {:?}", move_res);
+        if move_res.is_err() {
+            bail!("move failed: {:?}", move_res);
         }
+        if print_moves {
+            println!("node - {}", mv.to_long_algebraic());
+        }
+
+        let nodes = if depth > 1 {
+            perft(board, move_gen, depth, print_moves)?
+        } else {
+            1
+        };
+        if print_moves {
+            println!("---");
+        }
+        board.unmake_move()?;
+        results.push(SplitPerftResult { mv: *mv, nodes });
     }
 
     // sort results alphabetically
@@ -60,21 +64,28 @@ pub fn perft(
 ) -> Result<u64> {
     let mut nodes = 0;
     let mut move_list = MoveList::new();
+    move_gen.generate_legal_moves(&board, &mut move_list);
 
-    if depth == 0 {
-        return Ok(1);
+    if print_moves {
+        for mv in move_list.iter() {
+            println!("{}", mv);
+        }
     }
 
-    move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+    if depth == 1 {
+        // bulk counting
+        return Ok(move_list.len() as u64);
+    }
+
     for mv in move_list.iter() {
         let result = board.make_move(mv, &move_gen);
-        if !result.is_err() {
-            if print_moves {
-                println!("{}", mv);
-            }
-            nodes += perft(board, move_gen, depth - 1, print_moves)?;
-            board.unmake_move()?;
+        // this is unexpected as we are generating legal moves
+        // if this happens, it is likely a bug in the move generator
+        if result.is_err() {
+            bail!("move failed: {:?}", result);
         }
+        nodes += perft(board, move_gen, depth - 1, print_moves)?;
+        board.unmake_move()?;
     }
 
     Ok(nodes)
