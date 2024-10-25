@@ -217,6 +217,12 @@ impl From<u8> for Bitboard {
     }
 }
 
+impl Default for Bitboard {
+    fn default() -> Self {
+        Bitboard::default()
+    }
+}
+
 impl Bitboard {
     /// Create a new Bitboard with the given data.
     pub const fn new(data: u64) -> Self {
