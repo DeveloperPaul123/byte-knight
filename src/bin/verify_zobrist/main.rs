@@ -9,6 +9,30 @@ mod utils;
 static CHECK_BOX: Emoji = Emoji("✅", "");
 static CROSS_MARK: Emoji = Emoji("❌", "");
 
+fn decompress_data(
+    output_data_path: &PathBuf,
+    compressed_data_path: &PathBuf,
+) -> anyhow::Result<()> {
+    let mut decompress_command = std::process::Command::new("zstd");
+    decompress_command
+        .arg("-d")
+        .arg(compressed_data_path.to_str().unwrap())
+        .arg("-o")
+        .arg(output_data_path.to_str().unwrap());
+    println!("Decompressing data file...");
+    println!("Executing command: {:?}", decompress_command);
+    decompress_command.spawn()?.wait()?;
+
+    // check if the output file exists
+    if !output_data_path.exists() {
+        return Err(anyhow::anyhow!(
+            "Failed to decompress data file: output file not found"
+        ));
+    }
+
+    Ok(())
+}
+
 fn main() {
     // load data
     let mut data_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -17,24 +41,14 @@ fn main() {
         println!("Data file not found, decompressing from .zst file...");
         let mut zst_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         zst_path.push("data/lichess_db_puzzle.csv.zst");
-        let file = std::fs::File::open(&zst_path)
-            .unwrap_or_else(|_| panic!("Failed to open .zst file at {:?}", zst_path));
-
-        let mut decoder = zstd::Decoder::new(file)
-            .unwrap_or_else(|_| panic!("Failed to create zstd decoder for {:?}", zst_path));
-
-        let mut data_folder = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        data_folder.push("data");
-        let mut output_path = data_folder.clone();
-        output_path.push("lichess_db_puzzle.csv");
-
-        let mut output_file = std::fs::File::create(&output_path)
-            .unwrap_or_else(|_| panic!("Failed to create output file at {:?}", output_path));
-
-        std::io::copy(&mut decoder, &mut output_file)
-            .unwrap_or_else(|_| panic!("Failed to decompress .zst file to {:?}", output_path));
-
-        println!("Decompressed data file.");
+        let decompress_result = decompress_data(&data_path, &zst_path);
+        if decompress_result.is_err() {
+            println!(
+                "Failed to decompress data file: {:?}",
+                decompress_result.err()
+            );
+            assert!(false);
+        }
     }
 
     assert!(data_path.exists());
