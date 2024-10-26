@@ -410,7 +410,7 @@ impl Board {
         // don't want to try all the moves to check their legality
         // instead we can get king moves only and then check if the possible squares the king can move to are attacked
 
-        let king_attacks = move_gen.get_non_slider_moves(Piece::King, king_sq as u8);
+        let king_attacks = move_gen.get_non_slider_attacks(Piece::King, king_sq as u8);
         let our_pieces = self.pieces(self.side_to_move());
         let mut king_attacks = king_attacks & !our_pieces;
         let mut occupancy = self.all_pieces();
