@@ -26,7 +26,7 @@ use crate::{
     magics::{MagicNumber, BISHOP_MAGIC_VALUES, ROOK_MAGIC_VALUES},
     move_list::MoveList,
     moves::{Move, MoveDescriptor, MoveType, PromotionDescriptor},
-    pieces::{Piece, SQUARE_NAME},
+    pieces::{Piece, SLIDER_PIECES, SQUARE_NAME},
     rank::Rank,
     side::{self, Side},
     square::{self, Square},
@@ -526,11 +526,11 @@ impl MoveGenerator {
                 let from = bitboard_helpers::next_bit(&mut piece_bb) as u8;
                 let attacks_bb =
                     if piece == &Piece::Bishop || piece == &Piece::Queen || piece == &Piece::Rook {
-                        self.get_slider_moves(*piece, from, &occupancy)
+                        self.get_slider_attacks(*piece, from, &occupancy)
                     } else if piece == &Piece::Pawn {
                         self.pawn_attacks[side as usize][from as usize]
                     } else {
-                        self.get_non_slider_moves(*piece, from)
+                        self.get_non_slider_attacks(*piece, from)
                     };
 
                 attacks |= attacks_bb;
@@ -538,6 +538,41 @@ impl MoveGenerator {
         }
 
         return attacks & !our_pieces;
+    }
+
+    fn get_piece_attacks(
+        &self,
+        piece: Piece,
+        square: u8,
+        attacking_side: Side,
+        occupancy: &Bitboard,
+    ) -> Bitboard {
+        if piece.is_none() {
+            panic!("Cannot get attacks for an non-piece");
+        }
+
+        if piece.is_slider() {
+            self.get_slider_attacks(piece, square, occupancy)
+        } else if piece == Piece::Pawn {
+            self.pawn_attacks[Side::opposite(attacking_side) as usize][square as usize]
+        } else {
+            self.get_non_slider_attacks(piece, square)
+        }
+    }
+
+    fn calculate_attacks_from_square(
+        &self,
+        square: u8,
+        attackers: &[Piece],
+        side: Side,
+        occupancy: &Bitboard,
+    ) -> Bitboard {
+        let mut attacks = Bitboard::default();
+        for attacker in attackers {
+            let attack_bb = self.get_piece_attacks(*attacker, square, side, occupancy);
+            attacks |= attack_bb;
+        }
+        return attacks;
     }
 
     /// Calculate 'checkers' and 'pinned' bitboard masks for the current position.
@@ -560,13 +595,47 @@ impl MoveGenerator {
         let king_bb = board.piece_bitboard(Piece::King, us);
         let king_square = bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
 
-        let mut checkers = Bitboard::default();
-        // TODO: Fix pinned calculation. We need to:
-        // 1. Calculate opponent sliding piece moves
+        // 1. Calculate opponent sliding piece moves to our king square
         // 2. Calculate sliding piece moves from our king position
         // 3. Calculate "pinned rays" by overlapping 1 and 2
         // 4. Calculate pinned pieces by overlapping 3 and our pieces
-        let mut pinned = Bitboard::default();
+
+        let mut opponent_slider_attacks = Bitboard::default();
+        let their_pieces = board.pieces(them);
+        for piece in SLIDER_PIECES.iter() {
+            let mut piece_bb = board.piece_bitboard(*piece, them).clone();
+
+            while piece_bb.as_number() > 0 {
+                let slider_sq = bitboard_helpers::next_bit(&mut piece_bb) as u8;
+                let slider_attacks = self.get_slider_attacks(*piece, slider_sq, &their_pieces);
+                opponent_slider_attacks |= slider_attacks;
+            }
+        }
+
+        println!("Opponent Slider Attacks:\n{}", opponent_slider_attacks);
+
+        let mut from_our_king_attacks = Bitboard::default();
+        for piece in SLIDER_PIECES.iter() {
+            let piece_bb = board.piece_bitboard(*piece, them);
+            let attacks = self.get_slider_attacks(*piece, king_square, &their_pieces);
+            println!("attacks:\n{}", attacks);
+            if attacks.intersects(*piece_bb) {
+                println!("-- intersects");
+                let intersection = attacks & *piece_bb;
+                let piece_sq = bitboard_helpers::next_bit(&mut intersection.clone()) as u8;
+                from_our_king_attacks |= self.ray_between(
+                    Square::from_square_index(king_square),
+                    Square::from_square_index(piece_sq),
+                );
+            }
+        }
+
+        println!("From Our King Attacks:\n{}", from_our_king_attacks);
+
+        let pin_rays = opponent_slider_attacks & from_our_king_attacks;
+        println!("Pin Rays:\n{}", pin_rays);
+        let pinned_pieces = pin_rays & our_pieces;
+        println!("Pinned Pieces:\n{}", pinned_pieces);
 
         println!("Occupancy:\n{}", occupancy);
         println!("King BB:\n{}", king_bb);
@@ -574,9 +643,10 @@ impl MoveGenerator {
         let kingless_occupancy = *occupancy & !(*king_bb);
         println!("Kingless Occupancy:\n{}", kingless_occupancy);
         // an enemy king cannot check our king, so we ignore it
-        let knight_attacks = self.get_non_slider_moves(Piece::Knight, king_square);
-        let rook_attacks = self.get_slider_moves(Piece::Rook, king_square, &kingless_occupancy);
-        let bishop_attacks = self.get_slider_moves(Piece::Bishop, king_square, &kingless_occupancy);
+        let knight_attacks = self.get_non_slider_attacks(Piece::Knight, king_square);
+        let rook_attacks = self.get_slider_attacks(Piece::Rook, king_square, &kingless_occupancy);
+        let bishop_attacks =
+            self.get_slider_attacks(Piece::Bishop, king_square, &kingless_occupancy);
         let queen_attacks = rook_attacks | bishop_attacks;
         // note we use the opposite side for the pawn attacks
         let pawn_attacks = self.pawn_attacks[Side::opposite(them) as usize][king_square as usize];
@@ -587,42 +657,42 @@ impl MoveGenerator {
         let enemy_rooks = board.piece_bitboard(Piece::Rook, them);
         let enemy_queens = board.piece_bitboard(Piece::Queen, them);
 
-        checkers = *enemy_knights & knight_attacks | *enemy_pawns & pawn_attacks;
-        let mut slider_attacks = rook_attacks & *enemy_rooks
+        // calculate our checkers bb
+        let checkers = knight_attacks & *enemy_knights
+            | rook_attacks & *enemy_rooks
             | bishop_attacks & *enemy_bishops
-            | queen_attacks & *enemy_queens;
+            | queen_attacks & *enemy_queens
+            | pawn_attacks & *enemy_pawns;
+
         println!("Checkers:\n{}", checkers);
         // loop through the sliding attacks to check if they are checkers or a pinner
-        println!("slider:\n{}", slider_attacks);
-        while slider_attacks.as_number() > 0 {
-            let attacker_sq = bitboard_helpers::next_bit(&mut slider_attacks) as u8;
-            let ray = self.ray_between(
-                Square::from_square_index(king_square),
-                Square::from_square_index(attacker_sq),
-            );
 
-            println!("Ray:\n{}", ray);
-            println!("Occupancy:\n{}", kingless_occupancy);
-            println!("Both:\n{}", kingless_occupancy & ray);
-            // check if the ray is blocked
-            // if it is blocked, then we have a pinner
-            // if it is not blocked, then we have a checker
+        // while slider_attacks.as_number() > 0 {
+        //     let attacker_sq = bitboard_helpers::next_bit(&mut slider_attacks) as u8;
+        //     let ray = self.ray_between(
+        //         Square::from_square_index(king_square),
+        //         Square::from_square_index(attacker_sq),
+        //     );
 
-            match (kingless_occupancy & ray).as_number().count_ones() {
-                0 => {
-                    checkers |= Bitboard::from_square(attacker_sq);
-                }
-                1 => {
-                    pinned |= ray & our_pieces;
-                }
-                _ => {}
-            }
-        }
+        //     println!("Ray:\n{}", ray);
+        //     println!("Occupancy:\n{}", kingless_occupancy);
+        //     println!("Both:\n{}", kingless_occupancy & ray);
+        //     // check if the ray is blocked
+        //     // if it is blocked, then we have a pinner
+        //     // if it is not blocked, then we have a checker
 
-        println!("Checkers:\n{}", checkers);
-        println!("Pinned:\n{}", pinned);
+        //     match (kingless_occupancy & ray).as_number().count_ones() {
+        //         0 => {
+        //             checkers |= Bitboard::from_square(attacker_sq);
+        //         }
+        //         1 => {
+        //             pinned |= ray & our_pieces;
+        //         }
+        //         _ => {}
+        //     }
+        // }
 
-        (checkers, pinned)
+        (checkers, pinned_pieces)
     }
 
     /// Calculate the capture and push masks for the king in the current position
@@ -657,7 +727,7 @@ impl MoveGenerator {
             if let Some((piece, side)) = board.piece_on_square(checker_sq) {
                 debug_assert!(side == them);
                 // check if the piece is a slider
-                if piece.is_bishop() || piece.is_rook() || piece.is_queen() {
+                if piece.is_slider() {
                     // if the piece is a slider, we can evade check by blocking it, so moving (push)
                     // a piece into the ray between the checker and the king is valid
                     push_mask = self.ray_between(
@@ -836,14 +906,16 @@ impl MoveGenerator {
         let king_square =
             bitboard_helpers::next_bit(&mut board.piece_bitboard(Piece::King, us).clone()) as u8;
 
+        // TODO: This is wrong, we need the pin ray to be the ray between the king and the pinning piece
         pawn_pin_mask |= self.ray_between(*square, Square::from_square_index(king_square))
             | Bitboard::from(*square)
             | Bitboard::from(king_square);
 
+        println!("Pawn Pin Mask:\n{}", pawn_pin_mask);
         let en_passant_bb = self.calculate_en_passant_bitboard(from_square, board);
 
+        // filter pushes by the occupany
         let legal_pushes = pushes & !occupancy;
-        println!("legal pushes:\n{}", legal_pushes);
         let attacks = self.pawn_attacks[us as usize][square.to_square_index() as usize]
             & (their_pieces | en_passant_bb);
         println!("Attacks:\n{}", attacks);
@@ -865,9 +937,9 @@ impl MoveGenerator {
 
         let attacks = match piece {
             Piece::Knight => self.knight_attacks[from_square as usize],
-            Piece::Bishop => self.get_slider_moves(piece, from_square, &board.all_pieces()),
-            Piece::Rook => self.get_slider_moves(piece, from_square, &board.all_pieces()),
-            Piece::Queen => self.get_slider_moves(piece, from_square, &board.all_pieces()),
+            Piece::Bishop => self.get_slider_attacks(piece, from_square, &board.all_pieces()),
+            Piece::Rook => self.get_slider_attacks(piece, from_square, &board.all_pieces()),
+            Piece::Queen => self.get_slider_attacks(piece, from_square, &board.all_pieces()),
             _ => panic!("Invalid piece for normal piece mobility"),
         };
 
@@ -924,12 +996,10 @@ impl MoveGenerator {
         println!("Capture Mask:\n{}", capture_mask);
         println!("Push Mask:\n{}", push_mask);
 
-        println!("King Moves:");
-
         // generate king moves
         // calculate attacked squares
         let attacked_squares = self.get_attacked_squares(board, them, &(occupancy & !*king_bb));
-        let king_moves_bb = self.get_non_slider_moves(Piece::King, king_square);
+        let king_moves_bb = self.get_non_slider_attacks(Piece::King, king_square);
         println!("{}", king_moves_bb);
         let king_pushes = king_moves_bb & !attacked_squares & !our_pieces & !their_pieces;
         let king_attacks = king_moves_bb & capture_mask & their_pieces;
@@ -1139,9 +1209,9 @@ impl MoveGenerator {
         while piece_bb.as_number() > 0 {
             let from_square = bitboard_helpers::next_bit(&mut piece_bb) as u8;
             let attack_bb = match piece {
-                Piece::King | Piece::Knight => self.get_non_slider_moves(piece, from_square),
+                Piece::King | Piece::Knight => self.get_non_slider_attacks(piece, from_square),
                 Piece::Rook | Piece::Bishop | Piece::Queen => {
-                    self.get_slider_moves(piece, from_square, &occupancy)
+                    self.get_slider_attacks(piece, from_square, &occupancy)
                 }
                 _ => panic!("Piece must be non-slider and not pawn"),
             };
@@ -1162,7 +1232,7 @@ impl MoveGenerator {
         }
     }
 
-    pub(crate) fn get_non_slider_moves(&self, piece: Piece, from_square: u8) -> Bitboard {
+    pub(crate) fn get_non_slider_attacks(&self, piece: Piece, from_square: u8) -> Bitboard {
         assert!(
             piece == Piece::King || piece == Piece::Knight,
             "Piece must be non-slider and not pawn"
@@ -1177,7 +1247,7 @@ impl MoveGenerator {
         attack_table[from_square as usize]
     }
 
-    fn get_slider_moves(&self, piece: Piece, from_square: u8, occupancy: &Bitboard) -> Bitboard {
+    fn get_slider_attacks(&self, piece: Piece, from_square: u8, occupancy: &Bitboard) -> Bitboard {
         assert!(
             piece == Piece::Rook || piece == Piece::Bishop || piece == Piece::Queen,
             "Piece must be a slider"
@@ -1411,11 +1481,12 @@ impl MoveGenerator {
         let queen_bb = board.piece_bitboard(Piece::Queen, attacking_side);
         let pawn_bb: &Bitboard = board.piece_bitboard(Piece::Pawn, attacking_side);
 
-        let king_attacks = self.get_non_slider_moves(Piece::King, square.to_square_index());
-        let knight_attacks = self.get_non_slider_moves(Piece::Knight, square.to_square_index());
-        let rook_attacks = self.get_slider_moves(Piece::Rook, square.to_square_index(), &occupancy);
+        let king_attacks = self.get_non_slider_attacks(Piece::King, square.to_square_index());
+        let knight_attacks = self.get_non_slider_attacks(Piece::Knight, square.to_square_index());
+        let rook_attacks =
+            self.get_slider_attacks(Piece::Rook, square.to_square_index(), &occupancy);
         let bishop_attacks =
-            self.get_slider_moves(Piece::Bishop, square.to_square_index(), &occupancy);
+            self.get_slider_attacks(Piece::Bishop, square.to_square_index(), &occupancy);
         let queen_attacks = rook_attacks | bishop_attacks;
         // note we use the opposite side for the pawn attacks
         let pawn_attacks = self.pawn_attacks[Side::opposite(attacking_side) as usize]
@@ -1458,10 +1529,20 @@ mod tests {
         let board =
             Board::from_fen("2kr3r/p1ppqpb1/bn2Qnp1/3PN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQ - 3 2")
                 .unwrap();
-        let occupancy = board.pieces(Side::opposite(board.side_to_move()));
+        let occupancy = board.all_pieces();
         let (checkers, pinned) = move_gen.calculate_checkers_and_pinned_masks(&board, &occupancy);
         assert_eq!(checkers, 0);
-        assert_eq!(pinned, Bitboard::from_square(Squares::D6));
+        assert_eq!(pinned, Bitboard::from_square(Squares::D7));
+    }
+
+    #[test]
+    fn calculate_pinned_pieces_2() {
+        let move_gen = MoveGenerator::new();
+        let board = Board::from_fen("8/8/8/8/k2Pp2Q/8/8/3K4 b - d3 0 1").unwrap();
+        let occupancy = board.all_pieces();
+        let (checkers, pinned) = move_gen.calculate_checkers_and_pinned_masks(&board, &occupancy);
+        assert_eq!(checkers, 0);
+        assert_eq!(pinned, Bitboard::default());
     }
 
     #[test]
