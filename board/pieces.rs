@@ -24,6 +24,16 @@ pub const PIECE_NAMES: [&str; NumberOf::PIECE_TYPES] =
 pub const PIECE_SHORT_NAMES: [char; NumberOf::PIECE_TYPES + 1] =
     ['K', 'Q', 'R', 'B', 'N', 'P', ' '];
 
+pub const SLIDER_PIECES: [Piece; 3] = [Piece::Rook, Piece::Bishop, Piece::Queen];
+pub const ALL_PIECES: [Piece; 6] = [
+    Piece::King,
+    Piece::Queen,
+    Piece::Rook,
+    Piece::Bishop,
+    Piece::Knight,
+    Piece::Pawn,
+];
+
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Piece {
@@ -34,57 +44,6 @@ pub enum Piece {
     Knight = 4,
     Pawn = 5,
     None = 6,
-}
-
-impl Display for Piece {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Piece::King => write!(f, "King"),
-            Piece::Queen => write!(f, "Queen"),
-            Piece::Rook => write!(f, "Rook"),
-            Piece::Bishop => write!(f, "Bishop"),
-            Piece::Knight => write!(f, "Knight"),
-            Piece::Pawn => write!(f, "Pawn"),
-            Piece::None => write!(f, "None"),
-        }
-    }
-}
-
-impl Default for Piece {
-    fn default() -> Self {
-        Piece::None
-    }
-}
-
-impl TryFrom<u8> for Piece {
-    type Error = ();
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0 => Ok(Piece::King),
-            1 => Ok(Piece::Queen),
-            2 => Ok(Piece::Rook),
-            3 => Ok(Piece::Bishop),
-            4 => Ok(Piece::Knight),
-            5 => Ok(Piece::Pawn),
-            6 => Ok(Piece::None),
-            _ => Err(()),
-        }
-    }
-}
-
-impl TryFrom<char> for Piece {
-    type Error = ();
-    fn try_from(value: char) -> Result<Self, Self::Error> {
-        match value.to_ascii_uppercase() {
-            'K' => Ok(Piece::King),
-            'Q' => Ok(Piece::Queen),
-            'R' => Ok(Piece::Rook),
-            'B' => Ok(Piece::Bishop),
-            'N' => Ok(Piece::Knight),
-            'P' => Ok(Piece::Pawn),
-            _ => Err(()),
-        }
-    }
 }
 
 impl Piece {
@@ -144,7 +103,66 @@ impl Piece {
         matches!(self, Self::None)
     }
 
+    /// Returns `true` if the piece is a slider piece.
+    ///
+    /// A slider piece is a piece that can move any number of squares in a straight line.
+    #[must_use]
+    pub fn is_slider(&self) -> bool {
+        self.is_rook() || self.is_bishop() || self.is_queen()
+    }
+
     pub fn as_char(&self) -> char {
         PIECE_SHORT_NAMES[*self as usize].to_ascii_lowercase()
+    }
+}
+
+impl Display for Piece {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Piece::King => write!(f, "King"),
+            Piece::Queen => write!(f, "Queen"),
+            Piece::Rook => write!(f, "Rook"),
+            Piece::Bishop => write!(f, "Bishop"),
+            Piece::Knight => write!(f, "Knight"),
+            Piece::Pawn => write!(f, "Pawn"),
+            Piece::None => write!(f, "None"),
+        }
+    }
+}
+
+impl Default for Piece {
+    fn default() -> Self {
+        Piece::None
+    }
+}
+
+impl TryFrom<u8> for Piece {
+    type Error = ();
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Piece::King),
+            1 => Ok(Piece::Queen),
+            2 => Ok(Piece::Rook),
+            3 => Ok(Piece::Bishop),
+            4 => Ok(Piece::Knight),
+            5 => Ok(Piece::Pawn),
+            6 => Ok(Piece::None),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<char> for Piece {
+    type Error = ();
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value.to_ascii_uppercase() {
+            'K' => Ok(Piece::King),
+            'Q' => Ok(Piece::Queen),
+            'R' => Ok(Piece::Rook),
+            'B' => Ok(Piece::Bishop),
+            'N' => Ok(Piece::Knight),
+            'P' => Ok(Piece::Pawn),
+            _ => Err(()),
+        }
     }
 }
