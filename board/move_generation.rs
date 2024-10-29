@@ -1102,8 +1102,13 @@ impl MoveGenerator {
 
         // generate king moves
         // calculate attacked squares
-        let attacked_squares = self.get_attacked_squares(board, them, &(occupancy & !*king_bb));
+        // note that in addition to removing the king from the occupancy, we also need to remove any enemy pieces that are
+        // within the king's attack range
         let king_moves_bb = self.get_non_slider_attacks(Piece::King, square.to_square_index());
+
+        let attacked_squares_occupancy = occupancy & !*king_bb & !(their_pieces & king_moves_bb);
+        let attacked_squares = self.get_attacked_squares(board, them, &attacked_squares_occupancy);
+        println!("Attacked Squares:\n{}", attacked_squares);
         println!("{}", king_moves_bb);
         let king_pushes = king_moves_bb & !attacked_squares & !our_pieces & !their_pieces;
 
@@ -1111,7 +1116,8 @@ impl MoveGenerator {
         let castling_moves =
             self.generate_legal_castling_mobility(square, board, &attacked_squares);
 
-        let king_non_checker_attacks = (king_moves_bb & their_pieces & !*checkers) & !*push_mask;
+        let king_non_checker_attacks =
+            (king_moves_bb & their_pieces & !*checkers) & !*push_mask & !attacked_squares;
         let king_attacks =
             (king_moves_bb & *capture_mask & their_pieces) | king_non_checker_attacks;
         king_pushes | king_attacks | castling_moves
