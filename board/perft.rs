@@ -37,7 +37,7 @@ pub fn split_perft(
         }
 
         let nodes = if depth > 1 {
-            perft(board, move_gen, depth, print_moves)?
+            perft(board, move_gen, depth - 1, print_moves)?
         } else {
             1
         };
