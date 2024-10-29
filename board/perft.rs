@@ -82,7 +82,9 @@ pub fn perft(
         // this is unexpected as we are generating legal moves
         // if this happens, it is likely a bug in the move generator
         if result.is_err() {
-            bail!("move failed: {:?}", result);
+            println!("current board: {}", board.to_fen());
+            println!("current move: {}", mv);
+            bail!("move failed ({}): {:?}", depth, result);
         }
         nodes += perft(board, move_gen, depth - 1, print_moves)?;
         board.unmake_move()?;
@@ -173,6 +175,14 @@ mod tests {
     }
 
     #[test]
+    fn multi_depth_non_standard_positions_2() {
+        let move_gen = MoveGenerator::new();
+        let mut board = Board::from_fen("3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1").unwrap();
+        let total_moves = perft(&mut board, &move_gen, 6, false).unwrap();
+        assert_eq!(total_moves, 1134888);
+    }
+
+    #[test]
     fn multi_depth_non_standard_positions() {
         let move_gen = MoveGenerator::new();
         {
@@ -195,12 +205,6 @@ mod tests {
             .unwrap();
             let total_moves = perft(&mut board, &move_gen, 3, false).unwrap();
             assert_eq!(total_moves, 89890);
-        }
-
-        {
-            let mut board = Board::from_fen("3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1").unwrap();
-            let total_moves = perft(&mut board, &move_gen, 6, false).unwrap();
-            assert_eq!(total_moves, 1134888);
         }
 
         {

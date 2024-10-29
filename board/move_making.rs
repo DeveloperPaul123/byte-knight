@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 25 2024
+ * Last Modified: Tue Oct 29 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -120,7 +120,10 @@ impl Board {
 
         let piece_and_side = self.piece_on_square(from);
         if piece_and_side.is_none() {
-            bail!("No piece on square");
+            bail!(format!(
+                "No piece on square {} to move from",
+                SQUARE_NAME[from as usize]
+            ));
         }
 
         let (piece_on_square, side) = piece_and_side.unwrap();
@@ -128,7 +131,8 @@ impl Board {
             bail!("Invalid piece on square");
         }
 
-        if mv.captured_piece().is_some() {
+        // we don't handle en passant captures here
+        if mv.captured_piece().is_some() && !mv.is_en_passant_capture() {
             let captured_piece = mv.captured_piece().unwrap();
             let piece_and_side = self.piece_on_square(to);
             if piece_and_side.is_none() {
@@ -508,5 +512,31 @@ fn get_casting_right_to_remove(us: Side, from: u8) -> u8 {
             _ => 0,
         },
         _ => panic!("Invalid piece"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        board::Board, definitions::Squares, move_generation::MoveGenerator, move_list::MoveList,
+    };
+
+    #[test]
+    fn test_making_en_passant_move() {
+        let mut board = Board::from_fen("8/2k5/8/2Pp3r/K7/8/8/8 w - d6 0 1").unwrap();
+        let move_gen = MoveGenerator::new();
+        let mut move_list = MoveList::new();
+        move_gen.generate_legal_moves(&board, &mut move_list);
+
+        let en_passant_move = move_list
+            .iter()
+            .find(|mv| mv.to() == crate::definitions::Squares::D6 as u8)
+            .unwrap();
+
+        println!("Making en passant move: {}", en_passant_move);
+        assert!(board.piece_on_square(Squares::C5 as u8).is_some());
+        assert!(board.check_move_preconditions(en_passant_move).is_ok());
+        let move_result = board.make_move(en_passant_move, &move_gen);
+        assert!(move_result.is_ok());
     }
 }

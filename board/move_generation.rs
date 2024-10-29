@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 28th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 25 2024
+ * Last Modified: Tue Oct 29 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -504,7 +504,6 @@ impl MoveGenerator {
     /// A bitboard representing all squares currently being attacked by the given side.
     fn get_attacked_squares(&self, board: &Board, side: Side, occupancy: &Bitboard) -> Bitboard {
         let mut attacks = Bitboard::default();
-        let our_pieces = board.pieces(side);
 
         // get the squares attacked by each piece
         for piece in [
@@ -537,7 +536,7 @@ impl MoveGenerator {
             }
         }
 
-        return attacks & !our_pieces;
+        attacks
     }
 
     fn get_piece_attacks(
@@ -958,6 +957,7 @@ impl MoveGenerator {
         square: &Square,
         board: &Board,
         attacked_squares: &Bitboard,
+        checkers: &Bitboard,
     ) -> Bitboard {
         /*
          * For castling, the king and rook must not have moved.
@@ -978,7 +978,7 @@ impl MoveGenerator {
          */
 
         // we cannot castle when in check
-        let in_check = attacked_squares.intersects(*square);
+        let in_check = checkers.number_of_occupied_squares() > 0;
         if in_check {
             return Bitboard::default();
         }
@@ -1029,6 +1029,10 @@ impl MoveGenerator {
                 Side::Black => Squares::G8,
                 Side::Both => panic!("Both side not allowed"),
             };
+
+            println!("King Side Empty:\n{}", king_side_empty);
+            println!("Occupancy:\n{}", occupancy);
+            println!("castle attacks:\n{}", *attacked_squares);
 
             let is_king_ray_empty = king_side_empty & occupancy == Bitboard::default();
             let is_king_ray_attacked = king_side_empty & *attacked_squares != Bitboard::default();
@@ -1102,24 +1106,42 @@ impl MoveGenerator {
 
         // generate king moves
         // calculate attacked squares
-        // note that in addition to removing the king from the occupancy, we also need to remove any enemy pieces that are
-        // within the king's attack range
         let king_moves_bb = self.get_non_slider_attacks(Piece::King, square.to_square_index());
 
-        let attacked_squares_occupancy = occupancy & !*king_bb & !(their_pieces & king_moves_bb);
+        // remove the king from the attacked squares occupancy
+        let attacked_squares_occupancy = occupancy & !*king_bb;
         let attacked_squares = self.get_attacked_squares(board, them, &attacked_squares_occupancy);
         println!("Attacked Squares:\n{}", attacked_squares);
-        println!("{}", king_moves_bb);
         let king_pushes = king_moves_bb & !attacked_squares & !our_pieces & !their_pieces;
 
         // also add castling if possible
         let castling_moves =
-            self.generate_legal_castling_mobility(square, board, &attacked_squares);
+            self.generate_legal_castling_mobility(square, board, &attacked_squares, checkers);
 
         let king_non_checker_attacks =
             (king_moves_bb & their_pieces & !*checkers) & !*push_mask & !attacked_squares;
-        let king_attacks =
-            (king_moves_bb & *capture_mask & their_pieces) | king_non_checker_attacks;
+        let mut king_attacks = (king_moves_bb & *capture_mask & their_pieces & !attacked_squares)
+            | king_non_checker_attacks;
+
+        // do any of our attacks put us in check?
+        let mut k_att = king_attacks.clone();
+        while k_att.as_number() > 0 {
+            let capture_sq = bitboard_helpers::next_bit(&mut k_att) as u8;
+            // remove the piece we're capturing and the king from the occupancy
+            let modified_occupancy = occupancy & !Bitboard::from_square(capture_sq) & !*king_bb;
+            let is_invalid_capture = self.is_square_attacked_with_occupancy(
+                board,
+                &Square::from_square_index(capture_sq),
+                them,
+                &modified_occupancy,
+            );
+            if is_invalid_capture {
+                // if the capture puts us in check, remove it
+                println!("invalid capture: {}", SQUARE_NAME[capture_sq as usize]);
+                king_attacks &= !Bitboard::from_square(capture_sq);
+            }
+        }
+
         king_pushes | king_attacks | castling_moves
     }
 
@@ -1552,6 +1574,10 @@ impl MoveGenerator {
         board: &Board,
         move_list: &mut MoveList,
     ) {
+        if bitboard.as_number() == 0 {
+            return;
+        }
+
         let mut bb = *bitboard;
         let us = board.side_to_move();
         let them = Side::opposite(us);
@@ -1694,7 +1720,7 @@ impl MoveGenerator {
 #[cfg(test)]
 mod tests {
 
-    use crate::move_generation;
+    use crate::{definitions::FILE_A, move_generation};
 
     use super::*;
     #[test]
@@ -2439,6 +2465,27 @@ mod tests {
                 assert_eq!(attack & !bishop_bb_with_edges, 0);
             }
         }
+    }
+
+    #[test]
+    fn check_queen_attacks() {
+        let square = Squares::D8;
+        let bishop_bb = MoveGenerator::relevant_bishop_bits(square);
+        let rook_bb = MoveGenerator::relevant_rook_bits(square);
+        let queen_bb = bishop_bb | rook_bb;
+
+        let move_gen = MoveGenerator::new();
+        let queen_attacks = move_gen.get_slider_attacks(Piece::Queen, square, &Bitboard::default());
+        println!("queen attacks: \n{}", queen_attacks);
+        println!("queen bb: \n{}", queen_bb);
+
+        let attacks_without_edges = queen_attacks
+            & !FILE_BITBOARDS[File::A as usize]
+            & !FILE_BITBOARDS[File::H as usize]
+            & !RANK_BITBOARDS[Rank::R1 as usize];
+
+        println!("attacks without edges: \n{}", attacks_without_edges);
+        assert_eq!(attacks_without_edges, queen_bb);
     }
 
     #[test]
