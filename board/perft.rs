@@ -177,6 +177,15 @@ mod tests {
     #[test]
     fn multi_depth_non_standard_positions() {
         let move_gen = MoveGenerator::new();
+
+        {
+            let mut board = Board::from_fen("8/8/2k5/KpPr4/8/8/8/8 w - b6 0 1").unwrap();
+            let mut total_moves = perft(&mut board, &move_gen, 1, false).unwrap();
+            assert_eq!(total_moves, 2);
+            total_moves = perft(&mut board, &move_gen, 2, false).unwrap();
+            assert_eq!(total_moves, 31);
+        }
+        
         {
             let mut board =
                 Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
