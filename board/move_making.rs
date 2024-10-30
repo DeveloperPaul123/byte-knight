@@ -174,16 +174,7 @@ impl Board {
         Ok(())
     }
 
-    /// Make a move on the board and update the board state
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the move is illegal. The passed in moves are assumed to be pseudo-legal,
-    /// hence why the check has to be done after making the move. This function will make the move, check for legality
-    /// and then undo the move if it is illegal.
-    #[cfg_attr(not(debug_assertions), inline(always))]
-    #[cfg_attr(debug_assertions, inline(never))]
-    pub fn make_move(&mut self, mv: &Move, move_gen: &MoveGenerator) -> Result<()> {
+    pub fn make_move_unchecked(&mut self, mv: &Move) -> Result<()> {
         // validate pre-conditions first before even bothering to go further
         self.check_move_preconditions(mv)?;
 
@@ -335,6 +326,34 @@ impl Board {
         // update full move number
         if us == Side::Black {
             self.set_full_move_number(self.half_move_clock() + 1);
+        }
+
+        Ok(())
+    }
+
+    /// Make a move on the board and update the board state
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the move is illegal. The passed in moves are assumed to be pseudo-legal,
+    /// hence why the check has to be done after making the move. This function will make the move, check for legality
+    /// and then undo the move if it is illegal.
+    #[cfg_attr(not(debug_assertions), inline(always))]
+    #[cfg_attr(debug_assertions, inline(never))]
+    pub fn make_move(&mut self, mv: &Move, move_gen: &MoveGenerator) -> Result<()> {
+        let us = self.side_to_move();
+        let them = Side::opposite(us);
+        self.make_move_unchecked(mv)?;
+
+        // check if the move is legal
+        // if it is not, we need to undo the move
+        let king_square = self.king_square(us);
+        let is_king_in_check =
+            move_gen.is_square_attacked(self, &Square::from_square_index(king_square), them);
+
+        if is_king_in_check {
+            self.unmake_move()?;
+            bail!("Illegal move");
         }
 
         Ok(())
