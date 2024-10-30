@@ -544,7 +544,7 @@ impl MoveGenerator {
         attacks
     }
 
-    fn get_piece_attacks(
+    pub(crate) fn get_piece_attacks(
         &self,
         piece: Piece,
         square: u8,
@@ -753,7 +753,7 @@ impl MoveGenerator {
         }
     }
 
-    pub(crate) fn get_non_slider_attacks(&self, piece: Piece, from_square: u8) -> Bitboard {
+    fn get_non_slider_attacks(&self, piece: Piece, from_square: u8) -> Bitboard {
         assert!(
             piece == Piece::King || piece == Piece::Knight,
             "Piece must be non-slider and not pawn"
@@ -768,12 +768,7 @@ impl MoveGenerator {
         attack_table[from_square as usize]
     }
 
-    pub(crate) fn get_slider_attacks(
-        &self,
-        piece: Piece,
-        from_square: u8,
-        occupancy: &Bitboard,
-    ) -> Bitboard {
+    fn get_slider_attacks(&self, piece: Piece, from_square: u8, occupancy: &Bitboard) -> Bitboard {
         assert!(
             piece == Piece::Rook || piece == Piece::Bishop || piece == Piece::Queen,
             "Piece must be a slider"
@@ -1020,12 +1015,30 @@ impl MoveGenerator {
         let queen_bb = board.piece_bitboard(Piece::Queen, attacking_side);
         let pawn_bb: &Bitboard = board.piece_bitboard(Piece::Pawn, attacking_side);
 
-        let king_attacks = self.get_non_slider_attacks(Piece::King, square.to_square_index());
-        let knight_attacks = self.get_non_slider_attacks(Piece::Knight, square.to_square_index());
-        let rook_attacks =
-            self.get_slider_attacks(Piece::Rook, square.to_square_index(), &occupancy);
-        let bishop_attacks =
-            self.get_slider_attacks(Piece::Bishop, square.to_square_index(), &occupancy);
+        let king_attacks = self.get_piece_attacks(
+            Piece::King,
+            square.to_square_index(),
+            attacking_side,
+            occupancy,
+        );
+        let knight_attacks = self.get_piece_attacks(
+            Piece::Knight,
+            square.to_square_index(),
+            attacking_side,
+            occupancy,
+        );
+        let rook_attacks = self.get_piece_attacks(
+            Piece::Rook,
+            square.to_square_index(),
+            attacking_side,
+            occupancy,
+        );
+        let bishop_attacks = self.get_piece_attacks(
+            Piece::Bishop,
+            square.to_square_index(),
+            attacking_side,
+            occupancy,
+        );
         let queen_attacks = rook_attacks | bishop_attacks;
         // note we use the opposite side for the pawn attacks
         let pawn_attacks = self.pawn_attacks[Side::opposite(attacking_side) as usize]

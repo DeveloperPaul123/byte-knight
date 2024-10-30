@@ -47,7 +47,7 @@ impl MoveGenerator {
 
             while piece_bb.as_number() > 0 {
                 let slider_sq = bitboard_helpers::next_bit(&mut piece_bb) as u8;
-                let slider_attacks = self.get_slider_attacks(*piece, slider_sq, &their_pieces);
+                let slider_attacks = self.get_piece_attacks(*piece, slider_sq, them, &their_pieces);
                 opponent_slider_attacks |= slider_attacks;
             }
         }
@@ -56,7 +56,7 @@ impl MoveGenerator {
         let mut pinners = Bitboard::default();
         for piece in SLIDER_PIECES.iter() {
             let piece_bb = board.piece_bitboard(*piece, them);
-            let attacks = self.get_slider_attacks(*piece, king_square, &their_pieces);
+            let attacks = self.get_piece_attacks(*piece, king_square, us, &their_pieces);
 
             // does our piece interserct with the attacks?
             if attacks.intersects(*piece_bb) {
@@ -88,10 +88,12 @@ impl MoveGenerator {
         // ensure we definitely don't have the king in the occupancy
         let kingless_occupancy = *occupancy & !(*king_bb);
         // an enemy king cannot check our king, so we ignore it
-        let knight_attacks = self.get_non_slider_attacks(Piece::Knight, king_square);
-        let rook_attacks = self.get_slider_attacks(Piece::Rook, king_square, &kingless_occupancy);
+        let knight_attacks =
+            self.get_piece_attacks(Piece::Knight, king_square, us, &kingless_occupancy);
+        let rook_attacks =
+            self.get_piece_attacks(Piece::Rook, king_square, us, &kingless_occupancy);
         let bishop_attacks =
-            self.get_slider_attacks(Piece::Bishop, king_square, &kingless_occupancy);
+            self.get_piece_attacks(Piece::Bishop, king_square, us, &kingless_occupancy);
         let queen_attacks = rook_attacks | bishop_attacks;
         // note we use the opposite side for the pawn attacks
         let pawn_attacks = self.pawn_attacks[Side::opposite(them) as usize][king_square as usize];
@@ -341,15 +343,11 @@ impl MoveGenerator {
         let us = board.side_to_move();
         let their_pieces = board.pieces(Side::opposite(us));
         let from_square = square.to_square_index();
-        let mut mobility = Bitboard::default();
+        let occupancy = board.all_pieces();
 
-        let attacks = match piece {
-            Piece::Knight => self.knight_attacks[from_square as usize],
-            Piece::Bishop => self.get_slider_attacks(piece, from_square, &board.all_pieces()),
-            Piece::Rook => self.get_slider_attacks(piece, from_square, &board.all_pieces()),
-            Piece::Queen => self.get_slider_attacks(piece, from_square, &board.all_pieces()),
-            _ => panic!("Invalid piece for normal piece mobility"),
-        };
+        assert!(!piece.is_king() && !piece.is_pawn());
+
+        let attacks = self.get_piece_attacks(piece, from_square, us, &occupancy);
 
         // we need to further filter out moves and ensure they are along the correct pin ray
 
@@ -389,10 +387,7 @@ impl MoveGenerator {
             Bitboard::from(u64::MAX)
         };
 
-        mobility = ((attacks & *capture_mask & their_pieces) | (attacks & empty & *push_mask))
-            & pin_ray_mask;
-
-        mobility
+        ((attacks & *capture_mask & their_pieces) | (attacks & empty & *push_mask)) & pin_ray_mask
     }
 
     fn generate_legal_castling_mobility(
@@ -542,7 +537,8 @@ impl MoveGenerator {
 
         // generate king moves
         // calculate attacked squares
-        let king_moves_bb = self.get_non_slider_attacks(Piece::King, square.to_square_index());
+        let king_moves_bb =
+            self.get_piece_attacks(Piece::King, square.to_square_index(), us, &occupancy);
 
         // remove the king from the attacked squares occupancy
         let attacked_squares_occupancy = occupancy & !*king_bb;
