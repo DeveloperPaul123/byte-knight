@@ -28,7 +28,7 @@ pub fn split_perft(
         if print_moves {
             println!("mv - {}", mv.to_long_algebraic());
         }
-        let move_res = board.make_move(mv, &move_gen);
+        let move_res = board.make_move_unchecked(mv);
         if move_res.is_err() {
             bail!("move failed: {:?}", move_res);
         }
@@ -78,7 +78,7 @@ pub fn perft(
     }
 
     for mv in move_list.iter() {
-        let result = board.make_move(mv, &move_gen);
+        let result = board.make_move_unchecked(mv);
         // this is unexpected as we are generating legal moves
         // if this happens, it is likely a bug in the move generator
         if result.is_err() {
