@@ -175,14 +175,6 @@ mod tests {
     }
 
     #[test]
-    fn multi_depth_non_standard_positions_2() {
-        let move_gen = MoveGenerator::new();
-        let mut board = Board::from_fen("3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1").unwrap();
-        let total_moves = perft(&mut board, &move_gen, 6, false).unwrap();
-        assert_eq!(total_moves, 1134888);
-    }
-
-    #[test]
     fn multi_depth_non_standard_positions() {
         let move_gen = MoveGenerator::new();
         {
@@ -196,6 +188,12 @@ mod tests {
             let total_moves = perft(&mut board, &move_gen, 3, false).unwrap();
             // TODO: This is VERY broken
             assert_eq!(total_moves, 62379);
+        }
+
+        {
+            let mut board = Board::from_fen("3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1").unwrap();
+            let total_moves = perft(&mut board, &move_gen, 6, false).unwrap();
+            assert_eq!(total_moves, 1134888);
         }
 
         {
