@@ -311,6 +311,11 @@ impl Board {
         return &self.piece_bitboards[side as usize][piece as usize];
     }
 
+    pub fn king_square(&self, side: Side) -> u8 {
+        let king_bb = self.piece_bitboard(Piece::King, side);
+        return bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
+    }
+
     /// Find what piece is on a given square.
     ///
     /// Returns an optional tuple of the piece and the side that the piece belongs to.
