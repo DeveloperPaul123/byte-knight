@@ -26,9 +26,9 @@ impl MoveGenerator {
     /// # Returns
     ///
     /// A tuple containing:
-    /// - A bitboard representing the pinned pieces
-    /// - A bitboard representing the orthogonal pinned rays (vertical and horiztonal directions)
-    /// - A bitboard representing the pinned rays
+    /// - A [`Bitboard`] representing the pinned pieces
+    /// - A [`Bitboard`] representing the orthogonal pinned rays (vertical and horiztonal directions)
+    /// - A [`Bitboard`] representing the pinned rays
     ///
     /// Note that the pin ray bitboards include the respecive pinners.
     fn calculate_pins(&self, board: &Board) -> (Bitboard, Bitboard, Bitboard) {
@@ -134,7 +134,7 @@ impl MoveGenerator {
     ///
     /// # Returns
     ///
-    /// A tuple containing the 'checkers' and 'pinned' bitboards in that order.
+    /// A tuple containing the 'checkers' and 'pinned' [`Bitboard`] objects in that order.
     /// Checkers are the squares that are attacking the king, and pinned are squares/pieces that are pinned.
     fn calculate_checkers(&self, board: &Board, occupancy: &Bitboard) -> Bitboard {
         let us = board.side_to_move();
@@ -258,7 +258,7 @@ impl MoveGenerator {
     /// - checkers - The squares that are attacking the king. See [calculate_checkers][MoveGenerator::calculate_checkers] for more.
     ///
     /// # Returns
-    /// A bitboard with the en passant square set if it is a valid move, otherwise an empty bitboard.
+    /// A [`Bitboard`] with the en passant square set if it is a valid move, otherwise an empty bitboard.
     fn calculate_en_passant_bitboard(
         &self,
         from: u8,
@@ -315,6 +315,23 @@ impl MoveGenerator {
         }
     }
 
+    /// Generate the legal pawn moves from the given square with the given board state.
+    ///
+    /// # Arguments
+    ///
+    /// - board - The current board state
+    /// - square - The square to generate moves for
+    /// - pinned_pieces - The pinned pieces on the board
+    /// - capture_mask - The mask of squares that can be captured. Will be all squares if king is not in check.
+    /// - push_mask - The mask of squares that can be pushed to. Will be all squares if king is not in check.
+    /// - orthogonal_pin_rays - The rays of orthogonal pins
+    /// - diagonal_pin_rays - The rays of diagonal pins
+    /// - checkers - The squares that are attacking the king
+    ///
+    /// # Returns
+    /// A [`Bitboard`] with the legal moves for the pawn.
+    ///
+    /// These moves need to be enumerated to get the actual moves. See [`MoveGenerator::enumerate_moves`]
     fn generate_legal_pawn_mobility(
         &self,
         board: &Board,
@@ -424,6 +441,25 @@ impl MoveGenerator {
         (legal_pushes | attacks) & (*capture_mask | *push_mask)
     }
 
+    /// Generate the legal moves for a normal piece (not a pawn or king) from the given square.
+    /// This function will take into account pinned pieces and generate the legal moves for the piece.
+    ///
+    /// # Arguments
+    ///
+    /// - piece - The piece to generate moves for
+    /// - square - The square to generate moves for
+    /// - board - The current board state
+    /// - capture_mask - The mask of squares that can be captured. Will be all squares if king is not in check.
+    /// - pinned_mask - The mask of squares that are pinned
+    /// - push_mask - The mask of squares that can be pushed to. Will be all squares if king is not in check.
+    /// - orthogonal_pin_rays - The rays of orthogonal pins
+    /// - diagonal_pin_rays - The rays of diagonal pins
+    ///
+    /// # Returns
+    ///
+    /// A [`Bitboard`] with the legal moves for the piece.
+    ///
+    /// These moves need to be enumerated to get the actual moves. See [`MoveGenerator::enumerate_moves`]
     fn generate_normal_piece_legal_mobility(
         &self,
         piece: Piece,
@@ -488,6 +524,18 @@ impl MoveGenerator {
         ((attacks & *capture_mask & their_pieces) | (attacks & empty & *push_mask)) & pin_ray_mask
     }
 
+    /// Generate legal castling moves for the king.
+    ///
+    /// # Arguments
+    ///
+    /// - square - The square the king is on
+    /// - board - The current board state
+    /// - attacked_squares - The squares that are attacked by the opponent
+    /// - checkers - The squares that are checking the king
+    ///
+    /// # Returns
+    ///
+    /// A [`Bitboard`] with the legal castling moves for the king.
     fn generate_legal_castling_mobility(
         &self,
         square: &Square,
@@ -617,6 +665,19 @@ impl MoveGenerator {
         castling_moves
     }
 
+    /// Generate legal moves for the king
+    ///
+    /// # Arguments
+    ///
+    /// - `square` - The square index of the king
+    /// - `board` - The board state
+    /// - `capture_mask` - The mask of squares that can be captured
+    /// - `push_mask` - The mask of squares that can be pushed to
+    /// - `checkers` - The mask of squares that are checking the king
+    ///
+    /// # Returns
+    ///
+    /// A [`Bitboard`] of legal moves for the king
     fn generate_king_legal_mobility(
         &self,
         square: &Square,
@@ -673,6 +734,24 @@ impl MoveGenerator {
         king_pushes | king_attacks | castling_moves
     }
 
+    /// Generate legal moves for the given piece. This is a delegating function
+    /// that calls the appropriate function to generate legal moves for the piece.
+    ///
+    /// # Arguments
+    ///
+    /// - `piece` - The piece to generate legal moves for
+    /// - `square` - The square index of the piece
+    /// - `board` - The board state
+    /// - `pinned_mask` - The mask of pinned pieces
+    /// - `capture_mask` - The mask of squares that can be captured
+    /// - `push_mask` - The mask of squares that can be pushed to
+    /// - `orthogonal_pin_rays` - The mask of orthogonal pin rays
+    /// - `diagonal_pin_rays` - The mask of diagonal pin rays
+    /// - `checkers` - The mask of squares that are checking the king
+    ///
+    /// # Returns
+    ///
+    /// A [`Bitboard`] of legal moves for the piece that can them be enumerated.
     fn generate_legal_mobility(
         &self,
         piece: Piece,
@@ -711,22 +790,53 @@ impl MoveGenerator {
             ),
         }
     }
+
+    /// Generate all legal moves for the current [`Board`] state.
+    ///
+    /// # Arguments
+    ///
+    /// - `board` - The current board state
+    /// - `move_list` - The list of moves to append to
+    ///
+    /// # Returns
+    ///
+    /// A list of legal moves for the current board state.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use byte_board::board::Board;
+    /// use byte_board::move_list::MoveList;
+    /// use byte_board::move_generation::MoveGenerator;
+    ///
+    /// let board = Board::default_board();
+    /// let mut move_list = MoveList::new();
+    /// let movegen = MoveGenerator::new();
+    /// movegen.generate_legal_moves(&board, &mut move_list);
+    /// assert_eq!(20, move_list.len())
+    /// ```
     pub fn generate_legal_moves(&self, board: &Board, move_list: &mut MoveList) {
+        // get board state info to make things simpler
         let us = board.side_to_move();
         let them = Side::opposite(us);
         let our_pieces = board.pieces(us);
         let their_pieces = board.pieces(them);
         let occupancy = our_pieces | their_pieces;
 
+        // get the king square and bitboard
         let king_bb = board.piece_bitboard(Piece::King, us);
-        let king_square = bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
+        let king_square = board.king_square(us);
 
+        // calculate checkers and pins
         let checkers = self.calculate_checkers(board, &occupancy);
         let (pinned, orthogonal_pin_rays, diagonal_pin_rays) = self.calculate_pins(board);
 
+        // calculate capture and push masks
         let (capture_mask, push_mask) = self.calculate_capture_and_push_masks(board, &checkers);
 
+        // convert to Square object
         let king_sq = Square::from_square_index(king_square);
+        // generate the king mobility first because king can always move (unless checkmate)
         let king_moves = self.generate_king_legal_mobility(
             &king_sq,
             board,
@@ -735,8 +845,10 @@ impl MoveGenerator {
             &checkers,
         );
 
+        // enumerate the king moves
         self.enumerate_moves(&king_moves, &king_sq, Piece::King, board, move_list);
 
+        // check if we are more than single checked
         let num_checkers = checkers.as_number().count_ones();
         if num_checkers > 1 {
             // if there are multiple checkers, the king must move
