@@ -116,7 +116,7 @@ mod tests {
     use crate::{
         file::File,
         rank::Rank,
-        square::{self, Square},
+        square::Square,
     };
 
     #[test]

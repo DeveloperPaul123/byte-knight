@@ -13,7 +13,6 @@
  */
 
 use crate::{
-    bitboard_helpers,
     board::Board,
     definitions::{CastlingAvailability, Squares},
     move_generation::MoveGenerator,

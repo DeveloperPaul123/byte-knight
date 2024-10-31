@@ -564,21 +564,6 @@ impl MoveGenerator {
         }
     }
 
-    fn calculate_attacks_from_square(
-        &self,
-        square: u8,
-        attackers: &[Piece],
-        side: Side,
-        occupancy: &Bitboard,
-    ) -> Bitboard {
-        let mut attacks = Bitboard::default();
-        for attacker in attackers {
-            let attack_bb = self.get_piece_attacks(*attacker, square, side, occupancy);
-            attacks |= attack_bb;
-        }
-        return attacks;
-    }
-
     /// Generates pseudo-legal moves for the current board state.
     /// This function does not check for legality of the moves.
     ///
