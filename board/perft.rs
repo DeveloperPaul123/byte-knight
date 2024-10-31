@@ -386,7 +386,7 @@ mod tests {
     // taken from the rustic engine: https://github.com/mvanthoor/rustic/blob/eb5284dbb41d171fa6bf023f262f94240dcbe66d/src/extra/epds.rs
     ////////////////////////////////////////////////////////////////////////////
     #[test]
-    fn rustic_epd_test_suite() {
+    fn rustic_deep_perft() {
         let tests = [
             (
                 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
@@ -404,15 +404,15 @@ mod tests {
                 "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
                 vec![46, 2079, 89890, 3894594, 164075551, 6923051137],
             ),
-            //  promote out of check
-            (
-                "2K2r2/4P3/8/8/8/8/8/3k4 w - - 0 1",
-                vec![11, 133, 1442, 19174, 266199, 3821001],
-            ),
-            (
-                "3K4/8/8/8/8/8/4p3/2k2R2 b - - 0 1",
-                vec![11, 133, 1442, 19174, 266199, 3821001],
-            ),
+        ];
+
+        let move_gen = &MoveGenerator::new();
+        run_epd_test(&tests, move_gen);
+    }
+
+    #[test]
+    fn rustic_checks_and_stalemate() {
+        let tests = [
             // discovered check
             (
                 "8/8/1P2K3/8/2n5/1q6/8/5k2 b - - 0 1",
@@ -421,24 +421,6 @@ mod tests {
             (
                 "5K2/8/1Q6/2N5/8/1p2k3/8/8 w - - 0 1",
                 vec![29, 165, 5160, 31961, 1004658],
-            ),
-            // promote to give check
-            (
-                "4k3/1P6/8/8/8/8/K7/8 w - - 0 1",
-                vec![9, 40, 472, 2661, 38983, 217342],
-            ),
-            (
-                "8/k7/8/8/8/8/1p6/4K3 b - - 0 1",
-                vec![9, 40, 472, 2661, 38983, 217342],
-            ),
-            // "# underpromote to check
-            (
-                "8/P1k5/K7/8/8/8/8/8 w - - 0 1",
-                vec![6, 27, 273, 1329, 18135, 92683],
-            ),
-            (
-                "8/8/8/8/8/k7/p1K5/8 b - - 0 1",
-                vec![6, 27, 273, 1329, 18135, 92683],
             ),
             // "# self stalemate
             (
@@ -462,6 +444,42 @@ mod tests {
             (
                 "8/8/2k5/5q2/5n2/8/5K2/8 b - - 0 1",
                 vec![37, 183, 6559, 23527],
+            ),
+        ];
+
+        let move_gen = MoveGenerator::new();
+        run_epd_test(&tests, &move_gen);
+    }
+
+    #[test]
+    fn rustic_promote() {
+        let tests = [
+            //  promote out of check
+            (
+                "2K2r2/4P3/8/8/8/8/8/3k4 w - - 0 1",
+                vec![11, 133, 1442, 19174, 266199, 3821001],
+            ),
+            (
+                "3K4/8/8/8/8/8/4p3/2k2R2 b - - 0 1",
+                vec![11, 133, 1442, 19174, 266199, 3821001],
+            ),
+            // promote to give check
+            (
+                "4k3/1P6/8/8/8/8/K7/8 w - - 0 1",
+                vec![9, 40, 472, 2661, 38983, 217342],
+            ),
+            (
+                "8/k7/8/8/8/8/1p6/4K3 b - - 0 1",
+                vec![9, 40, 472, 2661, 38983, 217342],
+            ),
+            // "# underpromote to check
+            (
+                "8/P1k5/K7/8/8/8/8/8 w - - 0 1",
+                vec![6, 27, 273, 1329, 18135, 92683],
+            ),
+            (
+                "8/8/8/8/8/k7/p1K5/8 b - - 0 1",
+                vec![6, 27, 273, 1329, 18135, 92683],
             ),
         ];
 
@@ -568,4 +586,169 @@ mod tests {
         run_epd_test(&tests, &move_gen);
     }
     ////////////////////////////////////////////////////////////////////////////
+
+    // taken from the kz04px engine: https://github.com/kz04px/libchess/blob/master/tests/perft.cpp
+    ////////////////////////////////////////////////////////////////////////////
+
+    #[test]
+    fn kz_diagonal_pin() {
+        let tests = [
+            ("4k3/b7/8/2Pp4/8/8/8/6K1 w - d6 0 2", vec![5]),
+            ("4k3/7b/8/4pP2/8/8/8/1K6 w - e6 0 2", vec![5]),
+            ("6k1/8/8/8/2pP4/8/B7/3K4 b - d3 0 2", vec![5]),
+            ("1k6/8/8/8/4Pp2/8/7B/4K3 b - e3 0 2", vec![5]),
+            ("4k3/b7/8/1pP5/8/8/8/6K1 w - b6 0 2", vec![6]),
+            ("4k3/7b/8/5Pp1/8/8/8/1K6 w - g6 0 2", vec![6]),
+            ("6k1/8/8/8/1Pp5/8/B7/4K3 b - b3 0 2", vec![6]),
+            ("1k6/8/8/8/5pP1/8/7B/4K3 b - g3 0 2", vec![6]),
+            ("4k3/K7/8/1pP5/8/8/8/6b1 w - b6 0 2", vec![6]),
+            ("4k3/7K/8/5Pp1/8/8/8/1b6 w - g6 0 2", vec![6]),
+            ("6B1/8/8/8/1Pp5/8/k7/4K3 b - b3 0 2", vec![6]),
+            ("1B6/8/8/8/5pP1/8/7k/4K3 b - g3 0 2", vec![6]),
+        ];
+
+        let move_gen = MoveGenerator::new();
+        run_epd_test(&tests, &move_gen);
+    }
+
+    #[test]
+    fn kz_en_passant_horizontal_pin() {
+        let tests = [
+            ("4k3/8/8/K2pP2r/8/8/8/8 w - d6 0 1", vec![6]),
+            ("4k3/8/8/r2pP2K/8/8/8/8 w - d6 0 1", vec![6]),
+            ("8/8/8/8/1k1Pp2R/8/8/4K3 b - d3 0 1", vec![8]),
+            ("8/8/8/8/1R1Pp2k/8/8/4K3 b - d3 0 1", vec![6]),
+        ];
+
+        let move_gen = MoveGenerator::new();
+        run_epd_test(&tests, &move_gen);
+    }
+
+    #[test]
+    fn kz_en_passant_vertical_pin() {
+        let tests = [
+            ("k7/8/4r3/3pP3/8/8/8/4K3 w - d6 0 1", vec![5]),
+            ("k3K3/8/8/3pP3/8/8/8/4r3 w - d6 0 1", vec![6]),
+        ];
+
+        let move_gen = MoveGenerator::new();
+        run_epd_test(&tests, &move_gen);
+    }
+
+    #[test]
+    fn kz_legal_en_passant() {
+        let tests = [
+            ("8/8/8/8/1k1PpN1R/8/8/4K3 b - d3 0 1", vec![9, 193, 1322]),
+            ("8/8/8/8/1k1Ppn1R/8/8/4K3 b - d3 0 1", vec![17, 220, 3001]),
+            ("4k3/8/8/2PpP3/8/8/8/4K3 w - d6 0 1", vec![9, 47, 376]),
+            ("4k3/8/8/8/2pPp3/8/8/4K3 b - d3 0 1", vec![9, 47, 376]),
+            (
+                "r3k2r/p2pqpb1/bn2pnp1/2pPN3/1p2P3/2N2Q1p/PPPBBPPP/R4K1R w kq c6 0 2",
+                vec![46],
+            ),
+        ];
+
+        let move_gen = MoveGenerator::new();
+        run_epd_test(&tests, &move_gen);
+    }
+
+    #[test]
+    fn kz_en_passant_capture_checker() {
+        let tests = [
+            ("4k3/8/8/4pP2/3K4/8/8/8 w - e6 0 2", vec![9]),
+            ("8/8/8/4k3/5Pp1/8/8/3K4 b - f3 0 1", vec![9]),
+        ];
+
+        let move_gen = MoveGenerator::new();
+        run_epd_test(&tests, &move_gen);
+    }
+
+    #[test]
+    fn kz_en_passant_in_check() {
+        let tests = [
+            ("2b1k3/8/8/2Pp4/8/7K/8/8 w - - 0 1", vec![4, 52]),
+            ("2b1k3/8/8/2Pp4/8/7K/8/8 w - d6 0 1", vec![4, 52]),
+            ("4k3/r6K/8/2Pp4/8/8/8/8 w - - 0 1", vec![4, 77]),
+            ("4k3/r6K/8/2Pp4/8/8/8/8 w - d6 0 1", vec![4, 77]),
+            ("2K1k3/8/8/2Pp4/8/7b/8/8 w - - 0 1", vec![3, 37]),
+            ("2K1k3/8/8/2Pp4/8/7b/8/8 w - d6 0 1", vec![3, 37]),
+            ("2K1k3/8/8/2Pp4/8/7q/8/8 w - - 0 1", vec![3, 79]),
+            ("2K1k3/8/8/2Pp4/8/7q/8/8 w - d6 0 1", vec![3, 79]),
+            ("8/8/7k/8/2pP4/8/8/2B1K3 b - - 0 1", vec![4, 52]),
+            ("8/8/7k/8/2pP4/8/8/2B1K3 b - d3 0 1", vec![4, 52]),
+            ("8/8/7k/8/2pP4/8/8/2Q1K3 b - - 0 1", vec![4, 76]),
+            ("8/8/7k/8/2pP4/8/8/2Q1K3 b - d3 0 1", vec![4, 76]),
+            ("8/8/8/8/2pP4/8/R6k/4K3 b - - 0 1", vec![4, 77]),
+            ("8/8/8/8/2pP4/8/R6k/4K3 b - d3 0 1", vec![4, 77]),
+        ];
+
+        let move_gen = MoveGenerator::new();
+        run_epd_test(&tests, &move_gen);
+    }
+
+    #[test]
+    fn kz_en_passant_block_check() {
+        let tests = [
+            ("4k3/8/K6r/3pP3/8/8/8/8 w - d6 0 1", vec![6, 109]),
+            ("4k3/8/K6q/3pP3/8/8/8/8 w - d6 0 1", vec![6, 151]),
+            ("4kb2/8/8/3pP3/8/K7/8/8 w - d6 0 1", vec![5, 55]),
+            ("4kq2/8/8/3pP3/8/K7/8/8 w - d6 0 1", vec![5, 100]),
+            ("4k3/8/r6K/3pP3/8/8/8/8 w - d6 0 1", vec![6, 107]),
+            ("4k3/8/q6K/3pP3/8/8/8/8 w - d6 0 1", vec![6, 149]),
+            ("3k1K2/8/8/3pP3/8/b7/8/8 w - d6 0 1", vec![4, 44]),
+            ("3k1K2/8/8/3pP3/8/q7/8/8 w - d6 0 1", vec![4, 100]),
+            ("8/8/8/8/3Pp3/k6R/8/4K3 b - d3 0 1", vec![6, 109]),
+            ("8/8/8/8/3Pp3/k6Q/8/4K3 b - d3 0 1", vec![6, 151]),
+            ("8/8/k7/8/3Pp3/8/8/4KB2 b - d3 0 1", vec![5, 55]),
+            ("8/8/k7/8/3Pp3/8/8/4KQ2 b - d3 0 1", vec![5, 100]),
+        ];
+
+        let move_gen = MoveGenerator::new();
+        run_epd_test(&tests, &move_gen);
+    }
+
+    #[test]
+    fn kz_many_moves() {
+        let board =
+            Board::from_fen("R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1").unwrap();
+        let move_gen = MoveGenerator::new();
+        let mut move_list = MoveList::new();
+
+        move_gen.generate_legal_moves(&board, &mut move_list);
+        assert_eq!(move_list.len(), 218);
+    }
+
+    #[test]
+    fn kz_perft_shallow() {
+        let tests = [
+            ("4k3/b7/8/2Pp4/8/8/8/6K1 w - d6 0 2", vec![5]),
+            ("4k3/7b/8/4pP2/8/8/8/1K6 w - e6 0 2", vec![5]),
+            ("6k1/8/8/8/2pP4/8/B7/3K4 b - d3 0 2", vec![5]),
+            ("1k6/8/8/8/4Pp2/8/7B/4K3 b - e3 0 2", vec![5]),
+            ("4k3/b7/8/1pP5/8/8/8/6K1 w - b6 0 2", vec![6]),
+            ("4k3/7b/8/5Pp1/8/8/8/1K6 w - g6 0 2", vec![6]),
+            ("6k1/8/8/8/1Pp5/8/B7/4K3 b - b3 0 2", vec![6]),
+            ("1k6/8/8/8/5pP1/8/7B/4K3 b - g3 0 2", vec![6]),
+            ("4k3/K7/8/1pP5/8/8/8/6b1 w - b6 0 2", vec![6]),
+            ("4k3/7K/8/5Pp1/8/8/8/1b6 w - g6 0 2", vec![6]),
+            ("6B1/8/8/8/1Pp5/8/k7/4K3 b - b3 0 2", vec![6]),
+            ("1B6/8/8/8/5pP1/8/7k/4K3 b - g3 0 2", vec![6]),
+            ("4k3/8/8/K2pP2r/8/8/8/8 w - d6 0 1", vec![6]),
+            ("4k3/8/8/r2pP2K/8/8/8/8 w - d6 0 1", vec![6]),
+            ("8/8/8/8/1k1Pp2R/8/8/4K3 b - d3 0 1", vec![8]),
+            ("8/8/8/8/1R1Pp2k/8/8/4K3 b - d3 0 1", vec![6]),
+            ("k7/8/4r3/3pP3/8/8/8/4K3 w - d6 0 1", vec![5]),
+            ("k3K3/8/8/3pP3/8/8/8/4r3 w - d6 0 1", vec![6]),
+            ("8/8/8/8/1k1PpN1R/8/8/4K3 b - d3 0 1", vec![9, 193, 1322]),
+            ("8/8/8/8/1k1Ppn1R/8/8/4K3 b - d3 0 1", vec![17, 220, 3001]),
+            ("4k3/8/8/2PpP3/8/8/8/4K3 w - d6 0 1", vec![9, 47, 376]),
+            ("4k3/8/8/8/2pPp3/8/8/4K3 b - d3 0 1", vec![9, 47, 376]),
+            ("4k3/8/8/4pP2/3K4/8/8/8 w - e6 0 2", vec![9]),
+            ("8/8/8/4k3/5Pp1/8/8/3K4 b - f3 0 1", vec![9]),
+            ("4k3/8/K6r/3pP3/8/8/8/8 w - d6 0 1", vec![6]),
+        ];
+
+        let move_gen = MoveGenerator::new();
+        run_epd_test(&tests, &move_gen);
+    }
 }
