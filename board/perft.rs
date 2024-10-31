@@ -1,9 +1,4 @@
-use crate::{
-    board::Board,
-    move_generation::MoveGenerator,
-    move_list::MoveList,
-    moves::{Move, MoveType},
-};
+use crate::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
 use anyhow::{bail, Result};
 
 pub struct SplitPerftResult {
@@ -95,9 +90,10 @@ pub fn perft(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        board::Board, move_generation::MoveGenerator, move_list::MoveList, perft::perft, side::Side,
-    };
+    use crate::side::Side;
+
+    use super::*;
+
     #[test]
     fn default_board() {
         let mut board = Board::default_board();
@@ -391,7 +387,7 @@ mod tests {
     ////////////////////////////////////////////////////////////////////////////
     #[test]
     fn rustic_epd_test_suite() {
-        let tests: [(&str, Vec<i64>); 35] = [
+        let tests = [
             (
                 "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
                 vec![20, 400, 8902, 197281, 4865609, 119060324],
@@ -408,69 +404,6 @@ mod tests {
                 "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
                 vec![46, 2079, 89890, 3894594, 164075551, 6923051137],
             ),
-            // en passant capture checks opponent
-            (
-                "8/8/1k6/2b5/2pP4/8/5K2/8 b - d3 0 1",
-                vec![15, 126, 1928, 13931, 206379, 1440467],
-            ),
-            (
-                "8/5k2/8/2Pp4/2B5/1K6/8/8 w - d6 0 1",
-                vec![15, 126, 1928, 13931, 206379, 1440467],
-            ),
-            // avoid illegal ep(thanks to Steve Maughan)
-            (
-                "3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1",
-                vec![18, 92, 1670, 10138, 185429, 1134888],
-            ),
-            (
-                "8/8/8/8/k1p4R/8/3P4/3K4 w - - 0 1",
-                vec![18, 92, 1670, 10138, 185429, 1134888],
-            ),
-            // avoid illegal ep #2
-            (
-                "8/8/4k3/8/2p5/8/B2P2K1/8 w - - 0 1",
-                vec![13, 102, 1266, 10276, 135655, 1015133],
-            ),
-            (
-                "8/b2p2k1/8/2P5/8/4K3/8/8 b - - 0 1",
-                vec![13, 102, 1266, 10276, 135655, 1015133],
-            ),
-            // short castling gives check
-            (
-                "5k2/8/8/8/8/8/8/4K2R w K - 0 1",
-                vec![15, 66, 1198, 6399, 120330, 661072],
-            ),
-            (
-                "4k2r/8/8/8/8/8/8/5K2 b k - 0 1",
-                vec![15, 66, 1198, 6399, 120330, 661072],
-            ),
-            // long castling gives check
-            (
-                "3k4/8/8/8/8/8/8/R3K3 w Q - 0 1",
-                vec![16, 71, 1286, 7418, 141077, 803711],
-            ),
-            (
-                "r3k3/8/8/8/8/8/8/3K4 b q - 0 1",
-                vec![16, 71, 1286, 7418, 141077, 803711],
-            ),
-            // castling(including losing cr due to rook capture)
-            (
-                "r3k2r/1b4bq/8/8/8/8/7B/R3K2R w KQkq - 0 1",
-                vec![26, 1141, 27826, 1274206],
-            ),
-            (
-                "r3k2r/7b/8/8/8/8/1B4BQ/R3K2R b KQkq - 0 1",
-                vec![26, 1141, 27826, 1274206],
-            ),
-            // castling prevented
-            (
-                "r3k2r/8/3Q4/8/8/5q2/8/R3K2R b KQkq - 0 1",
-                vec![44, 1494, 50509, 1720476],
-            ),
-            (
-                "r3k2r/8/5Q2/8/8/3q4/8/R3K2R w KQkq - 0 1",
-                vec![44, 1494, 50509, 1720476],
-            ),
             //  promote out of check
             (
                 "2K2r2/4P3/8/8/8/8/8/3k4 w - - 0 1",
@@ -480,7 +413,7 @@ mod tests {
                 "3K4/8/8/8/8/8/4p3/2k2R2 b - - 0 1",
                 vec![11, 133, 1442, 19174, 266199, 3821001],
             ),
-            // "# discovered check
+            // discovered check
             (
                 "8/8/1P2K3/8/2n5/1q6/8/5k2 b - - 0 1",
                 vec![29, 165, 5160, 31961, 1004658],
@@ -489,7 +422,7 @@ mod tests {
                 "5K2/8/1Q6/2N5/8/1p2k3/8/8 w - - 0 1",
                 vec![29, 165, 5160, 31961, 1004658],
             ),
-            // "# promote to give check
+            // promote to give check
             (
                 "4k3/1P6/8/8/8/8/K7/8 w - - 0 1",
                 vec![9, 40, 472, 2661, 38983, 217342],
@@ -529,6 +462,87 @@ mod tests {
             (
                 "8/8/2k5/5q2/5n2/8/5K2/8 b - - 0 1",
                 vec![37, 183, 6559, 23527],
+            ),
+        ];
+
+        let move_gen = MoveGenerator::new();
+        run_epd_test(&tests, &move_gen);
+    }
+
+    #[test]
+    fn rustic_en_passant() {
+        let tests = [
+            // en passant capture checks opponent
+            (
+                "8/8/1k6/2b5/2pP4/8/5K2/8 b - d3 0 1",
+                vec![15, 126, 1928, 13931, 206379, 1440467],
+            ),
+            (
+                "8/5k2/8/2Pp4/2B5/1K6/8/8 w - d6 0 1",
+                vec![15, 126, 1928, 13931, 206379, 1440467],
+            ),
+            // avoid illegal ep(thanks to Steve Maughan)
+            (
+                "3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1",
+                vec![18, 92, 1670, 10138, 185429, 1134888],
+            ),
+            (
+                "8/8/8/8/k1p4R/8/3P4/3K4 w - - 0 1",
+                vec![18, 92, 1670, 10138, 185429, 1134888],
+            ),
+            // avoid illegal ep #2
+            (
+                "8/8/4k3/8/2p5/8/B2P2K1/8 w - - 0 1",
+                vec![13, 102, 1266, 10276, 135655, 1015133],
+            ),
+            (
+                "8/b2p2k1/8/2P5/8/4K3/8/8 b - - 0 1",
+                vec![13, 102, 1266, 10276, 135655, 1015133],
+            ),
+        ];
+
+        let move_gen = MoveGenerator::new();
+        run_epd_test(&tests, &move_gen);
+    }
+
+    #[test]
+    fn rustic_castling_checks() {
+        let tests = [
+            // short castling gives check
+            (
+                "5k2/8/8/8/8/8/8/4K2R w K - 0 1",
+                vec![15, 66, 1198, 6399, 120330, 661072],
+            ),
+            (
+                "4k2r/8/8/8/8/8/8/5K2 b k - 0 1",
+                vec![15, 66, 1198, 6399, 120330, 661072],
+            ),
+            // long castling gives check
+            (
+                "3k4/8/8/8/8/8/8/R3K3 w Q - 0 1",
+                vec![16, 71, 1286, 7418, 141077, 803711],
+            ),
+            (
+                "r3k3/8/8/8/8/8/8/3K4 b q - 0 1",
+                vec![16, 71, 1286, 7418, 141077, 803711],
+            ),
+            // castling(including losing cr due to rook capture)
+            (
+                "r3k2r/1b4bq/8/8/8/8/7B/R3K2R w KQkq - 0 1",
+                vec![26, 1141, 27826, 1274206],
+            ),
+            (
+                "r3k2r/7b/8/8/8/8/1B4BQ/R3K2R b KQkq - 0 1",
+                vec![26, 1141, 27826, 1274206],
+            ),
+            // castling prevented
+            (
+                "r3k2r/8/3Q4/8/8/5q2/8/R3K2R b KQkq - 0 1",
+                vec![44, 1494, 50509, 1720476],
+            ),
+            (
+                "r3k2r/8/5Q2/8/8/3q4/8/R3K2R w KQkq - 0 1",
+                vec![44, 1494, 50509, 1720476],
             ),
             // short castling impossible although the rook never moved away from its corner
             (
