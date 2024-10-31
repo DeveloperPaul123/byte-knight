@@ -193,7 +193,6 @@ mod tests {
             let total_moves_depth2 = perft(&mut board, &move_gen, 2, false).unwrap();
             assert_eq!(total_moves_depth2, 1486);
             let total_moves = perft(&mut board, &move_gen, 3, false).unwrap();
-            // TODO: This is VERY broken
             assert_eq!(total_moves, 62379);
         }
 
