@@ -187,7 +187,13 @@ impl MoveGenerator {
         (capture_mask, push_mask)
     }
 
-    fn calculate_en_passant_bitboard(&self, from: u8, board: &Board) -> Bitboard {
+    fn calculate_en_passant_bitboard(
+        &self,
+        from: u8,
+        board: &Board,
+        push_mask: &Bitboard,
+        checkers: &Bitboard,
+    ) -> Bitboard {
         let en_passant_sq = board.en_passant_square();
 
         match en_passant_sq {
@@ -209,7 +215,7 @@ impl MoveGenerator {
                 };
                 occupancy &= !(Bitboard::from_square(captured_sq));
                 // get the squares attacked by the sliding pieces
-                let (mut checkers, _, _) =
+                let (mut discovered_checkers, _, _) =
                     self.calculate_checkers_and_pinned_masks(board, &occupancy);
                 // filter checkers to the same rank as the king
                 let king_sq = bitboard_helpers::next_bit(
@@ -218,11 +224,19 @@ impl MoveGenerator {
                         .clone(),
                 ) as u8;
                 let king_rank = square::from_square(king_sq).1;
-                checkers &= RANK_BITBOARDS[king_rank as usize];
-                if checkers.number_of_occupied_squares() == 0 {
-                    // we are now in check, so we cannot use this en passant capture
+                // check if the checkers are on the same rank as the king and the en passant square is not
+                discovered_checkers &= RANK_BITBOARDS[king_rank as usize];
+
+                // it's a discovered check if our discovered check is not empty and we're currently not in check
+                let is_discovered_check = discovered_checkers.number_of_occupied_squares() > 0
+                    && checkers.number_of_occupied_squares() == 0;
+                let ep_is_blocker = en_passant_bb.intersects(*push_mask) && !is_discovered_check;
+
+                // check if there are no checkers along the king rank or, the en
+                if !is_discovered_check || ep_is_blocker {
                     en_passant_bb
                 } else {
+                    // we are now in check, so we cannot use this en passant capture
                     Bitboard::default()
                 }
             }
@@ -238,6 +252,7 @@ impl MoveGenerator {
         capture_mask: &Bitboard,
         push_mask: &Bitboard,
         pin_rays: &Bitboard,
+        checkers: &Bitboard,
     ) -> Bitboard {
         // pawns can get complex because of en passant and promotion
         // also, we need to take into account the pin direction
@@ -320,9 +335,12 @@ impl MoveGenerator {
             Bitboard::from(u64::MAX)
         };
 
-        let en_passant_bb = self.calculate_en_passant_bitboard(from_square, board);
+        println!("pawn pin:\n{}", pawn_pin_mask);
+        
+        let en_passant_bb =
+            self.calculate_en_passant_bitboard(from_square, board, push_mask, checkers);
 
-        // filter pushes by the occupany
+        // filter pushes by the occupancy
         let legal_pushes = pushes & !occupancy;
         let attacks = self.pawn_attacks[us as usize][square.to_square_index() as usize]
             & (their_pieces | en_passant_bb);
@@ -594,6 +612,7 @@ impl MoveGenerator {
                 capture_mask,
                 push_mask,
                 pin_rays,
+                checkers,
             ),
             Piece::King => {
                 self.generate_king_legal_mobility(square, board, capture_mask, push_mask, checkers)
