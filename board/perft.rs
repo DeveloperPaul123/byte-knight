@@ -95,7 +95,9 @@ pub fn perft(
 
 #[cfg(test)]
 mod tests {
-    use crate::{board::Board, move_generation::MoveGenerator, perft::perft, side::Side};
+    use crate::{
+        board::Board, move_generation::MoveGenerator, move_list::MoveList, perft::perft, side::Side,
+    };
     #[test]
     fn default_board() {
         let mut board = Board::default_board();
@@ -185,7 +187,7 @@ mod tests {
             total_moves = perft(&mut board, &move_gen, 2, false).unwrap();
             assert_eq!(total_moves, 31);
         }
-        
+
         {
             let mut board =
                 Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
@@ -292,4 +294,264 @@ mod tests {
             assert_eq!(total_moves, 23527);
         }
     }
+
+    /// Helper to run the EPD tests below
+    fn run_epd_test(tests: &[(&str, Vec<i64>)], move_gen: &MoveGenerator) {
+        for (fen, results) in tests.iter() {
+            println!("{}", fen);
+            let mut board = Board::from_fen(fen).unwrap();
+            for (idx, result) in results.iter().enumerate() {
+                let nodes = perft(&mut board, &move_gen, idx + 1, false).unwrap();
+                assert_eq!(nodes, *result as u64);
+            }
+        }
+    }
+
+    // tests below are from https://github.com/kz04px/rawr/blob/master/tests/perft_extra.rs
+    ////////////////////////////////////////////////////////////////////////////
+    #[test]
+    fn en_passant() {
+        let tests = [
+            // EP
+            ("8/8/8/8/1k1PpN1R/8/8/4K3 b - d3 0 1", vec![9, 193]),
+            ("8/8/8/8/1k1Ppn1R/8/8/4K3 b - d3 0 1", vec![17, 220]),
+            ("4k3/8/8/2PpP3/8/8/8/4K3 w - d6 0 1", vec![9, 47, 376]),
+            ("4k3/8/8/8/2pPp3/8/8/4K3 b - d3 0 1", vec![9, 47, 376]),
+            // EP - pinned diagonal
+            ("4k3/b7/8/2Pp4/8/8/8/6K1 w - d6 0 1", vec![5, 45]),
+            ("4k3/7b/8/4pP2/8/8/8/1K6 w - e6 0 1", vec![5, 45]),
+            ("6k1/8/8/8/2pP4/8/B7/3K4 b - d3 0 1", vec![5, 45]),
+            ("1k6/8/8/8/4Pp2/8/7B/4K3 b - e3 0 1", vec![5, 45]),
+            ("4k3/b7/8/1pP5/8/8/8/6K1 w - b6 0 1", vec![6, 52]),
+            ("4k3/7b/8/5Pp1/8/8/8/1K6 w - g6 0 1", vec![6, 51]),
+            ("6k1/8/8/8/1Pp5/8/B7/4K3 b - b3 0 1", vec![6, 52]),
+            ("1k6/8/8/8/5pP1/8/7B/4K3 b - g3 0 1", vec![6, 51]),
+            ("4k3/K7/8/1pP5/8/8/8/6b1 w - b6 0 1", vec![6, 66]),
+            ("4k3/7K/8/5Pp1/8/8/8/1b6 w - g6 0 1", vec![6, 60]),
+            ("6B1/8/8/8/1Pp5/8/k7/4K3 b - b3 0 1", vec![6, 66]),
+            ("1B6/8/8/8/5pP1/8/7k/4K3 b - g3 0 1", vec![6, 60]),
+            ("4k3/b7/8/2Pp4/3K4/8/8/8 w - d6 0 1", vec![5, 44]),
+            ("4k3/8/1b6/2Pp4/3K4/8/8/8 w - d6 0 1", vec![6, 59]),
+            ("4k3/8/b7/1Pp5/2K5/8/8/8 w - c6 0 1", vec![6, 49]),
+            ("4k3/8/7b/5pP1/5K2/8/8/8 w - f6 0 1", vec![6, 49]),
+            ("4k3/7b/8/4pP2/4K3/8/8/8 w - e6 0 1", vec![5, 44]),
+            ("4k3/8/6b1/4pP2/4K3/8/8/8 w - e6 0 1", vec![6, 53]),
+            ("4k3/8/3K4/1pP5/8/q7/8/8 w - b6 0 1", vec![5, 114]),
+            ("7k/4K3/8/1pP5/8/q7/8/8 w - b6 0 1", vec![8, 171]),
+            // EP - double check
+            ("4k3/2rn4/8/2K1pP2/8/8/8/8 w - e6 0 1", vec![4, 75]),
+            // EP - pinned horizontal
+            ("4k3/8/8/K2pP2r/8/8/8/8 w - d6 0 1", vec![6, 94]),
+            ("4k3/8/8/K2pP2q/8/8/8/8 w - d6 0 1", vec![6, 130]),
+            ("4k3/8/8/r2pP2K/8/8/8/8 w - d6 0 1", vec![6, 87]),
+            ("4k3/8/8/q2pP2K/8/8/8/8 w - d6 0 1", vec![6, 129]),
+            ("8/8/8/8/1k1Pp2R/8/8/4K3 b - d3 0 1", vec![8, 125]),
+            ("8/8/8/8/1R1Pp2k/8/8/4K3 b - d3 0 1", vec![6, 87]),
+            // EP - pinned vertical
+            ("k7/8/4r3/3pP3/8/8/8/4K3 w - d6 0 1", vec![5, 70]),
+            ("k3K3/8/8/3pP3/8/8/8/4r3 w - d6 0 1", vec![6, 91]),
+            // EP - in check
+            ("4k3/8/8/4pP2/3K4/8/8/8 w - e6 0 1", vec![9, 49]),
+            ("8/8/8/4k3/5Pp1/8/8/3K4 b - f3 0 1", vec![9, 50]),
+            // EP - block check
+            ("4k3/8/K6r/3pP3/8/8/8/8 w - d6 0 1", vec![6, 109]),
+            ("4k3/8/K6q/3pP3/8/8/8/8 w - d6 0 1", vec![6, 151]),
+        ];
+        let move_gen = &MoveGenerator::new();
+        run_epd_test(&tests, move_gen);
+    }
+
+    #[test]
+    fn double_checked() {
+        let tests = [
+            ("4k3/8/4r3/8/8/8/3p4/4K3 w - - 0 1", vec![4, 80, 320]),
+            ("4k3/8/4q3/8/8/8/3b4/4K3 w - - 0 1", vec![4, 143, 496]),
+        ];
+
+        let move_gen = &MoveGenerator::new();
+        run_epd_test(&tests, move_gen);
+    }
+
+    #[test]
+    fn pins() {
+        let tests = [
+            ("4k3/8/8/8/1b5b/8/3Q4/4K3 w - - 0 1", vec![3, 54, 1256]),
+            ("4k3/8/8/8/1b5b/8/3R4/4K3 w - - 0 1", vec![3, 54, 836]),
+            ("4k3/8/8/8/1b5b/2Q5/5P2/4K3 w - - 0 1", vec![6, 98, 2274]),
+            ("4k3/8/8/8/1b5b/2R5/5P2/4K3 w - - 0 1", vec![4, 72, 1300]),
+            ("4k3/8/8/8/1b2r3/8/3Q4/4K3 w - - 0 1", vec![3, 66, 1390]),
+            ("4k3/8/8/8/1b2r3/8/3QP3/4K3 w - - 0 1", vec![6, 119, 2074]),
+        ];
+        let move_gen = &MoveGenerator::new();
+        run_epd_test(&tests, move_gen);
+    }
+    ////////////////////////////////////////////////////////////////////////////
+
+    // taken from the rustic engine: https://github.com/mvanthoor/rustic/blob/eb5284dbb41d171fa6bf023f262f94240dcbe66d/src/extra/epds.rs
+    ////////////////////////////////////////////////////////////////////////////
+    #[test]
+    fn rustic_epd_test_suite() {
+        let tests: [(&str, Vec<i64>); 35] = [
+            (
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                vec![20, 400, 8902, 197281, 4865609, 119060324],
+            ),
+            (
+                "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1",
+                vec![20, 400, 8902, 197281, 4865609, 119060324],
+            ),
+            (
+                "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+                vec![6, 264, 9467, 422333, 15833292, 706045033],
+            ),
+            (
+                "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+                vec![46, 2079, 89890, 3894594, 164075551, 6923051137],
+            ),
+            // en passant capture checks opponent
+            (
+                "8/8/1k6/2b5/2pP4/8/5K2/8 b - d3 0 1",
+                vec![15, 126, 1928, 13931, 206379, 1440467],
+            ),
+            (
+                "8/5k2/8/2Pp4/2B5/1K6/8/8 w - d6 0 1",
+                vec![15, 126, 1928, 13931, 206379, 1440467],
+            ),
+            // avoid illegal ep(thanks to Steve Maughan)
+            (
+                "3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1",
+                vec![18, 92, 1670, 10138, 185429, 1134888],
+            ),
+            (
+                "8/8/8/8/k1p4R/8/3P4/3K4 w - - 0 1",
+                vec![18, 92, 1670, 10138, 185429, 1134888],
+            ),
+            // avoid illegal ep #2
+            (
+                "8/8/4k3/8/2p5/8/B2P2K1/8 w - - 0 1",
+                vec![13, 102, 1266, 10276, 135655, 1015133],
+            ),
+            (
+                "8/b2p2k1/8/2P5/8/4K3/8/8 b - - 0 1",
+                vec![13, 102, 1266, 10276, 135655, 1015133],
+            ),
+            // short castling gives check
+            (
+                "5k2/8/8/8/8/8/8/4K2R w K - 0 1",
+                vec![15, 66, 1198, 6399, 120330, 661072],
+            ),
+            (
+                "4k2r/8/8/8/8/8/8/5K2 b k - 0 1",
+                vec![15, 66, 1198, 6399, 120330, 661072],
+            ),
+            // long castling gives check
+            (
+                "3k4/8/8/8/8/8/8/R3K3 w Q - 0 1",
+                vec![16, 71, 1286, 7418, 141077, 803711],
+            ),
+            (
+                "r3k3/8/8/8/8/8/8/3K4 b q - 0 1",
+                vec![16, 71, 1286, 7418, 141077, 803711],
+            ),
+            // castling(including losing cr due to rook capture)
+            (
+                "r3k2r/1b4bq/8/8/8/8/7B/R3K2R w KQkq - 0 1",
+                vec![26, 1141, 27826, 1274206],
+            ),
+            (
+                "r3k2r/7b/8/8/8/8/1B4BQ/R3K2R b KQkq - 0 1",
+                vec![26, 1141, 27826, 1274206],
+            ),
+            // castling prevented
+            (
+                "r3k2r/8/3Q4/8/8/5q2/8/R3K2R b KQkq - 0 1",
+                vec![44, 1494, 50509, 1720476],
+            ),
+            (
+                "r3k2r/8/5Q2/8/8/3q4/8/R3K2R w KQkq - 0 1",
+                vec![44, 1494, 50509, 1720476],
+            ),
+            //  promote out of check
+            (
+                "2K2r2/4P3/8/8/8/8/8/3k4 w - - 0 1",
+                vec![11, 133, 1442, 19174, 266199, 3821001],
+            ),
+            (
+                "3K4/8/8/8/8/8/4p3/2k2R2 b - - 0 1",
+                vec![11, 133, 1442, 19174, 266199, 3821001],
+            ),
+            // "# discovered check
+            (
+                "8/8/1P2K3/8/2n5/1q6/8/5k2 b - - 0 1",
+                vec![29, 165, 5160, 31961, 1004658],
+            ),
+            (
+                "5K2/8/1Q6/2N5/8/1p2k3/8/8 w - - 0 1",
+                vec![29, 165, 5160, 31961, 1004658],
+            ),
+            // "# promote to give check
+            (
+                "4k3/1P6/8/8/8/8/K7/8 w - - 0 1",
+                vec![9, 40, 472, 2661, 38983, 217342],
+            ),
+            (
+                "8/k7/8/8/8/8/1p6/4K3 b - - 0 1",
+                vec![9, 40, 472, 2661, 38983, 217342],
+            ),
+            // "# underpromote to check
+            (
+                "8/P1k5/K7/8/8/8/8/8 w - - 0 1",
+                vec![6, 27, 273, 1329, 18135, 92683],
+            ),
+            (
+                "8/8/8/8/8/k7/p1K5/8 b - - 0 1",
+                vec![6, 27, 273, 1329, 18135, 92683],
+            ),
+            // "# self stalemate
+            (
+                "K1k5/8/P7/8/8/8/8/8 w - - 0 1",
+                vec![2, 6, 13, 63, 382, 2217],
+            ),
+            (
+                "8/8/8/8/8/p7/8/k1K5 b - - 0 1",
+                vec![2, 6, 13, 63, 382, 2217],
+            ),
+            // stalemate/checkmate:
+            (
+                "8/k1P5/8/1K6/8/8/8/8 w - - 0 1",
+                vec![10, 25, 268, 926, 10857, 43261, 567584],
+            ),
+            (
+                "8/8/8/8/1k6/8/K1p5/8 b - - 0 1",
+                vec![10, 25, 268, 926, 10857, 43261, 567584],
+            ),
+            // double check
+            (
+                "8/8/2k5/5q2/5n2/8/5K2/8 b - - 0 1",
+                vec![37, 183, 6559, 23527],
+            ),
+            // short castling impossible although the rook never moved away from its corner
+            (
+                "1k6/1b6/8/8/7R/8/8/4K2R b K - 0 1",
+                vec![13, 284, 3529, 85765, 1063513],
+            ),
+            (
+                "4k2r/8/8/7r/8/8/1B6/1K6 w k - 0 1",
+                vec![13, 284, 3529, 85765, 1063513],
+            ),
+            // long castling impossible although the rook never moved away from its corner
+            (
+                "1k6/8/8/8/R7/1n6/8/R3K3 b Q - 0 1",
+                vec![9, 193, 1676, 38751, 346695],
+            ),
+            (
+                "r3k3/8/1N6/r7/8/8/8/1K6 w q - 0 1",
+                vec![9, 193, 1676, 38751, 346695],
+            ),
+        ];
+
+        let move_gen = MoveGenerator::new();
+        run_epd_test(&tests, &move_gen);
+    }
+    ////////////////////////////////////////////////////////////////////////////
 }
