@@ -16,6 +16,21 @@ use crate::{
 };
 
 impl MoveGenerator {
+    /// Calculate pinned pieces for a given board state
+    ///
+    /// A pinned piece is a piece that cannot move because it would leave the king in check.
+    ///
+    /// # Arguments
+    /// - `board` - The board state to calculate pinned pieces for
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing:
+    /// - A bitboard representing the pinned pieces
+    /// - A bitboard representing the orthogonal pinned rays (vertical and horiztonal directions)
+    /// - A bitboard representing the pinned rays
+    ///
+    /// Note that the pin ray bitboards include the respecive pinners.
     fn calculate_pins(&self, board: &Board) -> (Bitboard, Bitboard, Bitboard) {
         let us = board.side_to_move();
         let them = Side::opposite(us);
@@ -39,10 +54,14 @@ impl MoveGenerator {
             }
         }
 
+        // split the attacks into orthogonal and diagonal directions
         let mut from_king_orthogonal_attacks = Bitboard::default();
         let mut from_king_diagonal_attacks = Bitboard::default();
+        // do the same with the pinners
         let mut orthogonal_pinners = Bitboard::default();
         let mut diagonal_pinners = Bitboard::default();
+
+        // loop through all sliders
         for piece in SLIDER_PIECES.iter() {
             let piece_bb = board.piece_bitboard(*piece, them);
             let orthogonal_attacks =
@@ -51,6 +70,7 @@ impl MoveGenerator {
                 self.get_piece_attacks(Piece::Bishop, king_square, us, &their_pieces);
 
             // does our piece interserct with the attacks?
+            // filter by the piece type
             if orthogonal_attacks.intersects(*piece_bb) && (piece.is_rook() || piece.is_queen()) {
                 // we have an intersection, but we may have multiple pieces on the enemy side that intersect
                 // we need to now identify the actual pinners
@@ -101,6 +121,7 @@ impl MoveGenerator {
         let diagonal_pin_rays =
             (from_king_diagonal_attacks & opponent_slider_attacks) | diagonal_pinners;
 
+        // combine pin rays to get pinned pieces
         let pinned_pieces = (horizontal_pin_rays | diagonal_pin_rays) & our_pieces;
 
         (pinned_pieces, horizontal_pin_rays, diagonal_pin_rays)
@@ -150,7 +171,11 @@ impl MoveGenerator {
         checkers
     }
 
-    /// Calculate the capture and push masks for the king in the current position
+    /// Calculate the capture and push masks for the king in the current position.
+    /// The capture mask will include pieces that are valid captures in the case that the king is in single or double check.
+    /// The push mask will include squares that other pieces can move to in order to block a single check.
+    ///
+    /// If there are no checkers or checks the capture and push mask will be all squares on the board.
     ///
     /// # Arguments
     ///
@@ -223,6 +248,17 @@ impl MoveGenerator {
         (capture_mask, push_mask)
     }
 
+    /// Calculate the en passant bitboard for the current position.
+    /// This will return a bitboard with the en passant square set if it is a valid move.
+    ///
+    /// # Arguments
+    /// - from - The square the pawn is moving from
+    /// - board - The current board state
+    /// - push_mask - The push mask for the king. See [calculate_capture_and_push_masks][MoveGenerator::calculate_capture_and_push_masks] for more.
+    /// - checkers - The squares that are attacking the king. See [calculate_checkers][MoveGenerator::calculate_checkers] for more.
+    ///
+    /// # Returns
+    /// A bitboard with the en passant square set if it is a valid move, otherwise an empty bitboard.
     fn calculate_en_passant_bitboard(
         &self,
         from: u8,
