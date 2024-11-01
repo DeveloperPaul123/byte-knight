@@ -13,6 +13,7 @@ test = true
 anyhow = "1.0.89"
 arrayvec = "0.7.6"
 clap = { version = "4.5.9", features = ["derive"] }
+colored = "2.1.0"
 console = { version = "0.15.8", features = ["windows-console-colors"] }
 csv = "1.3.0"
 indicatif = { version = "0.17.8", features = ["rayon"] }
