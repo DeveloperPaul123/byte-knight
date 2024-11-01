@@ -4,6 +4,7 @@ use std::{
     path::Path,
 };
 
+use colored::Colorize;
 use rayon::prelude::*;
 
 use byte_board::{
@@ -61,15 +62,17 @@ fn process_epd_file(path: &str, move_generation: &MoveGenerator) {
                 let mut board = Board::from_fen(fen).unwrap();
                 let nodes = perft::perft(&mut board, &move_generation, depth, false).unwrap();
                 if expected_nodes != nodes {
+                    print!("{} ", "[FAIL]".red().bold());
                     println!(
-                        "{:<30}: {:2} {:^10} != {:^10} {}",
-                        fen, depth, expected_nodes, nodes, CROSS_MARK
+                        "{:<30}: {:2} {:^10} != {:^10}",
+                        fen, depth, expected_nodes, nodes
                     );
                     failures.push((fen.to_string(), depth, expected_nodes, nodes));
                 } else {
+                    print!("{} ", "[PASS]".green());
                     println!(
-                        "{:<30}: {:2} {:^10} == {:^10} {}",
-                        fen, depth, expected_nodes, nodes, CHECK_BOX
+                        "{:<30}: {:2} {:^10} == {:^10}",
+                        fen, depth, expected_nodes, nodes
                     );
                 }
             }
@@ -92,9 +95,6 @@ fn process_epd_file(path: &str, move_generation: &MoveGenerator) {
         );
     }
 }
-
-static CHECK_BOX: Emoji = Emoji("✅", "");
-static CROSS_MARK: Emoji = Emoji("❌", "");
 
 fn main() {
     let args = Args::parse();
