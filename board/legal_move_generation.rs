@@ -134,8 +134,7 @@ impl MoveGenerator {
     ///
     /// # Returns
     ///
-    /// A tuple containing the 'checkers' and 'pinned' [`Bitboard`] objects in that order.
-    /// Checkers are the squares that are attacking the king, and pinned are squares/pieces that are pinned.
+    /// A [`Bitboard`] representing the squares that are checking the king
     fn calculate_checkers(&self, board: &Board, occupancy: &Bitboard) -> Bitboard {
         let us = board.side_to_move();
         let them = Side::opposite(us);
