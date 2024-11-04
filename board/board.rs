@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 18 2024
+ * Last Modified: Fri Nov 01 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -759,5 +759,17 @@ mod tests {
         // undo the move
         undo_ok = board.unmake_move();
         assert!(undo_ok.is_ok());
+    }
+
+    #[test]
+    fn from_fen_round_trip() {
+        // load Pohl.epd from data and go through each FEN. Load it into the board and then output the FEN to see if they match
+        let path = format!("{}/{}/{}", env!("CARGO_MANIFEST_DIR"), "data", "Pohl.epd");
+        let lines = std::fs::read_to_string(path).unwrap();
+        println!("Loaded {} FEN strings from Pohl.epd", lines.lines().count());
+        for fen in lines.lines() {
+            let board = Board::from_fen(fen).unwrap();
+            assert_eq!(fen, board.to_fen());
+        }
     }
 }
