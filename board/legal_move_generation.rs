@@ -1,130 +1,156 @@
+use std::u64;
+
 use crate::move_generation::NORTH;
 use crate::move_generation::RANK_BITBOARDS;
 use crate::move_generation::SOUTH;
 use crate::move_list::MoveList;
 use crate::square;
 use crate::{
-    bitboard::Bitboard,
-    bitboard_helpers,
-    board::Board,
-    definitions::Squares,
-    move_generation::MoveGenerator,
-    pieces::{Piece, SLIDER_PIECES},
-    rank::Rank,
-    side::Side,
-    square::Square,
+    bitboard::Bitboard, bitboard_helpers, board::Board, definitions::Squares,
+    move_generation::MoveGenerator, pieces::Piece, rank::Rank, side::Side, square::Square,
 };
 
 impl MoveGenerator {
-    /// Calculate pinned pieces for a given board state
-    ///
-    /// A pinned piece is a piece that cannot move because it would leave the king in check.
+    /// Calculates checkers, pinned pieces, capture mask, push mask and pin rays for the current position.
     ///
     /// # Arguments
-    /// - `board` - The board state to calculate pinned pieces for
+    ///
+    /// - board - The current board state
     ///
     /// # Returns
     ///
     /// A tuple containing:
-    /// - A [`Bitboard`] representing the pinned pieces
-    /// - A [`Bitboard`] representing the orthogonal pinned rays (vertical and horiztonal directions)
-    /// - A [`Bitboard`] representing the pinned rays
+    /// - A [`Bitboard`] representing the squares that are checking the king
+    /// - A [`Bitboard`] representing the squares can be attacked
+    /// - A [`Bitboard`] representing the squares that can be pushed to
+    /// - A [`Bitboard`] representing the squares that are pinned
+    /// - A [`Bitboard`] representing the orthogonal pin rays
+    /// - A [`Bitboard`] representing the diagonal pin rays
     ///
-    /// Note that the pin ray bitboards include the respecive pinners.
-    fn calculate_pins(&self, board: &Board) -> (Bitboard, Bitboard, Bitboard) {
+    fn calculate_check_and_pin_metadata(
+        &self,
+        board: &Board,
+    ) -> (Bitboard, Bitboard, Bitboard, Bitboard, Bitboard, Bitboard) {
         let us = board.side_to_move();
         let them = Side::opposite(us);
-        let our_pieces = board.pieces(us);
-        let king_bb = board.piece_bitboard(Piece::King, us);
-        let king_square = bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
-
-        // 1. Calculate opponent sliding piece moves to our king square
-        // 2. Calculate sliding piece moves from our king position
-        // 3. Calculate "pinned rays" by overlapping 1 and 2
-        // 4. Calculate pinned pieces by overlapping 3 and our pieces
-        let mut opponent_slider_attacks = Bitboard::default();
+        let occupancy = board.all_pieces();
+        let empty = !occupancy;
         let their_pieces = board.pieces(them);
-        for piece in SLIDER_PIECES.iter() {
-            let mut piece_bb = board.piece_bitboard(*piece, them).clone();
+        let our_pieces = board.pieces(us);
+        let enemy_or_empty = their_pieces | empty;
+        let king_sq = board.king_square(us);
 
-            while piece_bb.as_number() > 0 {
-                let slider_sq = bitboard_helpers::next_bit(&mut piece_bb) as u8;
-                let slider_attacks = self.get_piece_attacks(*piece, slider_sq, them, &their_pieces);
-                opponent_slider_attacks |= slider_attacks;
+        let mut pinned = Bitboard::default();
+        let mut capture_mask = enemy_or_empty & !(*board.piece_bitboard(Piece::King, them));
+        let mut orthogonal_pin_rays = Bitboard::default();
+        let mut diagonal_pin_rays = Bitboard::default();
+
+        let mut checkers = *board.piece_bitboard(Piece::Knight, them)
+            & self.get_piece_attacks(Piece::Knight, king_sq, them, &occupancy)
+            | *board.piece_bitboard(Piece::Pawn, them)
+                & self.get_piece_attacks(Piece::Pawn, king_sq, them, &occupancy);
+
+        let mut enemy_sliding_attacks =
+            self.get_piece_attacks(Piece::Rook, king_sq, them, &Bitboard::default())
+                & (*board.piece_bitboard(Piece::Rook, them)
+                    | *board.piece_bitboard(Piece::Queen, them))
+                | self.get_piece_attacks(Piece::Bishop, king_sq, them, &Bitboard::default())
+                    & (*board.piece_bitboard(Piece::Bishop, them)
+                        | *board.piece_bitboard(Piece::Queen, them));
+
+        while enemy_sliding_attacks.as_number() > 0 {
+            let next_attacker = bitboard_helpers::next_bit(&mut enemy_sliding_attacks) as u8;
+            let attacker_bb = Bitboard::from_square(next_attacker);
+
+            let ray = self.ray_between(
+                Square::from_square_index(king_sq),
+                Square::from_square_index(next_attacker),
+            );
+
+            let (king_file, king_rank) = square::from_square(king_sq);
+            let (attacker_file, attacker_rank) = square::from_square(next_attacker as u8);
+            let is_orthogonal = king_file == attacker_file || king_rank == attacker_rank;
+            let is_diagonal = (king_sq as i16 - next_attacker as i16).abs() % 9 == 0
+                || (king_sq as i16 - next_attacker as i16).abs() % 7 == 0;
+            match (ray & occupancy).number_of_occupied_squares() {
+                0 => {
+                    checkers |= Bitboard::from_square(next_attacker as u8);
+                }
+                1 => {
+                    pinned |= ray & our_pieces;
+                    if is_orthogonal {
+                        orthogonal_pin_rays |= ray | attacker_bb;
+                    } else if is_diagonal {
+                        diagonal_pin_rays |= ray | attacker_bb;
+                    }
+                }
+                _ => {}
             }
         }
 
-        // split the attacks into orthogonal and diagonal directions
-        let mut from_king_orthogonal_attacks = Bitboard::default();
-        let mut from_king_diagonal_attacks = Bitboard::default();
-        // do the same with the pinners
-        let mut orthogonal_pinners = Bitboard::default();
-        let mut diagonal_pinners = Bitboard::default();
+        let mut push_mask = Bitboard::from(u64::MAX);
 
-        // loop through all sliders
-        for piece in SLIDER_PIECES.iter() {
-            let piece_bb = board.piece_bitboard(*piece, them);
-            let orthogonal_attacks =
-                self.get_piece_attacks(Piece::Rook, king_square, us, &their_pieces);
-            let diagonal_attacks =
-                self.get_piece_attacks(Piece::Bishop, king_square, us, &their_pieces);
+        if checkers.number_of_occupied_squares() >= 1 {
+            let is_single_check = checkers.number_of_occupied_squares() == 1;
+            capture_mask = checkers & !(*board.piece_bitboard(Piece::King, them));
 
-            // does our piece interserct with the attacks?
-            // filter by the piece type
-            if orthogonal_attacks.intersects(*piece_bb) && (piece.is_rook() || piece.is_queen()) {
-                // we have an intersection, but we may have multiple pieces on the enemy side that intersect
-                // we need to now identify the actual pinners
-                let mut p_bb = orthogonal_attacks & *piece_bb;
+            let mut checkers_clone = checkers.clone();
+            while checkers_clone.as_number() > 0 {
+                let checker = bitboard_helpers::next_bit(&mut checkers_clone);
+                let ray = self.ray_between(
+                    Square::from_square_index(king_sq),
+                    Square::from_square_index(checker as u8),
+                );
+                // capture_mask |= ray;
 
-                while p_bb.as_number() > 0 {
-                    let sq = bitboard_helpers::next_bit(&mut p_bb) as u8;
-                    let ray = self.ray_between(
-                        Square::from_square_index(king_square),
-                        Square::from_square_index(sq),
-                    );
-
-                    let ray_piece_intersection = ray & our_pieces;
-                    if ray_piece_intersection.as_number().count_ones() == 1 {
-                        // only 1 piece between the king and the attacker, so it's pinned
-                        // if there are multiple pieces, then it's not pinned
-                        from_king_orthogonal_attacks |= ray;
-                        orthogonal_pinners |= Bitboard::from_square(sq);
-                    }
-                }
-            }
-
-            if diagonal_attacks.intersects(*piece_bb) && (piece.is_bishop() || piece.is_queen()) {
-                // we have an intersection, but we may have multiple pieces on the enemy side that intersect
-                // we need to now identify the actual pinners
-                let mut p_bb = diagonal_attacks & *piece_bb;
-
-                while p_bb.as_number() > 0 {
-                    let sq = bitboard_helpers::next_bit(&mut p_bb) as u8;
-                    let ray = self.ray_between(
-                        Square::from_square_index(king_square),
-                        Square::from_square_index(sq),
-                    );
-
-                    let ray_piece_intersection = ray & our_pieces;
-                    if ray_piece_intersection.as_number().count_ones() == 1 {
-                        // only 1 piece between the king and the attacker, so it's pinned
-                        // if there are multiple pieces, then it's not pinned
-                        from_king_diagonal_attacks |= ray;
-                        diagonal_pinners |= Bitboard::from_square(sq);
+                if is_single_check {
+                    if let Some((piece, side)) = board.piece_on_square(checker as u8) {
+                        debug_assert!(side == them);
+                        let is_slider = piece.is_slider();
+                        if is_slider {
+                            // attacker is a slider, so we can block by pushing into the ray
+                            push_mask = ray;
+                        } else {
+                            // we can only capture, so push mask must be empty
+                            push_mask = Bitboard::default();
+                        }
                     }
                 }
             }
         }
 
-        let horizontal_pin_rays =
-            (from_king_orthogonal_attacks & opponent_slider_attacks) | orthogonal_pinners;
-        let diagonal_pin_rays =
-            (from_king_diagonal_attacks & opponent_slider_attacks) | diagonal_pinners;
+        // Add the en passant square to our capture mask if it's viable
+        let en_passant_bb = board
+            .en_passant_square()
+            .map(|sq| Bitboard::from(sq))
+            .unwrap_or_default();
+        // we need to first check if the en passant square would capture a checker
+        // if "us" is white, then we should shift the en passant square left
+        // if "us" is black, then we should shift the en passant square right
+        match board.side_to_move() {
+            Side::White => {
+                let left = en_passant_bb >> SOUTH;
+                if left & checkers != 0 {
+                    capture_mask |= en_passant_bb;
+                }
+            }
+            Side::Black => {
+                let right = en_passant_bb << NORTH;
+                if right & checkers != 0 {
+                    capture_mask |= en_passant_bb;
+                }
+            }
+            Side::Both => panic!("Both side not allowed"),
+        }
 
-        // combine pin rays to get pinned pieces
-        let pinned_pieces = (horizontal_pin_rays | diagonal_pin_rays) & our_pieces;
-
-        (pinned_pieces, horizontal_pin_rays, diagonal_pin_rays)
+        (
+            checkers,
+            capture_mask,
+            push_mask,
+            pinned,
+            orthogonal_pin_rays,
+            diagonal_pin_rays,
+        )
     }
 
     /// Calculate 'checkers' and 'pinned' bitboard masks for the current position.
@@ -168,83 +194,6 @@ impl MoveGenerator {
             | pawn_attacks & *enemy_pawns;
 
         checkers
-    }
-
-    /// Calculate the capture and push masks for the king in the current position.
-    /// The capture mask will include pieces that are valid captures in the case that the king is in single or double check.
-    /// The push mask will include squares that other pieces can move to in order to block a single check.
-    ///
-    /// If there are no checkers or checks the capture and push mask will be all squares on the board.
-    ///
-    /// # Arguments
-    ///
-    /// - board - The current board state
-    /// - checkers - The squares that are attacking the king. See [calculate_checkers_and_pinned_mask][MoveGenerator::calculate_checkers_and_pinned_masks] for more.
-    ///
-    /// # Returns
-    ///
-    /// A tuple containing the capture and push masks in that order.
-    fn calculate_capture_and_push_masks(
-        &self,
-        board: &Board,
-        checkers: &Bitboard,
-    ) -> (Bitboard, Bitboard) {
-        let them = Side::opposite(board.side_to_move());
-        let king_bb = board.piece_bitboard(Piece::King, board.side_to_move());
-        let king_square = bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
-        // initialize these to all squares on the board by default
-        let mut capture_mask = Bitboard::new(u64::MAX);
-        let mut push_mask = Bitboard::new(u64::MAX);
-
-        // now we generate moves for the king
-        let num_checkers = checkers.as_number().count_ones();
-        if num_checkers == 1 {
-            // if there is only one checker, we can capture it or move the king
-            capture_mask = *checkers;
-
-            let checker_sq = bitboard_helpers::next_bit(&mut checkers.clone()) as u8;
-            if let Some((piece, side)) = board.piece_on_square(checker_sq) {
-                debug_assert!(side == them);
-                // check if the piece is a slider
-                if piece.is_slider() {
-                    // if the piece is a slider, we can evade check by blocking it, so moving (push)
-                    // a piece into the ray between the checker and the king is valid
-                    push_mask = self.ray_between(
-                        Square::from_square_index(king_square),
-                        Square::from_square_index(checker_sq),
-                    );
-                } else {
-                    // we can only capture, so push mask needs to be empty (0)
-                    push_mask = Bitboard::default();
-                }
-            }
-        }
-
-        // Add the enpassant square to our capture mask if it's viable
-        let en_passant_bb = board
-            .en_passant_square()
-            .map(|sq| Bitboard::from(sq))
-            .unwrap_or_default();
-        // we need to first check if the en passant square would capture a checker
-        // if "us" is white, then we whould shift the en passant square left
-        // if "us" is black, then we should shift the en passant square right
-        match board.side_to_move() {
-            Side::White => {
-                let left = en_passant_bb >> SOUTH;
-                if left & *checkers != 0 {
-                    capture_mask |= en_passant_bb;
-                }
-            }
-            Side::Black => {
-                let right = en_passant_bb << NORTH;
-                if right & *checkers != 0 {
-                    capture_mask |= en_passant_bb;
-                }
-            }
-            Side::Both => panic!("Both side not allowed"),
-        }
-
-        (capture_mask, push_mask)
     }
 
     /// Calculate the en passant bitboard for the current position.
@@ -671,7 +620,6 @@ impl MoveGenerator {
     /// - `square` - The square index of the king
     /// - `board` - The board state
     /// - `capture_mask` - The mask of squares that can be captured
-    /// - `push_mask` - The mask of squares that can be pushed to
     /// - `checkers` - The mask of squares that are checking the king
     ///
     /// # Returns
@@ -682,7 +630,6 @@ impl MoveGenerator {
         square: &Square,
         board: &Board,
         capture_mask: &Bitboard,
-        push_mask: &Bitboard,
         checkers: &Bitboard,
     ) -> Bitboard {
         let us = board.side_to_move();
@@ -708,7 +655,8 @@ impl MoveGenerator {
             self.generate_legal_castling_mobility(square, board, &attacked_squares, checkers);
 
         let king_non_checker_attacks =
-            (king_moves_bb & their_pieces & !*checkers) & !*push_mask & !attacked_squares;
+            (king_moves_bb & their_pieces & !*checkers) & !attacked_squares;
+
         let mut king_attacks = (king_moves_bb & *capture_mask & their_pieces & !attacked_squares)
             | king_non_checker_attacks;
 
@@ -774,9 +722,7 @@ impl MoveGenerator {
                 diagonal_pin_rays,
                 checkers,
             ),
-            Piece::King => {
-                self.generate_king_legal_mobility(square, board, capture_mask, push_mask, checkers)
-            }
+            Piece::King => self.generate_king_legal_mobility(square, board, capture_mask, checkers),
             _ => self.generate_normal_piece_legal_mobility(
                 piece,
                 square,
@@ -817,32 +763,21 @@ impl MoveGenerator {
     pub fn generate_legal_moves(&self, board: &Board, move_list: &mut MoveList) {
         // get board state info to make things simpler
         let us = board.side_to_move();
-        let them = Side::opposite(us);
         let our_pieces = board.pieces(us);
-        let their_pieces = board.pieces(them);
-        let occupancy = our_pieces | their_pieces;
 
         // get the king square and bitboard
         let king_bb = board.piece_bitboard(Piece::King, us);
         let king_square = board.king_square(us);
 
         // calculate checkers and pins
-        let checkers = self.calculate_checkers(board, &occupancy);
-        let (pinned, orthogonal_pin_rays, diagonal_pin_rays) = self.calculate_pins(board);
-
-        // calculate capture and push masks
-        let (capture_mask, push_mask) = self.calculate_capture_and_push_masks(board, &checkers);
+        let (checkers, capture_mask, push_mask, pinned, orthogonal_pin_rays, diagonal_pin_rays) =
+            self.calculate_check_and_pin_metadata(board);
 
         // convert to Square object
         let king_sq = Square::from_square_index(king_square);
         // generate the king mobility first because king can always move (unless checkmate)
-        let king_moves = self.generate_king_legal_mobility(
-            &king_sq,
-            board,
-            &capture_mask,
-            &push_mask,
-            &checkers,
-        );
+        let king_moves =
+            self.generate_king_legal_mobility(&king_sq, board, &capture_mask, &checkers);
 
         // enumerate the king moves
         self.enumerate_moves(&king_moves, &king_sq, Piece::King, board, move_list);
@@ -895,7 +830,7 @@ mod tests {
             Board::from_fen("2kr3r/p1ppqpb1/bn2Qnp1/3PN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQ - 3 2")
                 .unwrap();
         let occupancy = board.all_pieces();
-        let (pinned, _, _) = move_gen.calculate_pins(&board);
+        let (_, _, _, pinned, _, _) = move_gen.calculate_check_and_pin_metadata(&board);
         let checkers = move_gen.calculate_checkers(&board, &occupancy);
         assert_eq!(checkers, 0);
         assert_eq!(pinned, Bitboard::from_square(Squares::D7));
@@ -906,7 +841,7 @@ mod tests {
         let move_gen = MoveGenerator::new();
         let board = Board::from_fen("8/8/8/8/k2Pp2Q/8/8/3K4 b - d3 0 1").unwrap();
         let occupancy = board.all_pieces();
-        let (pinned, _, _) = move_gen.calculate_pins(&board);
+        let (_, _, _, pinned, _, _) = move_gen.calculate_check_and_pin_metadata(&board);
         let checkers = move_gen.calculate_checkers(&board, &occupancy);
         assert_eq!(checkers, 0);
         assert_eq!(pinned, Bitboard::default());
@@ -919,7 +854,8 @@ mod tests {
             Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQKR2 b Q - 2 8").unwrap();
 
         let occupancy = board.all_pieces();
-        let (pinned, orthogonal_rays, diagonal_rays) = move_gen.calculate_pins(&board);
+        let (_, _, _, pinned, orthogonal_rays, diagonal_rays) =
+            move_gen.calculate_check_and_pin_metadata(&board);
         let pin_rays = orthogonal_rays | diagonal_rays;
         let checkers = move_gen.calculate_checkers(&board, &occupancy);
         assert_eq!(checkers, 0);
@@ -933,8 +869,8 @@ mod tests {
         let board =
             Board::from_fen("r3k2r/Pppp1ppp/1b3nbN/nPB5/B1P1P3/5N2/q2P1KPP/b2Q1R2 w kq - 0 3")
                 .unwrap();
-        let (pinned_pieces, horizontal_pin_rays, diagonal_pin_rays) =
-            move_gen.calculate_pins(&board);
+        let (_, _, _, pinned_pieces, horizontal_pin_rays, diagonal_pin_rays) =
+            move_gen.calculate_check_and_pin_metadata(&board);
 
         assert_eq!(pinned_pieces.number_of_occupied_squares(), 2);
         println!("horizontal pin rays:\n{}", horizontal_pin_rays);
@@ -949,11 +885,15 @@ mod tests {
         let move_gen = MoveGenerator::new();
         let board =
             Board::from_fen("rnQq1k1r/pp2bppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R b KQ - 0 8").unwrap();
-        let occupancy = board.all_pieces();
-        let (pinned, _, _) = move_gen.calculate_pins(&board);
-        let checkers = move_gen.calculate_checkers(&board, &occupancy);
-        let (capture_mask, push_mask) =
-            move_gen.calculate_capture_and_push_masks(&board, &checkers);
+        let (checkers, capture_mask, push_mask, pinned, orthogonal_rays, diagonal_rays) =
+            move_gen.calculate_check_and_pin_metadata(&board);
+        println!("checkers:\n{}", checkers);
+        println!("check mask:\n{}", capture_mask);
+        println!("push mask:\n{}", push_mask);
+        println!("pinned:\n{}", pinned);
+        println!("orthogonal rays:\n{}", orthogonal_rays);
+        println!("diagonal rays:\n{}", diagonal_rays);
+
         assert_eq!(checkers, 0);
         assert_eq!(pinned, Bitboard::from_square(Squares::D8));
         println!("capture mask:\n{}", capture_mask);
