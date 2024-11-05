@@ -4,7 +4,7 @@
  * Created Date: Monday, August 19th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 18 2024
+ * Last Modified: Mon Oct 28 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -168,6 +168,21 @@ impl Move {
         );
     }
 
+    pub fn new_king_move(
+        king_from: &Square,
+        king_to: &Square,
+        captured_piece: Option<Piece>,
+    ) -> Self {
+        return Self::new(
+            king_from,
+            king_to,
+            MoveDescriptor::None,
+            Piece::King,
+            captured_piece,
+            None,
+        );
+    }
+
     pub fn new_short_move(from: &Square, to: &Square, promotion: Option<Piece>) -> Self {
         Self::new(from, to, MoveDescriptor::None, Piece::None, None, promotion)
     }
@@ -276,7 +291,7 @@ impl Move {
     pub fn to_long_algebraic(&self) -> String {
         let from = SQUARE_NAME[self.from() as usize];
         let to = SQUARE_NAME[self.to() as usize];
-        // TODO: Do we need to handle promotion too? yes
+        // handle promotion too
         let promotion_piece = self.promotion_piece().unwrap_or(Piece::None);
         format!(
             "{}{}{}",

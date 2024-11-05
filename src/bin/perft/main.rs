@@ -4,6 +4,7 @@ use std::{
     path::Path,
 };
 
+use colored::Colorize;
 use rayon::prelude::*;
 
 use byte_board::{
@@ -13,7 +14,6 @@ use byte_board::{
     perft::{self},
 };
 use clap::Parser;
-use console::Emoji;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -61,15 +61,17 @@ fn process_epd_file(path: &str, move_generation: &MoveGenerator) {
                 let mut board = Board::from_fen(fen).unwrap();
                 let nodes = perft::perft(&mut board, &move_generation, depth, false).unwrap();
                 if expected_nodes != nodes {
+                    print!("{} ", "[FAIL]".red().bold());
                     println!(
-                        "{:<30}: {:2} {:^10} != {:^10} {}",
-                        fen, depth, expected_nodes, nodes, CROSS_MARK
+                        "{:<30}: {:2} {:^10} != {:^10}",
+                        fen, depth, expected_nodes, nodes
                     );
                     failures.push((fen.to_string(), depth, expected_nodes, nodes));
                 } else {
+                    print!("{} ", "[PASS]".green());
                     println!(
-                        "{:<30}: {:2} {:^10} == {:^10} {}",
-                        fen, depth, expected_nodes, nodes, CHECK_BOX
+                        "{:<30}: {:2} {:^10} == {:^10}",
+                        fen, depth, expected_nodes, nodes
                     );
                 }
             }
@@ -87,14 +89,11 @@ fn process_epd_file(path: &str, move_generation: &MoveGenerator) {
 
     for (fen, depth, expected, actual) in all_failures.iter().flatten() {
         println!(
-            "{:<30}: {:2} {:^10} != {:^10} {}",
-            fen, depth, expected, actual, CROSS_MARK
+            "{:<30}: {:2} {:^10} != {:^10}",
+            fen, depth, expected, actual
         );
     }
 }
-
-static CHECK_BOX: Emoji = Emoji("✅", "");
-static CROSS_MARK: Emoji = Emoji("❌", "");
 
 fn main() {
     let args = Args::parse();

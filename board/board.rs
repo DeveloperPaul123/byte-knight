@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 18 2024
+ * Last Modified: Fri Nov 01 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -311,6 +311,11 @@ impl Board {
         return &self.piece_bitboards[side as usize][piece as usize];
     }
 
+    pub fn king_square(&self, side: Side) -> u8 {
+        let king_bb = self.piece_bitboard(Piece::King, side);
+        return bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
+    }
+
     /// Find what piece is on a given square.
     ///
     /// Returns an optional tuple of the piece and the side that the piece belongs to.
@@ -409,11 +414,12 @@ impl Board {
         // check mate happens when we're in check and all the legal moves are illegal but we
         // don't want to try all the moves to check their legality
         // instead we can get king moves only and then check if the possible squares the king can move to are attacked
+        let mut occupancy = self.all_pieces();
+        let us = self.side_to_move();
 
-        let king_attacks = move_gen.get_non_slider_moves(Piece::King, king_sq as u8);
+        let king_attacks = move_gen.get_piece_attacks(Piece::King, king_sq as u8, us, &occupancy);
         let our_pieces = self.pieces(self.side_to_move());
         let mut king_attacks = king_attacks & !our_pieces;
-        let mut occupancy = self.all_pieces();
 
         // modify occupancy to exclude the king square
         occupancy.clear_square(king_sq as u8);
@@ -753,5 +759,17 @@ mod tests {
         // undo the move
         undo_ok = board.unmake_move();
         assert!(undo_ok.is_ok());
+    }
+
+    #[test]
+    fn from_fen_round_trip() {
+        // load Pohl.epd from data and go through each FEN. Load it into the board and then output the FEN to see if they match
+        let path = format!("{}/{}/{}", env!("CARGO_MANIFEST_DIR"), "data", "Pohl.epd");
+        let lines = std::fs::read_to_string(path).unwrap();
+        println!("Loaded {} FEN strings from Pohl.epd", lines.lines().count());
+        for fen in lines.lines() {
+            let board = Board::from_fen(fen).unwrap();
+            assert_eq!(fen, board.to_fen());
+        }
     }
 }

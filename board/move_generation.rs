@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 28th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 18 2024
+ * Last Modified: Tue Oct 29 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -12,11 +12,15 @@
  *
  */
 
+use std::u64;
+
 use crate::{
     bitboard::Bitboard,
     bitboard_helpers,
     board::Board,
-    definitions::{NumberOf, Squares, BISHOP_BLOCKER_PERMUTATIONS, ROOK_BLOCKER_PERMUTATIONS},
+    definitions::{
+        NumberOf, Squares, BISHOP_BLOCKER_PERMUTATIONS, QUEEN_OFFSETS, ROOK_BLOCKER_PERMUTATIONS,
+    },
     file::File,
     magics::{MagicNumber, BISHOP_MAGIC_VALUES, ROOK_MAGIC_VALUES},
     move_list::MoveList,
@@ -40,7 +44,8 @@ const FILE_BITBOARDS: FileBitboards = [
     Bitboard::new(4629771061636907072),
     Bitboard::new(9259542123273814144),
 ];
-const RANK_BITBOARDS: RankBitboards = [
+
+pub(crate) const RANK_BITBOARDS: RankBitboards = [
     Bitboard::new(255),
     Bitboard::new(65280),
     Bitboard::new(16711680),
@@ -51,8 +56,8 @@ const RANK_BITBOARDS: RankBitboards = [
     Bitboard::new(18374686479671623680),
 ];
 
-const NORTH: u64 = 8;
-const SOUTH: u64 = 8;
+pub(crate) const NORTH: u64 = 8;
+pub(crate) const SOUTH: u64 = 8;
 
 const WEST: u64 = 1;
 const EAST: u64 = 1;
@@ -150,14 +155,33 @@ fn initialize_pawn_attacks(
     attacks[Side::Black as usize][square as usize] = attacks_b_bb;
 }
 
+fn initialize_rays_between(rays_between: &mut [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES]) {
+    for sq in 0..NumberOf::SQUARES as u8 {
+        let from_square = Square::from_square_index(sq);
+        for (delta_file, delta_rank) in QUEEN_OFFSETS {
+            let mut ray = Bitboard::default();
+            let mut to = from_square;
+            while let Some(shifted) = to.offset(delta_file, delta_rank) {
+                ray.set_square(shifted.to_square_index());
+                to = shifted;
+                let from_index = from_square.to_square_index() as usize;
+                let to_index = to.to_square_index() as usize;
+                rays_between[from_index][to_index] =
+                    ray ^ Bitboard::from_square(to.to_square_index());
+            }
+        }
+    }
+}
+
 pub struct MoveGenerator {
-    king_attacks: [Bitboard; NumberOf::SQUARES],
-    knight_attacks: [Bitboard; NumberOf::SQUARES],
-    pawn_attacks: [[Bitboard; NumberOf::SQUARES]; NumberOf::SIDES],
-    rook_magics: [MagicNumber; NumberOf::SQUARES],
-    bishop_magics: [MagicNumber; NumberOf::SQUARES],
-    rook_attacks: Vec<Bitboard>,
-    bishop_attacks: Vec<Bitboard>,
+    pub(crate) king_attacks: [Bitboard; NumberOf::SQUARES],
+    pub(crate) knight_attacks: [Bitboard; NumberOf::SQUARES],
+    pub(crate) pawn_attacks: [[Bitboard; NumberOf::SQUARES]; NumberOf::SIDES],
+    pub(crate) rook_magics: [MagicNumber; NumberOf::SQUARES],
+    pub(crate) bishop_magics: [MagicNumber; NumberOf::SQUARES],
+    pub(crate) rook_attacks: Vec<Bitboard>,
+    pub(crate) bishop_attacks: Vec<Bitboard>,
+    pub(crate) rays_between: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES],
 }
 
 impl MoveGenerator {
@@ -173,9 +197,11 @@ impl MoveGenerator {
             bishop_magics: [MagicNumber::default(); NumberOf::SQUARES],
             rook_attacks: vec![Bitboard::default(); ROOK_BLOCKER_PERMUTATIONS],
             bishop_attacks: vec![Bitboard::default(); BISHOP_BLOCKER_PERMUTATIONS],
+            rays_between: [[Bitboard::default(); NumberOf::SQUARES]; NumberOf::SQUARES],
         };
 
         move_gen.initialize_attack_boards();
+        initialize_rays_between(&mut move_gen.rays_between);
         return move_gen;
     }
 
@@ -463,6 +489,81 @@ impl MoveGenerator {
         return bishop_rays_bb;
     }
 
+    pub(crate) fn ray_between(&self, from: Square, to: Square) -> Bitboard {
+        return self.rays_between[from.to_square_index() as usize][to.to_square_index() as usize];
+    }
+
+    /// Calculate all squares currently being attacked by a given side.
+    ///
+    /// # Arguments
+    /// - board - The current board state
+    /// - side - The side to calculate the attacked squares for
+    ///
+    /// # Returns
+    ///
+    /// A bitboard representing all squares currently being attacked by the given side.
+    pub(crate) fn get_attacked_squares(
+        &self,
+        board: &Board,
+        side: Side,
+        occupancy: &Bitboard,
+    ) -> Bitboard {
+        let mut attacks = Bitboard::default();
+
+        // get the squares attacked by each piece
+        for piece in [
+            Piece::Bishop,
+            Piece::Rook,
+            Piece::Queen,
+            Piece::King,
+            Piece::Knight,
+            Piece::Pawn,
+        ]
+        .iter()
+        {
+            let mut piece_bb = board.piece_bitboard(*piece, side).clone();
+            if piece_bb.as_number() == 0 {
+                continue;
+            }
+
+            while piece_bb.as_number() > 0 {
+                let from = bitboard_helpers::next_bit(&mut piece_bb) as u8;
+                let attacks_bb =
+                    if piece == &Piece::Bishop || piece == &Piece::Queen || piece == &Piece::Rook {
+                        self.get_slider_attacks(*piece, from, &occupancy)
+                    } else if piece == &Piece::Pawn {
+                        self.pawn_attacks[side as usize][from as usize]
+                    } else {
+                        self.get_non_slider_attacks(*piece, from)
+                    };
+
+                attacks |= attacks_bb;
+            }
+        }
+
+        attacks
+    }
+
+    pub(crate) fn get_piece_attacks(
+        &self,
+        piece: Piece,
+        square: u8,
+        attacking_side: Side,
+        occupancy: &Bitboard,
+    ) -> Bitboard {
+        if piece.is_none() {
+            panic!("Cannot get attacks for an non-piece");
+        }
+
+        if piece.is_slider() {
+            self.get_slider_attacks(piece, square, occupancy)
+        } else if piece == Piece::Pawn {
+            self.pawn_attacks[Side::opposite(attacking_side) as usize][square as usize]
+        } else {
+            self.get_non_slider_attacks(piece, square)
+        }
+    }
+
     /// Generates pseudo-legal moves for the current board state.
     /// This function does not check for legality of the moves.
     ///
@@ -614,9 +715,9 @@ impl MoveGenerator {
         while piece_bb.as_number() > 0 {
             let from_square = bitboard_helpers::next_bit(&mut piece_bb) as u8;
             let attack_bb = match piece {
-                Piece::King | Piece::Knight => self.get_non_slider_moves(piece, from_square),
+                Piece::King | Piece::Knight => self.get_non_slider_attacks(piece, from_square),
                 Piece::Rook | Piece::Bishop | Piece::Queen => {
-                    self.get_slider_moves(piece, from_square, &occupancy)
+                    self.get_slider_attacks(piece, from_square, &occupancy)
                 }
                 _ => panic!("Piece must be non-slider and not pawn"),
             };
@@ -637,7 +738,7 @@ impl MoveGenerator {
         }
     }
 
-    pub(crate) fn get_non_slider_moves(&self, piece: Piece, from_square: u8) -> Bitboard {
+    fn get_non_slider_attacks(&self, piece: Piece, from_square: u8) -> Bitboard {
         assert!(
             piece == Piece::King || piece == Piece::Knight,
             "Piece must be non-slider and not pawn"
@@ -652,7 +753,7 @@ impl MoveGenerator {
         attack_table[from_square as usize]
     }
 
-    fn get_slider_moves(&self, piece: Piece, from_square: u8, occupancy: &Bitboard) -> Bitboard {
+    fn get_slider_attacks(&self, piece: Piece, from_square: u8, occupancy: &Bitboard) -> Bitboard {
         assert!(
             piece == Piece::Rook || piece == Piece::Bishop || piece == Piece::Queen,
             "Piece must be a slider"
@@ -784,7 +885,7 @@ impl MoveGenerator {
         }
     }
 
-    fn enumerate_moves(
+    pub(crate) fn enumerate_moves(
         &self,
         bitboard: &Bitboard,
         from: &Square,
@@ -792,6 +893,10 @@ impl MoveGenerator {
         board: &Board,
         move_list: &mut MoveList,
     ) {
+        if bitboard.as_number() == 0 {
+            return;
+        }
+
         let mut bb = *bitboard;
         let us = board.side_to_move();
         let them = Side::opposite(us);
@@ -800,6 +905,7 @@ impl MoveGenerator {
         while bb > 0 {
             let to_square = bitboard_helpers::next_bit(&mut bb) as u8;
             let (file, rank) = square::from_square(to_square as u8);
+            let (from_file, _) = square::from_square(from.to_square_index());
 
             let en_passant = match board.en_passant_square() {
                 Some(en_passant_square) => en_passant_square == to_square && piece == Piece::Pawn,
@@ -817,11 +923,16 @@ impl MoveGenerator {
                 panic!("Double move and en passant should not happen");
             }
 
+            // a castle is the only time a king can move 2 squares
+            let is_castle = piece == Piece::King && from_file.abs_diff(file) == 2;
+
             let mut move_desc = MoveDescriptor::None;
             if is_double_move {
                 move_desc = MoveDescriptor::PawnTwoUp;
             } else if en_passant {
                 move_desc = MoveDescriptor::EnPassantCapture;
+            } else if is_castle {
+                move_desc = MoveDescriptor::Castle;
             }
 
             let capture_piece = if is_capture && !en_passant {
@@ -851,6 +962,9 @@ impl MoveGenerator {
                     );
                     move_list.push(mv);
                 }
+            } else if is_castle {
+                let mv = Move::new_castle(from, &to_square);
+                move_list.push(mv);
             } else {
                 let mv = Move::new(&from, &to_square, move_desc, piece, capture_piece, None);
                 move_list.push(mv);
@@ -886,11 +1000,30 @@ impl MoveGenerator {
         let queen_bb = board.piece_bitboard(Piece::Queen, attacking_side);
         let pawn_bb: &Bitboard = board.piece_bitboard(Piece::Pawn, attacking_side);
 
-        let king_attacks = self.get_non_slider_moves(Piece::King, square.to_square_index());
-        let knight_attacks = self.get_non_slider_moves(Piece::Knight, square.to_square_index());
-        let rook_attacks = self.get_slider_moves(Piece::Rook, square.to_square_index(), &occupancy);
-        let bishop_attacks =
-            self.get_slider_moves(Piece::Bishop, square.to_square_index(), &occupancy);
+        let king_attacks = self.get_piece_attacks(
+            Piece::King,
+            square.to_square_index(),
+            attacking_side,
+            occupancy,
+        );
+        let knight_attacks = self.get_piece_attacks(
+            Piece::Knight,
+            square.to_square_index(),
+            attacking_side,
+            occupancy,
+        );
+        let rook_attacks = self.get_piece_attacks(
+            Piece::Rook,
+            square.to_square_index(),
+            attacking_side,
+            occupancy,
+        );
+        let bishop_attacks = self.get_piece_attacks(
+            Piece::Bishop,
+            square.to_square_index(),
+            attacking_side,
+            occupancy,
+        );
         let queen_attacks = rook_attacks | bishop_attacks;
         // note we use the opposite side for the pawn attacks
         let pawn_attacks = self.pawn_attacks[Side::opposite(attacking_side) as usize]
@@ -924,7 +1057,7 @@ impl MoveGenerator {
 #[cfg(test)]
 mod tests {
 
-    use crate::move_generation;
+    use crate::{board::Board, move_generation};
 
     use super::*;
 
@@ -1538,6 +1671,27 @@ mod tests {
     }
 
     #[test]
+    fn check_queen_attacks() {
+        let square = Squares::D8;
+        let bishop_bb = MoveGenerator::relevant_bishop_bits(square);
+        let rook_bb = MoveGenerator::relevant_rook_bits(square);
+        let queen_bb = bishop_bb | rook_bb;
+
+        let move_gen = MoveGenerator::new();
+        let queen_attacks = move_gen.get_slider_attacks(Piece::Queen, square, &Bitboard::default());
+        println!("queen attacks: \n{}", queen_attacks);
+        println!("queen bb: \n{}", queen_bb);
+
+        let attacks_without_edges = queen_attacks
+            & !FILE_BITBOARDS[File::A as usize]
+            & !FILE_BITBOARDS[File::H as usize]
+            & !RANK_BITBOARDS[Rank::R1 as usize];
+
+        println!("attacks without edges: \n{}", attacks_without_edges);
+        assert_eq!(attacks_without_edges, queen_bb);
+    }
+
+    #[test]
     fn check_basic_move_gen() {
         let board = Board::default_board();
         let mut move_list = MoveList::new();
@@ -1551,6 +1705,14 @@ mod tests {
             assert!(!mv.is_promotion());
         }
 
+        assert_eq!(move_list.len(), 20);
+
+        move_list.clear();
+        move_gen.generate_legal_moves(&board, &mut move_list);
+
+        for mv in move_list.iter() {
+            println!("{}", mv);
+        }
         assert_eq!(move_list.len(), 20);
     }
 

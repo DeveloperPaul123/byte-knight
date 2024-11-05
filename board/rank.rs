@@ -33,6 +33,14 @@ impl Rank {
     pub fn as_number(&self) -> u8 {
         *self as u8 + 1u8
     }
+
+    pub fn offset(&self, delta: i8) -> Option<Self> {
+        let new_rank = (*self as i8) + delta;
+        if new_rank < 0 || new_rank > 7 {
+            return None;
+        }
+        Some(unsafe { std::mem::transmute(new_rank as u8) })
+    }
 }
 
 impl TryFrom<u8> for Rank {
@@ -50,5 +58,18 @@ impl TryFrom<u8> for Rank {
             7 => Ok(Self::R8),
             _ => Err(()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rank_offset() {
+        assert_eq!(Rank::R1.offset(1), Some(Rank::R2));
+        assert_eq!(Rank::R1.offset(-1), None);
+        assert_eq!(Rank::R8.offset(1), None);
+        assert_eq!(Rank::R8.offset(-1), Some(Rank::R7));
     }
 }

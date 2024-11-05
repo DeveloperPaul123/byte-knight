@@ -27,6 +27,22 @@ pub const MAX_MOVE_RULE: u32 = 100;
 pub const ROOK_BLOCKER_PERMUTATIONS: usize = 102_400;
 pub const BISHOP_BLOCKER_PERMUTATIONS: usize = 5_248;
 
+pub const QUEEN_OFFSETS: [(i8, i8); 8] = [
+    // diagonals (bishop)
+    (-1, -1),
+    (-1, 1),
+    (1, -1),
+    (1, 1),
+    // straight lines (rook)
+    (-1, 0),
+    (1, 0),
+    (0, -1),
+    (0, 1),
+];
+
+pub const BISHOP_OFFSETS: [(i8, i8); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
+pub const ROOK_OFFSETS: [(i8, i8); 4] = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+
 pub struct NumberOf;
 impl NumberOf {
     pub const PIECE_TYPES: usize = 6;

@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 18 2024
+ * Last Modified: Tue Oct 29 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -13,7 +13,6 @@
  */
 
 use crate::{
-    bitboard_helpers,
     board::Board,
     definitions::{CastlingAvailability, Squares},
     move_generation::MoveGenerator,
@@ -120,7 +119,10 @@ impl Board {
 
         let piece_and_side = self.piece_on_square(from);
         if piece_and_side.is_none() {
-            bail!("No piece on square");
+            bail!(format!(
+                "No piece on square {} to move from",
+                SQUARE_NAME[from as usize]
+            ));
         }
 
         let (piece_on_square, side) = piece_and_side.unwrap();
@@ -128,7 +130,8 @@ impl Board {
             bail!("Invalid piece on square");
         }
 
-        if mv.captured_piece().is_some() {
+        // we don't handle en passant captures here
+        if mv.captured_piece().is_some() && !mv.is_en_passant_capture() {
             let captured_piece = mv.captured_piece().unwrap();
             let piece_and_side = self.piece_on_square(to);
             if piece_and_side.is_none() {
@@ -170,19 +173,10 @@ impl Board {
         Ok(())
     }
 
-    /// Make a move on the board and update the board state
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the move is illegal. The passed in moves are assumed to be pseudo-legal,
-    /// hence why the check has to be done after making the move. This function will make the move, check for legality
-    /// and then undo the move if it is illegal.
-    #[cfg_attr(not(debug_assertions), inline(always))]
-    #[cfg_attr(debug_assertions, inline(never))]
-    pub fn make_move(&mut self, mv: &Move, move_gen: &MoveGenerator) -> Result<()> {
+    pub fn make_move_unchecked(&mut self, mv: &Move) -> Result<()> {
         // validate pre-conditions first before even bothering to go further
         self.check_move_preconditions(mv)?;
-        
+
         let mut current_state = self.board_state().clone();
         current_state.next_move = mv.clone();
         // update history before modifying the current state
@@ -333,11 +327,26 @@ impl Board {
             self.set_full_move_number(self.half_move_clock() + 1);
         }
 
-        // pseudo legal check
-        // check if we are in check
-        // get the kings location and check if that square is attacked by the opponent
-        let mut king_bb = self.piece_bitboard(Piece::King, us).clone();
-        let king_square = bitboard_helpers::next_bit(&mut king_bb) as u8;
+        Ok(())
+    }
+
+    /// Make a move on the board and update the board state
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the move is illegal. The passed in moves are assumed to be pseudo-legal,
+    /// hence why the check has to be done after making the move. This function will make the move, check for legality
+    /// and then undo the move if it is illegal.
+    #[cfg_attr(not(debug_assertions), inline(always))]
+    #[cfg_attr(debug_assertions, inline(never))]
+    pub fn make_move(&mut self, mv: &Move, move_gen: &MoveGenerator) -> Result<()> {
+        let us = self.side_to_move();
+        let them = Side::opposite(us);
+        self.make_move_unchecked(mv)?;
+
+        // check if the move is legal
+        // if it is not, we need to undo the move
+        let king_square = self.king_square(us);
         let is_king_in_check =
             move_gen.is_square_attacked(self, &Square::from_square_index(king_square), them);
 
@@ -346,7 +355,7 @@ impl Board {
             bail!("Illegal move");
         }
 
-        return Ok(());
+        Ok(())
     }
 
     /// Undo the last move made on this [`Board`].
@@ -521,5 +530,31 @@ fn get_casting_right_to_remove(us: Side, from: u8) -> u8 {
             _ => 0,
         },
         _ => panic!("Invalid piece"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        board::Board, definitions::Squares, move_generation::MoveGenerator, move_list::MoveList,
+    };
+
+    #[test]
+    fn test_making_en_passant_move() {
+        let mut board = Board::from_fen("8/2k5/8/2Pp3r/K7/8/8/8 w - d6 0 1").unwrap();
+        let move_gen = MoveGenerator::new();
+        let mut move_list = MoveList::new();
+        move_gen.generate_legal_moves(&board, &mut move_list);
+
+        let en_passant_move = move_list
+            .iter()
+            .find(|mv| mv.to() == crate::definitions::Squares::D6 as u8)
+            .unwrap();
+
+        println!("Making en passant move: {}", en_passant_move);
+        assert!(board.piece_on_square(Squares::C5 as u8).is_some());
+        assert!(board.check_move_preconditions(en_passant_move).is_ok());
+        let move_result = board.make_move(en_passant_move, &move_gen);
+        assert!(move_result.is_ok());
     }
 }

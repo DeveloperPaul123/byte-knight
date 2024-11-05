@@ -12,6 +12,14 @@ pub enum File {
 }
 
 impl File {
+    pub fn offset(&self, delta: i8) -> Option<Self> {
+        let new_file = (*self as i8) + delta;
+        if new_file < 0 || new_file > 7 {
+            return None;
+        }
+        Some(unsafe { std::mem::transmute(new_file as u8) })
+    }
+
     pub fn to_char(&self) -> char {
         match self {
             Self::A => 'a',
@@ -59,5 +67,18 @@ impl TryFrom<char> for File {
             'h' => Ok(Self::H),
             _ => Err(()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn offset() {
+        assert_eq!(File::A.offset(1), Some(File::B));
+        assert_eq!(File::A.offset(-1), None);
+        assert_eq!(File::H.offset(1), None);
+        assert_eq!(File::H.offset(-1), Some(File::G));
     }
 }
