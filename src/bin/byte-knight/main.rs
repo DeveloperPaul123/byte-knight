@@ -12,17 +12,13 @@
  *
  */
 
-mod base_engine;
 mod engine;
 mod evaluation;
-mod evil_bot;
 mod score;
 mod search;
 mod timer;
 
-pub use base_engine::ChessEngine;
 use engine::ByteKnight;
-pub use evil_bot::EvilBot;
 pub use timer::Timer;
 use uci_parser::{UciCommand, UciInfo, UciMove, UciResponse, UciScore};
 
@@ -49,17 +45,7 @@ struct Options {
 
 #[derive(Subcommand)]
 #[command(about = "Available commands")]
-enum Command {
-    // prints out what engines are available
-    Engines,
-}
-
-fn engine_for_type(engine_type: EngineType) -> Box<dyn ChessEngine> {
-    match engine_type {
-        EngineType::EvilBot => Box::new(EvilBot::default()),
-        EngineType::ByteKnight => Box::new(ByteKnight::default()),
-    }
-}
+enum Command {}
 
 fn square_index_to_uci_square(square: u8) -> uci_parser::Square {
     uci_parser::Square::from_str(SQUARE_NAME[square as usize]).unwrap()
@@ -82,15 +68,14 @@ fn move_to_uci_move(mv: &Move) -> UciMove {
     }
 }
 
-fn run_uci(engine_name: &String) {
+fn run_uci() {
     let stdin: io::Stdin = io::stdin();
     let stdout = io::stdout();
     let mut stdout = stdout.lock();
     let mut input = stdin.lock().lines();
     let mut board = Board::default_board();
 
-    let engine_type = EngineType::from_str(&engine_name).expect("Invalid engine name");
-    let mut engine = engine_for_type(engine_type);
+    let mut engine = ByteKnight::new();
     let move_gen = MoveGenerator::new();
     loop {
         if let Some(Ok(line)) = input.next() {
@@ -109,7 +94,6 @@ fn run_uci(engine_name: &String) {
                 }
                 UciCommand::UciNewGame => {
                     board = Board::default_board();
-                    engine = engine_for_type(engine_type);
                 }
                 UciCommand::IsReady => {
                     writeln!(stdout, "{}", UciResponse::<String>::ReadyOk).unwrap();
@@ -232,15 +216,7 @@ impl ToString for EngineType {
 fn main() {
     let args = Options::parse();
     match args.command {
-        Some(command) => match command {
-            Command::Engines => {
-                println!("Available engines:");
-                for engine in EngineType::iter() {
-                    println!("  🤖 {}", engine.to_string());
-                }
-                exit(0);
-            }
-        },
-        None => run_uci(&args.engine),
+        Some(command) => match command {},
+        None => run_uci(),
     }
 }
