@@ -14,7 +14,6 @@ use byte_board::{
     perft::{self},
 };
 use clap::Parser;
-use console::Emoji;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -90,8 +89,8 @@ fn process_epd_file(path: &str, move_generation: &MoveGenerator) {
 
     for (fen, depth, expected, actual) in all_failures.iter().flatten() {
         println!(
-            "{:<30}: {:2} {:^10} != {:^10} {}",
-            fen, depth, expected, actual, CROSS_MARK
+            "{:<30}: {:2} {:^10} != {:^10}",
+            fen, depth, expected, actual
         );
     }
 }
