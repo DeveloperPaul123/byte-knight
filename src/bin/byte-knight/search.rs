@@ -140,6 +140,7 @@ impl Search {
     ) -> SearchResult {
         // initialize the best result
         let mut best_result = SearchResult::new();
+        let best_move = Move::default();
 
         while params.start_time.elapsed() < params.soft_timeout
             && best_result.depth <= params.max_depth
@@ -150,12 +151,17 @@ impl Search {
                 0,
                 -Score::INF,
                 Score::INF,
-                &best_result.best_move,
+                &mut best_result,
                 params.max_depth as i64,
             );
 
             best_result.score = score;
             best_result.depth += 1;
+            best_result.best_move = if best_move.is_valid() {
+                Some(best_move)
+            } else {
+                None
+            };
 
             println!("info {}", best_result);
         }
@@ -172,7 +178,7 @@ impl Search {
         ply: i64,
         alpha: Score,
         beta: Score,
-        mut best_move: &Option<Move>,
+        results: &mut SearchResult,
         max_depth: i64,
     ) -> Score {
         self.nodes += 1;
@@ -192,21 +198,14 @@ impl Search {
         let mut best_score = -Score::INF;
         for mv in move_list.iter() {
             if board.make_move(mv, &self.move_gen).is_ok() {
-                let score = -self.negamax(
-                    board,
-                    depth - 1,
-                    ply + 1,
-                    -beta,
-                    -alpha,
-                    best_move,
-                    max_depth,
-                );
+                let score =
+                    -self.negamax(board, depth - 1, ply + 1, -beta, -alpha, results, max_depth);
                 board.unmake_move().unwrap();
 
                 if score >= best_score {
                     best_score = score;
                     if depth == max_depth {
-                        best_move = &Some(*mv);
+                        results.best_move = Some(*mv);
                     }
                 }
 
