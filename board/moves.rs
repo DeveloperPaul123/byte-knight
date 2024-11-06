@@ -156,6 +156,9 @@ impl Move {
             | descriptor as u32;
         Self { move_info }
     }
+    pub fn is_valid(&self) -> bool {
+        return self.move_info != 0;
+    }
 
     pub fn new_castle(king_from: &Square, king_to: &Square) -> Self {
         return Self::new(
