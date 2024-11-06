@@ -12,48 +12,9 @@ use byte_board::{
 };
 use uci_parser::UciSearchOptions;
 
-use crate::{evaluation::Evaluation, score::Score};
+use crate::{evaluation::Evaluation, score::Score, tt_table::TranspositionTable};
 
 const MAX_DEPTH: u8 = 128;
-#[derive(Clone, Copy)]
-struct TranspositionTableEntry {
-    zobrist: u64,
-    depth: i64,
-    score: i64,
-    flag: i64,
-    board_move: Move,
-}
-
-impl TranspositionTableEntry {
-    pub fn new() -> TranspositionTableEntry {
-        TranspositionTableEntry {
-            zobrist: 0,
-            depth: 0,
-            score: 0,
-            flag: 0,
-            board_move: Move::default(),
-        }
-    }
-}
-
-static TRANSPOSITION_TABLE_SIZE: usize = 1_048_576;
-
-struct TranspositionTable {
-    table: Vec<TranspositionTableEntry>,
-}
-
-impl TranspositionTable {
-    fn new() -> TranspositionTable {
-        TranspositionTable {
-            table: Vec::with_capacity(TRANSPOSITION_TABLE_SIZE),
-        }
-    }
-
-    pub fn get_entry(self: &Self, zobrist: u64) -> TranspositionTableEntry {
-        let index = zobrist as usize % TRANSPOSITION_TABLE_SIZE;
-        return self.table[index];
-    }
-}
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct SearchResult {
@@ -189,7 +150,7 @@ impl Search {
                 0,
                 -Score::INF,
                 Score::INF,
-                best_result.best_move,
+                &best_result.best_move,
                 params.max_depth as i64,
             );
 
@@ -211,7 +172,7 @@ impl Search {
         ply: i64,
         alpha: Score,
         beta: Score,
-        mut best_move: Option<Move>,
+        mut best_move: &Option<Move>,
         max_depth: i64,
     ) -> Score {
         self.nodes += 1;
@@ -245,7 +206,7 @@ impl Search {
                 if score >= best_score {
                     best_score = score;
                     if depth == max_depth {
-                        best_move = Some(*mv);
+                        best_move = &Some(*mv);
                     }
                 }
 
@@ -262,7 +223,7 @@ impl Search {
 
 #[cfg(test)]
 mod tests {
-    use byte_board::{board::Board, definitions::Squares, moves::Move, square::Square};
+    use byte_board::board::Board;
 
     use crate::search::SearchParameters;
 
