@@ -16,17 +16,16 @@ mod engine;
 mod evaluation;
 mod score;
 mod search;
-mod timer;
 
 use engine::ByteKnight;
-pub use timer::Timer;
+use search::SearchParameters;
 use uci_parser::{UciCommand, UciInfo, UciMove, UciResponse, UciScore};
 
 use std::{process::exit, slice::Iter, str::FromStr};
 
 use byte_board::{
     board::Board, definitions::About, move_generation::MoveGenerator, moves::Move,
-    pieces::SQUARE_NAME, side::Side,
+    pieces::SQUARE_NAME,
 };
 use clap::{Parser, Subcommand};
 use std::io::{self, BufRead, Write};
@@ -116,25 +115,7 @@ fn run_uci() {
                     // writeln!(stdout, "{}", Board::to_string(&board)).unwrap();
                 }
                 UciCommand::Go(search_options) => {
-                    let timer = match board.side_to_move() {
-                        Side::Black => {
-                            assert!(
-                                search_options.btime.is_some(),
-                                "btime is required for black side move"
-                            );
-                            Timer::new(search_options.btime.unwrap().as_millis() as i64)
-                        }
-                        Side::White => {
-                            assert!(
-                                search_options.wtime.is_some(),
-                                "wtime is required for white side move"
-                            );
-                            Timer::new(search_options.wtime.unwrap().as_millis() as i64)
-                        }
-                        _ => {
-                            panic!("Invalid side to move");
-                        }
-                    };
+                    let search_params = SearchParameters::new(&search_options, &board);
 
                     let info = UciInfo::default()
                         .score(UciScore::cp(20))
@@ -154,7 +135,7 @@ fn run_uci() {
                     )
                     .unwrap();
 
-                    let best_move = engine.think(&mut board, &timer);
+                    let best_move = engine.think(&mut board, &search_params);
 
                     if let Some(bot_move) = best_move {
                         writeln!(
