@@ -16,6 +16,7 @@ mod engine;
 mod evaluation;
 mod score;
 mod search;
+mod tt_table;
 
 use engine::ByteKnight;
 use search::SearchParameters;
