@@ -31,6 +31,7 @@ impl MoveGenerator {
         &self,
         board: &Board,
     ) -> (Bitboard, Bitboard, Bitboard, Bitboard, Bitboard, Bitboard) {
+        // helpers to simplify things later
         let us = board.side_to_move();
         let them = Side::opposite(us);
         let occupancy = board.all_pieces();
@@ -40,16 +41,22 @@ impl MoveGenerator {
         let enemy_or_empty = their_pieces | empty;
         let king_sq = board.king_square(us);
 
+        // initialize variables that we will use later
         let mut pinned = Bitboard::default();
         let mut capture_mask = enemy_or_empty & !(*board.piece_bitboard(Piece::King, them));
         let mut orthogonal_pin_rays = Bitboard::default();
         let mut diagonal_pin_rays = Bitboard::default();
 
+        // calculate checkers, we first start with non-sliding pieces
+        // note that the opponent's king cannot check our king
         let mut checkers = *board.piece_bitboard(Piece::Knight, them)
             & self.get_piece_attacks(Piece::Knight, king_sq, them, &occupancy)
             | *board.piece_bitboard(Piece::Pawn, them)
                 & self.get_piece_attacks(Piece::Pawn, king_sq, them, &occupancy);
 
+        // calculate sliding attacks from our king square on an empty board and then "and" with the enemy pieces
+        // the overlap of these two bitboards will give us the sliding pieces that can "see" our king and are
+        // potentially attacking it.
         let mut enemy_sliding_attacks =
             self.get_piece_attacks(Piece::Rook, king_sq, them, &Bitboard::default())
                 & (*board.piece_bitboard(Piece::Rook, them)
@@ -58,10 +65,12 @@ impl MoveGenerator {
                     & (*board.piece_bitboard(Piece::Bishop, them)
                         | *board.piece_bitboard(Piece::Queen, them));
 
+        // loop through all sliding attackers
         while enemy_sliding_attacks.as_number() > 0 {
             let next_attacker = bitboard_helpers::next_bit(&mut enemy_sliding_attacks) as u8;
             let attacker_bb = Bitboard::from_square(next_attacker);
 
+            // get the ray from the attacker to the king square (not inclusive)
             let ray = self.ray_between(
                 Square::from_square_index(king_sq),
                 Square::from_square_index(next_attacker),
@@ -69,13 +78,18 @@ impl MoveGenerator {
 
             let (king_file, king_rank) = square::from_square(king_sq);
             let (attacker_file, attacker_rank) = square::from_square(next_attacker as u8);
+            // check if the ray is orthogonal or diagonal
             let is_orthogonal = king_file == attacker_file || king_rank == attacker_rank;
             let is_diagonal = (king_sq as i16 - next_attacker as i16).abs() % 9 == 0
                 || (king_sq as i16 - next_attacker as i16).abs() % 7 == 0;
+
+            // check if the ray is blocked by any pieces
             match (ray & occupancy).number_of_occupied_squares() {
+                // not blocked so the attacker is checking our king
                 0 => {
                     checkers |= Bitboard::from_square(next_attacker as u8);
                 }
+                // exactly 1 blockers, so this piece is pinned
                 1 => {
                     pinned |= ray & our_pieces;
                     if is_orthogonal {
@@ -84,36 +98,44 @@ impl MoveGenerator {
                         diagonal_pin_rays |= ray | attacker_bb;
                     }
                 }
+                // more than 1 piece in ray, so we don't care
                 _ => {}
             }
         }
 
+        // by default, we can push to all squares
         let mut push_mask = Bitboard::from(u64::MAX);
 
+        // check if we have checkers
         if checkers.number_of_occupied_squares() >= 1 {
+            // check if this is a single check
             let is_single_check = checkers.number_of_occupied_squares() == 1;
+
+            // update our capture mask to be the checkers, but exclude the king
             capture_mask = checkers & !(*board.piece_bitboard(Piece::King, them));
 
-            let mut checkers_clone = checkers.clone();
-            while checkers_clone.as_number() > 0 {
-                let checker = bitboard_helpers::next_bit(&mut checkers_clone);
+            // special case for single check
+            if is_single_check {
+                // if we're in single check, we can block the checker or capture it
+                let mut checkers_clone = checkers.clone();
+                let checker = bitboard_helpers::next_bit(&mut checkers_clone) as u8;
+
+                // calculate the ray between the checker and the king
                 let ray = self.ray_between(
                     Square::from_square_index(king_sq),
                     Square::from_square_index(checker as u8),
                 );
-                // capture_mask |= ray;
 
-                if is_single_check {
-                    if let Some((piece, side)) = board.piece_on_square(checker as u8) {
-                        debug_assert!(side == them);
-                        let is_slider = piece.is_slider();
-                        if is_slider {
-                            // attacker is a slider, so we can block by pushing into the ray
-                            push_mask = ray;
-                        } else {
-                            // we can only capture, so push mask must be empty
-                            push_mask = Bitboard::default();
-                        }
+                // update the push mask if the attacker is a slider piece
+                if let Some((piece, side)) = board.piece_on_square(checker as u8) {
+                    debug_assert!(side == them);
+                    let is_slider = piece.is_slider();
+                    if is_slider {
+                        // attacker is a slider, so we can block by pushing into the ray
+                        push_mask = ray;
+                    } else {
+                        // we can only capture, so push mask must be empty
+                        push_mask = Bitboard::default();
                     }
                 }
             }
