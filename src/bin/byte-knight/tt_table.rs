@@ -2,8 +2,8 @@ use byte_board::{board::Board, moves::Move};
 
 use crate::score::Score;
 
-const BYTES_PER_MB: usize = 1_048_576;
-pub const DEFAULT_CAPACITY: usize = 64;
+const BYTES_PER_MB: usize = 1024 * 1024;
+const DEFAULT_CAPACITY: usize = 64;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum EntryFlag {
@@ -55,7 +55,7 @@ impl TranspositionTable {
     }
 
     pub(crate) fn from_size_in_mb(mb: usize) -> Self {
-        let capacity = mb * 1_048_576 / std::mem::size_of::<TranspositionTableEntry>();
+        let capacity = mb * BYTES_PER_MB / std::mem::size_of::<TranspositionTableEntry>();
         Self::from_capacity(capacity)
     }
 
