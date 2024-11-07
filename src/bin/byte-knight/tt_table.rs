@@ -1,40 +1,75 @@
-use byte_board::moves::Move;
+use byte_board::{board::Board, moves::Move};
+
+use crate::score::Score;
+
+const BYTES_PER_MB: usize = 1_048_576;
+pub const DEFAULT_CAPACITY: usize = 64;
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum EntryFlag {
+    Exact,
+    LowerBound,
+    UpperBound,
+}
 
 #[derive(Clone, Copy)]
 pub(crate) struct TranspositionTableEntry {
-    zobrist: u64,
-    depth: i64,
-    score: i64,
-    flag: i64,
-    board_move: Move,
+    pub zobrist: u64,
+    pub depth: u8,
+    pub score: Score,
+    pub flag: EntryFlag,
+    pub board_move: Move,
 }
 
 impl TranspositionTableEntry {
-    pub fn new() -> TranspositionTableEntry {
+    pub fn new(
+        board: &Board,
+        depth: u8,
+        score: Score,
+        flag: EntryFlag,
+        mv: Move,
+    ) -> TranspositionTableEntry {
         TranspositionTableEntry {
-            zobrist: 0,
-            depth: 0,
-            score: 0,
-            flag: 0,
-            board_move: Move::default(),
+            zobrist: board.zobrist_hash(),
+            depth,
+            score,
+            flag,
+            board_move: mv,
         }
     }
 }
 
-static TRANSPOSITION_TABLE_SIZE: usize = 1_048_576;
 pub(crate) struct TranspositionTable {
     table: Vec<Option<TranspositionTableEntry>>,
 }
 
 impl TranspositionTable {
     pub(crate) fn new() -> TranspositionTable {
-        TranspositionTable {
-            table: Vec::with_capacity(TRANSPOSITION_TABLE_SIZE),
+        Self::from_capacity(DEFAULT_CAPACITY)
+    }
+
+    pub(crate) fn from_capacity(capacity: usize) -> Self {
+        Self {
+            table: vec![None; capacity],
         }
     }
 
+    pub(crate) fn from_size_in_mb(mb: usize) -> Self {
+        let capacity = mb * 1_048_576 / std::mem::size_of::<TranspositionTableEntry>();
+        Self::from_capacity(capacity)
+    }
+
+    fn get_index(self: &Self, zobrist: u64) -> usize {
+        zobrist as usize % self.table.len()
+    }
+
     pub(crate) fn get_entry(self: &Self, zobrist: u64) -> Option<TranspositionTableEntry> {
-        let index = zobrist as usize % TRANSPOSITION_TABLE_SIZE;
+        let index = self.get_index(zobrist);
         self.table[index]
+    }
+
+    pub(crate) fn store_entry(self: &mut Self, entry: TranspositionTableEntry) {
+        let index = self.get_index(entry.zobrist);
+        self.table[index] = Some(entry);
     }
 }
