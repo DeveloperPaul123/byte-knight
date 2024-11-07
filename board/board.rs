@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Nov 01 2024
+ * Last Modified: Wed Nov 06 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -308,7 +308,8 @@ impl Board {
 
     /// Returns the bitboard for a specific piece and side.
     pub fn piece_bitboard(&self, piece: Piece, side: Side) -> &Bitboard {
-        return &self.piece_bitboards[side as usize][piece as usize];
+        debug_assert!(side != Side::Both);
+        &self.piece_bitboards[side as usize][piece as usize]
     }
 
     pub fn king_square(&self, side: Side) -> u8 {
@@ -453,16 +454,55 @@ impl Board {
             None
         }
     }
-    pub fn is_draw(&self, move_gen: &MoveGenerator) -> bool {
+    pub fn is_draw(&self) -> bool {
         return self.is_draw_by_fifty_move_rule()
-            || self.is_stalemate(move_gen)
             || self.insufficient_material()
             || self.is_repetition();
     }
 
+    /// Check if the game is a draw by insufficient material. We use the FIDE rules for this check.
+    ///
+    /// Returns true if the game is a draw by insufficient material, otherwise false.
     pub fn insufficient_material(&self) -> bool {
-        // TODO
-        false
+        // if any side has a Queen, Rook or Pawn, there's sufficient material
+        let queen_bbs = *self.piece_bitboard(Piece::Queen, Side::Black)
+            | *self.piece_bitboard(Piece::Queen, Side::White);
+        let rook_bbs = *self.piece_bitboard(Piece::Rook, Side::Black)
+            | *self.piece_bitboard(Piece::Rook, Side::White);
+        let pawn_bbs = *self.piece_bitboard(Piece::Pawn, Side::Black)
+            | *self.piece_bitboard(Piece::Pawn, Side::White);
+
+        if (queen_bbs | rook_bbs | pawn_bbs).number_of_occupied_squares() > 0 {
+            return false;
+        }
+
+        // check bishops and knights
+        let white_bishops = self.piece_bitboard(Piece::Bishop, Side::White);
+        let black_bishops = self.piece_bitboard(Piece::Bishop, Side::Black);
+        let white_knights = self.piece_bitboard(Piece::Knight, Side::White);
+        let black_knights = self.piece_bitboard(Piece::Knight, Side::Black);
+
+        let wb_count = white_bishops.number_of_occupied_squares();
+        let bb_count = black_bishops.number_of_occupied_squares();
+        let wn_count = white_knights.number_of_occupied_squares();
+        let bn_count = black_knights.number_of_occupied_squares();
+
+        match (wb_count, bb_count, wn_count, bn_count) {
+            // only kings left
+            (0, 0, 0, 0) => true,
+            // single bishops
+            (1, 0, 0, 0) => true,
+            (0, 1, 0, 0) => true,
+            // single knight
+            (0, 0, 1, 0) => true,
+            (0, 0, 0, 1) => true,
+            (1, 1, 0, 0) => {
+                // bishops on the same color
+                Square::from_bitboard(white_bishops).color()
+                    == Square::from_bitboard(black_bishops).color()
+            }
+            _ => false,
+        }
     }
 
     pub fn is_draw_by_fifty_move_rule(&self) -> bool {
@@ -488,20 +528,7 @@ impl Board {
             }
         }
 
-        // 2 fold repetition for our engine
         repetition_count >= 2
-    }
-
-    pub fn is_stalemate(&self, move_gen: &MoveGenerator) -> bool {
-        // if the side to move is in check, it's not stalemate
-        if self.is_in_check(move_gen) {
-            return false;
-        }
-
-        // if the side to move has no legal moves, it's stalemate
-        let mut move_list = MoveList::new();
-        move_gen.generate_moves(self, &mut move_list, MoveType::All);
-        return self.are_legal(&move_list, move_gen);
     }
 
     pub fn is_legal(&self, mv: &Move, move_gen: &MoveGenerator) -> bool {
@@ -591,6 +618,30 @@ mod tests {
     #[test]
     fn make_move_updates_castling_rights() {
         // TODO
+    }
+
+    #[test]
+    fn insufficient_material_check() {
+        // test cases taken from https://github.com/dannyhammer/chessie/blob/b9ff0e4340b4600c497570ed11cd18c3654c99b9/chessie/src/position.rs#L412
+        // Lone Kings
+        let kk = Board::from_fen("8/4k3/8/8/3K4/8/8/8 w - - 0 1").unwrap();
+        assert!(kk.insufficient_material());
+
+        // A single Bishop (either color)
+        let kbk = Board::from_fen("8/4k3/8/8/3K4/8/5B2/8 w - - 0 1").unwrap();
+        assert!(kbk.insufficient_material());
+
+        // A single Knight
+        let knk = Board::from_fen("8/4k3/2n5/8/3K4/8/8/8 w - - 0 1").unwrap();
+        assert!(knk.insufficient_material());
+
+        // Opposing Bishops on the same color square
+        let same_square_bishops = Board::from_fen("8/2b1k3/8/8/3K4/8/5B2/8 w - - 0 1").unwrap();
+        assert!(same_square_bishops.insufficient_material());
+
+        // Opposing Bishops on different color squares
+        let diff_square_bishops = Board::from_fen("8/3bk3/8/8/3K4/8/5B2/8 w - - 0 1").unwrap();
+        assert!(!diff_square_bishops.insufficient_material());
     }
 
     #[test]

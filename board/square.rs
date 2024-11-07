@@ -12,7 +12,10 @@
  *
  */
 
-use crate::{file::File, rank::Rank};
+use crate::{
+    bitboard::Bitboard, bitboard_helpers, color::Color, definitions::DARK_SQUARES, file::File,
+    rank::Rank,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Square {
@@ -31,6 +34,11 @@ impl Square {
         Ok(Self { file, rank })
     }
 
+    pub fn from_bitboard(bitboard: &Bitboard) -> Self {
+        let sq = bitboard_helpers::next_bit(&mut bitboard.to_owned());
+        Self::from_square_index(sq as u8)
+    }
+
     pub fn to_square_index(&self) -> u8 {
         to_square(self.file as u8, self.rank as u8)
     }
@@ -47,6 +55,26 @@ impl Square {
         let new_file = self.file.offset(file_delta)?;
         let new_rank = self.rank.offset(rank_delta)?;
         Some(Self::new(new_file, new_rank))
+    }
+
+    pub fn bitboard(&self) -> Bitboard {
+        Bitboard::from_square(self.to_square_index())
+    }
+
+    pub fn is_dark(&self) -> bool {
+        Bitboard::from(DARK_SQUARES) & self.bitboard() != Bitboard::EMPTY
+    }
+
+    pub fn is_light(&self) -> bool {
+        !self.is_dark()
+    }
+
+    pub fn color(&self) -> Color {
+        if self.is_dark() {
+            Color::Black
+        } else {
+            Color::White
+        }
     }
 }
 
@@ -113,11 +141,7 @@ pub const fn from_square(square: u8) -> (u8, u8) {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        file::File,
-        rank::Rank,
-        square::Square,
-    };
+    use crate::{file::File, rank::Rank, square::Square};
 
     #[test]
     fn parse_square_from_uci_str() {

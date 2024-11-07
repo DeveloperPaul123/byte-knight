@@ -155,3 +155,5 @@ impl Squares {
     pub const G8: u8 = 62;
     pub const H8: u8 = 63;
 }
+
+pub const DARK_SQUARES: u64 = 0xAA55AA55AA55AA55;
