@@ -12,22 +12,22 @@
  *
  */
 
+mod bench;
+mod defs;
 mod engine;
 mod evaluation;
 mod score;
 mod search;
 mod tt_table;
 
+use defs::About;
 use engine::ByteKnight;
 use search::SearchParameters;
-use uci_parser::{UciCommand, UciInfo, UciMove, UciResponse, UciScore};
+use uci_parser::{UciCommand, UciInfo, UciMove, UciOption, UciResponse, UciScore};
 
 use std::{process::exit, slice::Iter, str::FromStr};
 
-use byte_board::{
-    board::Board, definitions::About, move_generation::MoveGenerator, moves::Move,
-    pieces::SQUARE_NAME,
-};
+use byte_board::{board::Board, move_generation::MoveGenerator, moves::Move, pieces::SQUARE_NAME};
 use clap::{Parser, Subcommand};
 use std::io::{self, BufRead, Write};
 
@@ -45,7 +45,13 @@ struct Options {
 
 #[derive(Subcommand)]
 #[command(about = "Available commands")]
-enum Command {}
+enum Command {
+    #[command(about = "Run fixed depth search")]
+    Bench {
+        #[arg(short, long, default_value = "6")]
+        depth: u8,
+    },
+}
 
 fn square_index_to_uci_square(square: u8) -> uci_parser::Square {
     uci_parser::Square::from_str(SQUARE_NAME[square as usize]).unwrap()
@@ -77,6 +83,9 @@ fn run_uci() {
 
     let mut engine = ByteKnight::new();
     let move_gen = MoveGenerator::new();
+
+    writeln!(stdout, "{}", About::BANNER).unwrap();
+
     loop {
         if let Some(Ok(line)) = input.next() {
             let command = UciCommand::from_str(line.as_str()).unwrap();
@@ -86,6 +95,15 @@ fn run_uci() {
                         name: About::NAME,
                         author: About::AUTHORS,
                     };
+
+                    let options = vec![
+                        UciOption::spin("Hash", 16, 1, 1024),
+                        UciOption::spin("Threads", 1, 1, 1),
+                    ];
+                    // TODO: Actually implement the hash option
+                    for option in options {
+                        writeln!(stdout, "{}", UciResponse::Option(option)).unwrap();
+                    }
                     writeln!(stdout, "{}", id).unwrap();
                     writeln!(stdout, "{}", UciResponse::<String>::UciOk).unwrap();
                 }
@@ -198,7 +216,11 @@ impl ToString for EngineType {
 fn main() {
     let args = Options::parse();
     match args.command {
-        Some(command) => match command {},
+        Some(command) => match command {
+            Command::Bench { depth } => {
+                bench::bench(depth);
+            }
+        },
         None => run_uci(),
     }
 }
