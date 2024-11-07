@@ -28,6 +28,10 @@ impl MoveList {
         self.moves.iter()
     }
 
+    pub fn at(&self, index: usize) -> Option<&Move> {
+        self.moves.get(index)
+    }
+
     pub fn clear(&mut self) {
         self.moves.clear();
     }
