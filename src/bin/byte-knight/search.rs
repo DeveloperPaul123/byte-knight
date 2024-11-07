@@ -224,7 +224,7 @@ impl Search {
         // sort moves
         let sorted_moves = move_list
             .iter()
-            .sorted_by_cached_key(|mv| self.score_moves(mv, &tt_entry));
+            .sorted_by_cached_key(|mv| Evaluation::score_moves_for_ordering(mv, &tt_entry));
 
         // loop through all moves
         for mv in sorted_moves {
@@ -298,7 +298,7 @@ impl Search {
         let tt_move = self.transposition_table.get_entry(board.zobrist_hash());
         let sorted_moves = captures
             .iter()
-            .sorted_by_cached_key(|mv| self.score_moves(*mv, &tt_move));
+            .sorted_by_cached_key(|mv| Evaluation::score_moves_for_ordering(*mv, &tt_move));
 
         let mut best_score = standing_eval;
 
