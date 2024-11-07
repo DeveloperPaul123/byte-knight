@@ -1,6 +1,6 @@
 use std::{
     fmt::{self, Display, Formatter},
-    ops::Neg,
+    ops::{AddAssign, Neg},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -25,10 +25,23 @@ impl Display for Score {
         }
     }
 }
+
 impl Neg for Score {
     type Output = Score;
 
     fn neg(self) -> Score {
         Score(-self.0)
+    }
+}
+
+impl AddAssign for Score {
+    fn add_assign(&mut self, other: Score) {
+        self.0 += other.0;
+    }
+}
+
+impl AddAssign<i64> for Score {
+    fn add_assign(&mut self, other: i64) {
+        self.0 += other;
     }
 }
