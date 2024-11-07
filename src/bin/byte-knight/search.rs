@@ -6,13 +6,19 @@ use std::{
 
 use byte_board::{
     board::Board,
+    definitions::DEFAULT_FEN,
     move_generation::MoveGenerator,
     move_list::MoveList,
     moves::{Move, MoveType},
 };
+use itertools::Itertools;
 use uci_parser::UciSearchOptions;
 
-use crate::{evaluation::Evaluation, score::Score, tt_table::TranspositionTable};
+use crate::{
+    evaluation::Evaluation,
+    score::Score,
+    tt_table::{EntryFlag, TranspositionTable, TranspositionTableEntry},
+};
 
 const MAX_DEPTH: u8 = 128;
 
@@ -24,13 +30,13 @@ pub(crate) struct SearchResult {
     pub depth: u8,
 }
 
-impl SearchResult {
-    pub fn new() -> SearchResult {
+impl Default for SearchResult {
+    fn default() -> SearchResult {
         SearchResult {
-            score: Score::INF,
+            score: -Score::INF,
             best_move: None,
             nodes: 0,
-            depth: 0,
+            depth: 1,
         }
     }
 }
@@ -118,7 +124,7 @@ impl Default for Search {
 impl Search {
     pub fn new() -> Self {
         Search {
-            transposition_table: TranspositionTable::new(),
+            transposition_table: TranspositionTable::from_size_in_mb(64),
             move_gen: MoveGenerator::new(),
             nodes: 0,
         }
@@ -129,7 +135,6 @@ impl Search {
         board: &mut Board,
         search_params: &SearchParameters,
     ) -> SearchResult {
-        // basic negamax search
         self.iterative_deepening(board, search_params)
     }
 
@@ -139,29 +144,26 @@ impl Search {
         params: &SearchParameters,
     ) -> SearchResult {
         // initialize the best result
-        let mut best_result = SearchResult::new();
-        let best_move = Move::default();
+        let mut best_result = SearchResult::default();
 
         while params.start_time.elapsed() < params.soft_timeout
             && best_result.depth <= params.max_depth
         {
             let score = self.negamax(
                 board,
-                params.max_depth as i64,
+                best_result.depth as i64,
                 0,
                 -Score::INF,
                 Score::INF,
-                &mut best_result,
                 params.max_depth as i64,
             );
 
             best_result.score = score;
             best_result.depth += 1;
-            best_result.best_move = if best_move.is_valid() {
-                Some(best_move)
-            } else {
-                None
-            };
+            best_result.best_move = self
+                .transposition_table
+                .get_entry(board.zobrist_hash())
+                .map(|e| e.board_move);
 
             println!("info {}", best_result);
         }
@@ -176,41 +178,148 @@ impl Search {
         board: &mut Board,
         depth: i64,
         ply: i64,
-        alpha: Score,
+        mut alpha: Score,
         beta: Score,
-        results: &mut SearchResult,
         max_depth: i64,
     ) -> Score {
         self.nodes += 1;
 
-        if board.is_draw(&self.move_gen) {
-            return Score::DRAW;
-        }
-
         if depth == 0 {
-            return Evaluation::evaluate_position(board, &self.move_gen);
+            return self.quiescence(board, ply, alpha, beta);
         }
 
+        // get all legal moves
         let mut move_list = MoveList::new();
         // search the tree
-        self.move_gen
-            .generate_moves(board, &mut move_list, MoveType::All);
+        self.move_gen.generate_legal_moves(board, &mut move_list);
+
+        // do we have moves?
+        if move_list.len() == 0 {
+            if board.is_in_check(&self.move_gen) {
+                return Score::new(-Score::MATE.0 + ply);
+            } else {
+                return Score::new(0);
+            }
+        }
+
+        // get the tt entry
+        let tt_entry = self.transposition_table.get_entry(board.zobrist_hash());
+        match tt_entry {
+            Some(tt) => {
+                if tt.zobrist == board.zobrist_hash()
+                    && tt.depth >= depth as u8
+                    && (tt.flag == EntryFlag::Exact
+                        || tt.flag == EntryFlag::LowerBound && tt.score >= beta
+                        || tt.flag == EntryFlag::UpperBound && tt.score <= alpha)
+                {
+                    return tt.score;
+                }
+            }
+            None => {} // do nothing
+        }
+
+        let mut best_move = move_list.at(0).unwrap();
         let mut best_score = -Score::INF;
-        for mv in move_list.iter() {
-            if board.make_move(mv, &self.move_gen).is_ok() {
-                let score =
-                    -self.negamax(board, depth - 1, ply + 1, -beta, -alpha, results, max_depth);
+
+        // sort moves
+        let sorted_moves = move_list
+            .iter()
+            .sorted_by_cached_key(|mv| self.score_moves(mv, &tt_entry));
+
+        // loop through all moves
+        for mv in sorted_moves {
+            if board.make_move_unchecked(mv).is_ok() {
+                let score = -self.negamax(board, depth - 1, ply + 1, -beta, -alpha, max_depth);
                 board.unmake_move().unwrap();
 
-                if score >= best_score {
+                if score > best_score {
                     best_score = score;
                     if depth == max_depth {
-                        results.best_move = Some(*mv);
+                        best_move = mv;
                     }
                 }
 
-                let new_alpha = alpha.max(best_score);
-                if new_alpha >= beta {
+                alpha = alpha.max(best_score);
+                if alpha >= beta {
+                    break;
+                }
+            }
+        }
+
+        // did we fail high or low or did we find the exact score?
+        let flag = if best_score <= alpha {
+            EntryFlag::UpperBound
+        } else if best_score >= beta {
+            EntryFlag::LowerBound
+        } else {
+            EntryFlag::Exact
+        };
+
+        // save move to transposition table
+        self.transposition_table
+            .store_entry(TranspositionTableEntry::new(
+                board,
+                depth as u8,
+                best_score,
+                flag,
+                *best_move,
+            ));
+        best_score
+    }
+
+    fn quiescence(
+        self: &mut Self,
+        board: &mut Board,
+        ply: i64,
+        mut alpha: Score,
+        beta: Score,
+    ) -> Score {
+        let standing_eval = Evaluation::evaluate_position(board, &self.move_gen);
+        if standing_eval >= beta {
+            return beta;
+        }
+
+        alpha = alpha.max(standing_eval);
+
+        let mut move_list = MoveList::new();
+        self.move_gen.generate_legal_moves(board, &mut move_list);
+
+        let captures = move_list
+            .iter()
+            .filter(|mv| mv.captured_piece().is_some())
+            .collect_vec();
+
+        if captures.len() == 0 {
+            return standing_eval;
+        }
+
+        self.nodes += 1;
+
+        let tt_move = self.transposition_table.get_entry(board.zobrist_hash());
+        let sorted_moves = captures
+            .iter()
+            .sorted_by_cached_key(|mv| self.score_moves(*mv, &tt_move));
+
+        let mut best_score = standing_eval;
+
+        for mv in sorted_moves {
+            let mut new_board = board.clone();
+            new_board.make_move_unchecked(mv).unwrap();
+            let score;
+
+            if new_board.is_draw() {
+                return Score::DRAW;
+            } else {
+                score = -self.quiescence(&mut new_board, ply + 1, -beta, -alpha);
+            }
+
+            if score > best_score {
+                best_score = score;
+                if best_score > alpha {
+                    alpha = best_score;
+                }
+
+                if best_score >= beta {
                     break;
                 }
             }
@@ -218,16 +327,33 @@ impl Search {
 
         best_score
     }
+
+    fn score_moves(self: &Self, mv: &Move, tt_entry: &Option<TranspositionTableEntry>) -> Score {
+        if tt_entry.is_some_and(|tt| *mv == tt.board_move) {
+            return -Score::INF;
+        }
+        let mut score = Score::new(0);
+
+        if mv.captured_piece().is_some() {
+            // poor mans MVV/LVA
+            score += 1000 * mv.captured_piece().unwrap() as i64 - mv.piece() as i64
+        }
+
+        score
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use byte_board::board::Board;
 
-    use crate::search::SearchParameters;
+    use crate::{
+        score::Score,
+        search::{Search, SearchParameters},
+    };
 
     #[test]
-    fn test_white_mate_in_1() {
+    fn white_mate_in_1() {
         let fen = "k7/8/KQ6/8/8/8/8/8 w - - 0 1";
         let board = Board::from_fen(fen).unwrap();
         let config = SearchParameters {
@@ -235,12 +361,39 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = super::Search::new();
+        let mut search = Search::new();
         let res = search.search(&mut board.clone(), &config);
         // b6a7
         assert_eq!(
             res.best_move.unwrap().to_long_algebraic(),
             "b6a7".to_string()
         );
+    }
+
+    #[test]
+    fn black_mated_in_1() {
+        let fen = "1k6/8/KQ6/2Q5/8/8/8/8 b - - 0 1";
+        let mut board = Board::from_fen(fen).unwrap();
+        let config = SearchParameters {
+            max_depth: 3,
+            ..Default::default()
+        };
+
+        let mut search = Search::new();
+        let res = search.search(&mut board, &config);
+
+        assert_eq!(res.best_move.unwrap().to_long_algebraic(), "b8a8")
+    }
+
+    #[test]
+    fn stalemate() {
+        let fen = "k7/8/KQ6/8/8/8/8/8 b - - 0 1";
+        let mut board = Board::from_fen(&fen).unwrap();
+        let config = SearchParameters::default();
+
+        let mut search = Search::new();
+        let res = search.search(&mut board, &config);
+        assert!(res.best_move.is_none());
+        assert_eq!(res.score, Score::DRAW);
     }
 }
