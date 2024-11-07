@@ -147,7 +147,9 @@ impl Search {
         let message = UciResponse::info(info);
         println!("{}", message);
 
-        self.iterative_deepening(board)
+        let result = self.iterative_deepening(board);
+        self.nodes = 0;
+        result
     }
 
     fn should_stop_searching(self: &Self) -> bool {
@@ -177,7 +179,6 @@ impl Search {
             }
 
             best_result.score = score;
-            best_result.depth += 1;
             best_result.best_move = self
                 .transposition_table
                 .get_entry(board.zobrist_hash())
@@ -196,6 +197,9 @@ impl Search {
                 .pv(best_result.best_move.map(|m| m.to_long_algebraic()));
             let message = UciResponse::info(info);
             println!("{}", message);
+
+            // increment depth for next move
+            best_result.depth += 1;
         }
 
         // update total nodes for the current search
