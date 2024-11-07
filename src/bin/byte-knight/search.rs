@@ -172,7 +172,7 @@ impl Search {
 
             if self.should_stop_searching() {
                 // we have to stop searching now, use the best result we have
-                // break here
+                // no score update
                 break;
             }
 
@@ -198,8 +198,9 @@ impl Search {
             println!("{}", message);
         }
 
+        // update total nodes for the current search
         best_result.nodes = self.nodes;
-        best_result.depth += 1;
+        // return our best result so far
         best_result
     }
 
