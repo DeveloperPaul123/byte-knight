@@ -4,15 +4,11 @@ use crate::search::SearchParameters;
 
 use super::search;
 
-pub struct ByteKnight {
-    search: search::Search,
-}
+pub struct ByteKnight {}
 
 impl ByteKnight {
     pub fn new() -> ByteKnight {
-        ByteKnight {
-            search: search::Search::new(),
-        }
+        ByteKnight {}
     }
 
     pub(crate) fn think(
@@ -20,7 +16,9 @@ impl ByteKnight {
         board: &mut Board,
         search_params: &SearchParameters,
     ) -> Option<Move> {
-        let result = self.search.search(board, &search_params);
+        println!("Searching with params: {}", search_params);
+        let mut search = search::Search::new(*search_params);
+        let result = search.search(board);
         // TODO: Print out information about the search
         result.best_move
     }

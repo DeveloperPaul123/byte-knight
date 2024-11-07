@@ -12,7 +12,7 @@ use byte_board::{
     moves::{Move, MoveType},
 };
 use itertools::Itertools;
-use uci_parser::UciSearchOptions;
+use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
 use crate::{
     evaluation::Evaluation,
@@ -103,6 +103,16 @@ impl SearchParameters {
     }
 }
 
+impl Display for SearchParameters {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "max depth {} start_time {:?} soft_timeout {:?} hard_timeout {:?}",
+            self.max_depth, self.start_time, self.soft_timeout, self.hard_timeout
+        )
+    }
+}
+
 impl Default for SearchParameters {
     fn default() -> SearchParameters {
         SearchParameters::default()
@@ -113,41 +123,43 @@ pub(crate) struct Search {
     transposition_table: TranspositionTable,
     move_gen: MoveGenerator,
     nodes: u128,
+    parameters: SearchParameters,
 }
 
 impl Default for Search {
     fn default() -> Self {
-        Search::new()
+        Search::new(SearchParameters::default())
     }
 }
 
 impl Search {
-    pub fn new() -> Self {
+    pub fn new(parameters: SearchParameters) -> Self {
         Search {
             transposition_table: TranspositionTable::from_size_in_mb(64),
             move_gen: MoveGenerator::new(),
             nodes: 0,
+            parameters,
         }
     }
 
-    pub(crate) fn search(
-        self: &mut Self,
-        board: &mut Board,
-        search_params: &SearchParameters,
-    ) -> SearchResult {
-        self.iterative_deepening(board, search_params)
+    pub(crate) fn search(self: &mut Self, board: &mut Board) -> SearchResult {
+        let info = UciInfo::default().string(format!("searching {}", self.parameters));
+        let message = UciResponse::info(info);
+        println!("{}", message);
+
+        self.iterative_deepening(board)
     }
 
-    fn iterative_deepening(
-        self: &mut Self,
-        board: &mut Board,
-        params: &SearchParameters,
-    ) -> SearchResult {
+    fn should_stop_searching(self: &Self) -> bool {
+        self.parameters.start_time.elapsed() >= self.parameters.hard_timeout
+    }
+
+    fn iterative_deepening(self: &mut Self, board: &mut Board) -> SearchResult {
         // initialize the best result
         let mut best_result = SearchResult::default();
 
-        while params.start_time.elapsed() < params.soft_timeout
-            && best_result.depth <= params.max_depth
+        while self.parameters.start_time.elapsed() < self.parameters.soft_timeout
+            && best_result.depth <= self.parameters.max_depth
         {
             let score = self.negamax(
                 board,
@@ -155,8 +167,14 @@ impl Search {
                 0,
                 -Score::INF,
                 Score::INF,
-                params.max_depth as i64,
+                self.parameters.max_depth as i64,
             );
+
+            if self.should_stop_searching() {
+                // we have to stop searching now, use the best result we have
+                // break here
+                break;
+            }
 
             best_result.score = score;
             best_result.depth += 1;
@@ -165,7 +183,19 @@ impl Search {
                 .get_entry(board.zobrist_hash())
                 .map(|e| e.board_move);
 
-            println!("info {}", best_result);
+            // create UciInfo and print it
+            let info = UciInfo::new()
+                .depth(best_result.depth)
+                .nodes(self.nodes)
+                .score(best_result.score)
+                .nps(
+                    (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32())
+                        .trunc(),
+                )
+                .time(self.parameters.start_time.elapsed().as_millis() as u64)
+                .pv(best_result.best_move.map(|m| m.to_long_algebraic()));
+            let message = UciResponse::info(info);
+            println!("{}", message);
         }
 
         best_result.nodes = self.nodes;
@@ -243,6 +273,10 @@ impl Search {
                 if alpha >= beta {
                     break;
                 }
+            }
+
+            if self.should_stop_searching() {
+                break;
             }
         }
 
@@ -323,28 +357,20 @@ impl Search {
                     break;
                 }
             }
+
+            if self.should_stop_searching() {
+                break;
+            }
         }
 
         best_score
-    }
-
-    fn score_moves(self: &Self, mv: &Move, tt_entry: &Option<TranspositionTableEntry>) -> Score {
-        if tt_entry.is_some_and(|tt| *mv == tt.board_move) {
-            return -Score::INF;
-        }
-        let mut score = Score::new(0);
-
-        if mv.captured_piece().is_some() {
-            // poor mans MVV/LVA
-            score += 1000 * mv.captured_piece().unwrap() as i64 - mv.piece() as i64
-        }
-
-        score
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use byte_board::board::Board;
 
     use crate::{
@@ -361,8 +387,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new();
-        let res = search.search(&mut board.clone(), &config);
+        let mut search = Search::new(config);
+        let res = search.search(&mut board.clone());
         // b6a7
         assert_eq!(
             res.best_move.unwrap().to_long_algebraic(),
@@ -379,8 +405,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new();
-        let res = search.search(&mut board, &config);
+        let mut search = Search::new(config);
+        let res = search.search(&mut board);
 
         assert_eq!(res.best_move.unwrap().to_long_algebraic(), "b8a8")
     }
@@ -391,9 +417,25 @@ mod tests {
         let mut board = Board::from_fen(&fen).unwrap();
         let config = SearchParameters::default();
 
-        let mut search = Search::new();
-        let res = search.search(&mut board, &config);
+        let mut search = Search::new(config);
+        let res = search.search(&mut board);
         assert!(res.best_move.is_none());
         assert_eq!(res.score, Score::DRAW);
+    }
+
+    #[test]
+    fn do_not_exceed_time() {
+        let mut board = Board::default_board();
+        let config = SearchParameters {
+            soft_timeout: Duration::from_millis(100),
+            hard_timeout: Duration::from_millis(1000),
+            ..Default::default()
+        };
+
+        let mut search = Search::new(config);
+        let res = search.search(&mut board);
+
+        assert!(res.best_move.is_some());
+        assert!(config.start_time.elapsed() <= config.hard_timeout);
     }
 }

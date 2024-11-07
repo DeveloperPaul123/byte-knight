@@ -3,6 +3,8 @@ use std::{
     ops::{AddAssign, Neg},
 };
 
+use uci_parser::UciScore;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Score(pub i64);
 
@@ -13,6 +15,12 @@ impl Score {
 
     pub fn new(score: i64) -> Score {
         Score(score)
+    }
+}
+
+impl Into<UciScore> for Score {
+    fn into(self) -> UciScore {
+        UciScore::cp(self.0 as i32)
     }
 }
 
