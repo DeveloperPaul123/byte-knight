@@ -252,9 +252,7 @@ impl Search {
 
         let alpha_original = alpha;
         if depth == 0 {
-            // TODO: Re-enable qsearch
             return self.quiescence(board, ply, alpha, beta);
-            // return Evaluation::evaluate_position(board, &self.move_gen);
         }
 
         // get all legal moves
