@@ -51,8 +51,8 @@ impl Evaluation {
                     Piece::King => 0,
                     Piece::None => 0,
                 };
-                sum += (black_bb.as_number().count_ones() as i64
-                    - white_bb.as_number().count_ones() as i64)
+                sum += (white_bb.number_of_occupied_squares() as i64
+                    - black_bb.number_of_occupied_squares() as i64)
                     * piece_value;
             }
             Score::new(sum)
