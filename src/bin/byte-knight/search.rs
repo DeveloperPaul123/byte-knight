@@ -148,6 +148,7 @@ impl Search {
         println!("{}", message);
 
         let result = self.iterative_deepening(board);
+        // search ended, reset our node count
         self.nodes = 0;
         result
     }
@@ -163,6 +164,7 @@ impl Search {
         while self.parameters.start_time.elapsed() < self.parameters.soft_timeout
             && best_result.depth <= self.parameters.max_depth
         {
+            // search the tree, starting at the current depth (starts at 1)
             let score = self.negamax(
                 board,
                 best_result.depth as i64,
@@ -172,13 +174,16 @@ impl Search {
                 self.parameters.max_depth as i64,
             );
 
+            // check stop conditions
             if self.should_stop_searching() {
                 // we have to stop searching now, use the best result we have
                 // no score update
                 break;
             }
 
+            // update the best result
             best_result.score = score;
+            // pull best move from the transposition table
             best_result.best_move = self
                 .transposition_table
                 .get_entry(board.zobrist_hash())
@@ -198,100 +203,117 @@ impl Search {
             let message = UciResponse::info(info);
             println!("{}", message);
 
-            // increment depth for next move
+            // increment depth for next iteration
             best_result.depth += 1;
         }
 
         // update total nodes for the current search
         best_result.nodes = self.nodes;
+
         // return our best result so far
         best_result
     }
 
     fn negamax(
         self: &mut Self,
-        board: &Board,
+        board: &mut Board,
         depth: i64,
         ply: i64,
         mut alpha: Score,
-        beta: Score,
+        mut beta: Score,
         max_depth: i64,
     ) -> Score {
+        // increment node count
         self.nodes += 1;
-
-        if depth == 0 {
-            return self.quiescence(board, ply, alpha, beta);
-        }
-
-        // get all legal moves
-        let mut move_list = MoveList::new();
-        // search the tree
-        self.move_gen.generate_legal_moves(board, &mut move_list);
-
-        // do we have moves?
-        if move_list.len() == 0 {
-            if board.is_in_check(&self.move_gen) {
-                return Score::new(-Score::MATE.0 + ply);
-            } else {
-                return Score::new(0);
-            }
-        }
 
         // get the tt entry
         let tt_entry = self.transposition_table.get_entry(board.zobrist_hash());
         match tt_entry {
             Some(tt) => {
-                if tt.zobrist == board.zobrist_hash()
-                    && tt.depth >= depth as u8
-                    && (tt.flag == EntryFlag::Exact
-                        || tt.flag == EntryFlag::LowerBound && tt.score >= beta
-                        || tt.flag == EntryFlag::UpperBound && tt.score <= alpha)
-                {
-                    return tt.score;
+                if tt.depth >= depth as u8 {
+                    match tt.flag {
+                        EntryFlag::Exact => {
+                            return tt.score;
+                        }
+                        EntryFlag::LowerBound => {
+                            alpha = alpha.max(tt.score);
+                        }
+                        EntryFlag::UpperBound => {
+                            beta = beta.min(tt.score);
+                        }
+                    }
+                    if alpha >= beta {
+                        return tt.score;
+                    }
                 }
             }
             None => {} // do nothing
         }
 
-        let mut best_move = move_list.at(0).unwrap();
-        let mut best_score = -Score::INF;
+        let alpha_original = alpha;
+        if depth == 0 {
+            // TODO: Re-enable qsearch
+            // return self.quiescence(board, ply, alpha, beta);
+            return Evaluation::evaluate_position(board, &self.move_gen);
+        }
 
-        // sort moves
+        // get all legal moves
+        let mut move_list = MoveList::new();
+        self.move_gen.generate_legal_moves(board, &mut move_list);
+
+        // do we have moves?
+        if move_list.len() == 0 {
+            if board.is_in_check(&self.move_gen) {
+                return -Score::MATE + ply;
+            } else {
+                return Score::DRAW;
+            }
+        }
+
+        // sort moves by MVV/LVA
         let sorted_moves = move_list
             .iter()
-            .sorted_by_cached_key(|mv| Evaluation::score_moves_for_ordering(mv, &tt_entry));
+            .sorted_by_cached_key(|mv| Evaluation::score_moves_for_ordering(mv, &tt_entry))
+            .collect_vec();
+
+        // initialize best move and best score
+        // we ensured we have moves earlier
+        let mut best_move = sorted_moves[0];
+        // really "bad" initial score
+        let mut best_score = -Score::INF;
 
         // loop through all moves
         for mv in sorted_moves {
-            let mut new_board = board.clone();
+            // make the move
+            board.make_move_unchecked(mv).unwrap();
+            // is it a draw?
+            let score = // recursive call and lower depth, higher ply and negated alpha and beta (swapped)
+            -self.negamax(board, depth - 1, ply + 1, -beta, -alpha, max_depth);
 
-            if new_board.make_move_unchecked(mv).is_ok() {
-                let score = if new_board.is_draw() {
-                    Score::DRAW
-                } else {
-                    -self.negamax(&mut new_board, depth - 1, ply + 1, -beta, -alpha, max_depth)
-                };
+            // undo the move
+            board.unmake_move().unwrap();
 
-                if score > best_score {
-                    best_score = score;
-                    if depth == max_depth {
-                        best_move = mv;
-                    }
-                }
+            // do we need to stop searching?
+            if self.should_stop_searching() {
+                break;
+            }
 
+            // check the results
+            if score > best_score {
+                // we improved, so update the score and best move
+                best_score = score;
+                best_move = mv;
+
+                // update alpha
                 alpha = alpha.max(best_score);
                 if alpha >= beta {
                     break;
                 }
             }
-
-            if self.should_stop_searching() {
-                break;
-            }
         }
 
         // did we fail high or low or did we find the exact score?
-        let flag = if best_score <= alpha {
+        let flag = if best_score <= alpha_original {
             EntryFlag::UpperBound
         } else if best_score >= beta {
             EntryFlag::LowerBound
@@ -313,7 +335,7 @@ impl Search {
 
     fn quiescence(
         self: &mut Self,
-        board: &Board,
+        board: &mut Board,
         ply: i64,
         mut alpha: Score,
         beta: Score,
@@ -341,21 +363,19 @@ impl Search {
 
         let tt_move = self.transposition_table.get_entry(board.zobrist_hash());
         let sorted_moves = captures
-            .iter()
+            .into_iter()
             .sorted_by_cached_key(|mv| Evaluation::score_moves_for_ordering(*mv, &tt_move));
 
         let mut best_score = standing_eval;
 
         for mv in sorted_moves {
-            let mut new_board = board.clone();
-            new_board.make_move_unchecked(mv).unwrap();
-            let score;
-
-            if new_board.is_draw() {
+            board.make_move_unchecked(mv).unwrap();
+            let score = if board.is_draw() {
                 return Score::DRAW;
             } else {
-                score = -self.quiescence(&mut new_board, ply + 1, -beta, -alpha);
-            }
+                -self.quiescence(board, ply + 1, -beta, -alpha)
+            };
+            board.unmake_move().unwrap();
 
             if score > best_score {
                 best_score = score;
@@ -447,5 +467,19 @@ mod tests {
 
         assert!(res.best_move.is_some());
         assert!(config.start_time.elapsed() <= config.hard_timeout);
+    }
+
+    #[test]
+    fn starting_position() {
+        let mut board = Board::default_board();
+        let config = SearchParameters {
+            max_depth: 8,
+            ..Default::default()
+        };
+
+        let mut search = Search::new(config);
+        let res = search.search(&mut board);
+        assert!(res.best_move.is_some());
+        println!("{}", res.best_move.unwrap().to_long_algebraic());
     }
 }
