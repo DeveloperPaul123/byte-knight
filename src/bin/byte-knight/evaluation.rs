@@ -1,10 +1,24 @@
 use byte_board::{
-    board::Board, move_generation::MoveGenerator, moves::Move, pieces::Piece, side::Side,
+    board::Board, definitions::NumberOf, move_generation::MoveGenerator, moves::Move,
+    pieces::Piece, side::Side,
 };
 
 use crate::{score::Score, tt_table::TranspositionTableEntry};
 
 pub struct Evaluation;
+
+// similar setup to Rustic https://rustic-chess.org/search/ordering/mvv_lva.html
+// MVV-LVA (Most Valuable Victim - Least Valuable Attacker) is a heuristic used to order captures.
+// MVV_LVA[victim][attacker] = victim_value - attacker_value
+const MVV_LVA: [[i64; NumberOf::PIECE_TYPES + 1]; NumberOf::PIECE_TYPES + 1] = [
+    [0, 0, 0, 0, 0, 0, 0],             // victim K, attacker K, Q, R, B, N, P, None
+    [500, 510, 520, 530, 540, 550, 0], // victim Q, attacker K, Q, R, B, N, P, None
+    [400, 410, 420, 430, 440, 450, 0], // victim R, attacker K, Q, R, B, N, P, None
+    [300, 310, 320, 330, 340, 350, 0], // victim B, attacker K, Q, R, B, N, P, None
+    [200, 210, 220, 230, 240, 250, 0], // victim N, attacker K, Q, R, B, N, P, None
+    [100, 110, 120, 130, 140, 150, 0], // victim P, attacker K, Q, R, B, N, P, None
+    [0, 0, 0, 0, 0, 0, 0],             // victim None, attacker K, Q, R, B, N, P, None
+];
 
 impl Evaluation {
     pub(crate) fn evaluate_position(board: &Board, move_gen: &MoveGenerator) -> Score {
@@ -62,7 +76,7 @@ impl Evaluation {
 
         if mv.captured_piece().is_some() {
             // poor mans MVV/LVA
-            score += 1000 * mv.captured_piece().unwrap() as i64 - mv.piece() as i64
+            score += MVV_LVA[mv.captured_piece().unwrap() as usize][mv.piece() as usize];
         }
 
         // negate the score to get the best move first
