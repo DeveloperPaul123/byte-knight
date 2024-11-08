@@ -44,6 +44,53 @@ pub struct Bitboard {
     data: u64,
 }
 
+impl Bitboard {
+    pub const EMPTY: Bitboard = Bitboard::new(0);
+    /// Create a new Bitboard with the given data.
+    pub const fn new(data: u64) -> Self {
+        Bitboard { data }
+    }
+
+    /// Create an empty Bitboard.
+    pub const fn default() -> Self {
+        Bitboard { data: 0 }
+    }
+
+    pub const fn from_square(square: u8) -> Self {
+        Bitboard { data: 1 << square }
+    }
+
+    /// Check if a square is occupied.
+    pub fn is_square_occupied(&self, square: u8) -> bool {
+        self.data & (1 << square) != 0
+    }
+
+    /// Mark a square as occupied.
+    pub fn set_square(&mut self, square: u8) {
+        self.clear_square(square);
+        self.data |= 1 << square;
+    }
+
+    /// Clear a given square.
+    pub fn clear_square(&mut self, square: u8) {
+        self.data &= !(1 << square);
+    }
+
+    /// Get the number of occupied squares on the board.
+    pub fn number_of_occupied_squares(&self) -> u32 {
+        self.data.count_ones()
+    }
+
+    /// Convert to a 64-bit unsigned integer.
+    pub const fn as_number(&self) -> u64 {
+        self.data
+    }
+
+    pub fn intersects(&self, other: impl Into<Self>) -> bool {
+        (*self & other.into()).number_of_occupied_squares() > 0
+    }
+}
+
 impl PartialOrd<u64> for Bitboard {
     fn partial_cmp(&self, other: &u64) -> Option<std::cmp::Ordering> {
         self.data.partial_cmp(other)
@@ -220,52 +267,6 @@ impl From<u8> for Bitboard {
 impl Default for Bitboard {
     fn default() -> Self {
         Bitboard::default()
-    }
-}
-
-impl Bitboard {
-    /// Create a new Bitboard with the given data.
-    pub const fn new(data: u64) -> Self {
-        Bitboard { data }
-    }
-
-    /// Create an empty Bitboard.
-    pub const fn default() -> Self {
-        Bitboard { data: 0 }
-    }
-
-    pub const fn from_square(square: u8) -> Self {
-        Bitboard { data: 1 << square }
-    }
-
-    /// Check if a square is occupied.
-    pub fn is_square_occupied(&self, square: u8) -> bool {
-        self.data & (1 << square) != 0
-    }
-
-    /// Mark a square as occupied.
-    pub fn set_square(&mut self, square: u8) {
-        self.clear_square(square);
-        self.data |= 1 << square;
-    }
-
-    /// Clear a given square.
-    pub fn clear_square(&mut self, square: u8) {
-        self.data &= !(1 << square);
-    }
-
-    /// Get the number of occupied squares on the board.
-    pub fn number_of_occupied_squares(&self) -> u32 {
-        self.data.count_ones()
-    }
-
-    /// Convert to a 64-bit unsigned integer.
-    pub const fn as_number(&self) -> u64 {
-        self.data
-    }
-
-    pub fn intersects(&self, other: impl Into<Self>) -> bool {
-        (*self & other.into()).number_of_occupied_squares() > 0
     }
 }
 

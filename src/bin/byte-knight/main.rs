@@ -12,22 +12,22 @@
  *
  */
 
+mod bench;
+mod defs;
 mod engine;
 mod evaluation;
 mod score;
 mod search;
-mod timer;
+mod tt_table;
 
+use defs::About;
 use engine::ByteKnight;
-pub use timer::Timer;
-use uci_parser::{UciCommand, UciInfo, UciMove, UciResponse, UciScore};
+use search::SearchParameters;
+use uci_parser::{UciCommand, UciInfo, UciMove, UciOption, UciResponse, UciScore};
 
 use std::{process::exit, slice::Iter, str::FromStr};
 
-use byte_board::{
-    board::Board, definitions::About, move_generation::MoveGenerator, moves::Move,
-    pieces::SQUARE_NAME, side::Side,
-};
+use byte_board::{board::Board, move_generation::MoveGenerator, moves::Move, pieces::SQUARE_NAME};
 use clap::{Parser, Subcommand};
 use std::io::{self, BufRead, Write};
 
@@ -45,7 +45,13 @@ struct Options {
 
 #[derive(Subcommand)]
 #[command(about = "Available commands")]
-enum Command {}
+enum Command {
+    #[command(about = "Run fixed depth search")]
+    Bench {
+        #[arg(short, long, default_value = "6")]
+        depth: u8,
+    },
+}
 
 fn square_index_to_uci_square(square: u8) -> uci_parser::Square {
     uci_parser::Square::from_str(SQUARE_NAME[square as usize]).unwrap()
@@ -77,6 +83,9 @@ fn run_uci() {
 
     let mut engine = ByteKnight::new();
     let move_gen = MoveGenerator::new();
+
+    writeln!(stdout, "{}", About::BANNER).unwrap();
+
     loop {
         if let Some(Ok(line)) = input.next() {
             let command = UciCommand::from_str(line.as_str()).unwrap();
@@ -86,6 +95,15 @@ fn run_uci() {
                         name: About::NAME,
                         author: About::AUTHORS,
                     };
+
+                    let options = vec![
+                        UciOption::spin("Hash", 16, 1, 1024),
+                        UciOption::spin("Threads", 1, 1, 1),
+                    ];
+                    // TODO: Actually implement the hash option
+                    for option in options {
+                        writeln!(stdout, "{}", UciResponse::Option(option)).unwrap();
+                    }
                     writeln!(stdout, "{}", id).unwrap();
                     writeln!(stdout, "{}", UciResponse::<String>::UciOk).unwrap();
                 }
@@ -116,25 +134,7 @@ fn run_uci() {
                     // writeln!(stdout, "{}", Board::to_string(&board)).unwrap();
                 }
                 UciCommand::Go(search_options) => {
-                    let timer = match board.side_to_move() {
-                        Side::Black => {
-                            assert!(
-                                search_options.btime.is_some(),
-                                "btime is required for black side move"
-                            );
-                            Timer::new(search_options.btime.unwrap().as_millis() as i64)
-                        }
-                        Side::White => {
-                            assert!(
-                                search_options.wtime.is_some(),
-                                "wtime is required for white side move"
-                            );
-                            Timer::new(search_options.wtime.unwrap().as_millis() as i64)
-                        }
-                        _ => {
-                            panic!("Invalid side to move");
-                        }
-                    };
+                    let search_params = SearchParameters::new(&search_options, &board);
 
                     let info = UciInfo::default()
                         .score(UciScore::cp(20))
@@ -154,7 +154,7 @@ fn run_uci() {
                     )
                     .unwrap();
 
-                    let best_move = engine.think(&mut board, &timer);
+                    let best_move = engine.think(&mut board, &search_params);
 
                     if let Some(bot_move) = best_move {
                         writeln!(
@@ -179,44 +179,14 @@ fn run_uci() {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-enum EngineType {
-    EvilBot,
-    ByteKnight,
-}
-
-impl EngineType {
-    fn iter() -> Iter<'static, EngineType> {
-        static ENGINES: [EngineType; 2] = [EngineType::EvilBot, EngineType::ByteKnight];
-        return ENGINES.iter();
-    }
-}
-
-impl FromStr for EngineType {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "EvilBot" => Ok(EngineType::EvilBot),
-            "ByteKnight" => Ok(EngineType::ByteKnight),
-            _ => Err("Invalid engine".to_string()),
-        }
-    }
-}
-
-impl ToString for EngineType {
-    fn to_string(&self) -> String {
-        match self {
-            EngineType::EvilBot => "EvilBot".to_string(),
-            EngineType::ByteKnight => "ByteKnight".to_string(),
-        }
-    }
-}
-
 fn main() {
     let args = Options::parse();
     match args.command {
-        Some(command) => match command {},
+        Some(command) => match command {
+            Command::Bench { depth } => {
+                bench::bench(depth);
+            }
+        },
         None => run_uci(),
     }
 }

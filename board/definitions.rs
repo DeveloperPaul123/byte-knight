@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 18 2024
+ * Last Modified: Thu Nov 07 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -54,14 +54,6 @@ impl NumberOf {
 }
 
 pub const EMPTY: u64 = 0;
-
-pub struct About;
-impl About {
-    pub const NAME: &'static str = "ByteKnight";
-    pub const VERSION: &'static str = "0.1.0";
-    pub const SHORT_DESCRIPTION: &'static str = "ByteKnight is a UCI compliant chess engine.";
-    pub const AUTHORS: &'static str = "Paul T. (DeveloperPaul123)";
-}
 
 pub struct CastlingAvailability;
 impl CastlingAvailability {
@@ -155,3 +147,5 @@ impl Squares {
     pub const G8: u8 = 62;
     pub const H8: u8 = 63;
 }
+
+pub const DARK_SQUARES: u64 = 0xAA55AA55AA55AA55;

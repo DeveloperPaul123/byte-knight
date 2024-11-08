@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Oct 29 2024
+ * Last Modified: Thu Nov 07 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -36,16 +36,12 @@ impl Board {
     ///
     ///
     pub fn make_uci_move(&mut self, mv: &str, move_gen: &MoveGenerator) -> Result<()> {
-        println!("Making UCI move: {}", mv);
         if mv.len() < 4 {
             bail!("Invalid move length");
         }
 
         // parse the move to and from squares
         // also check if this is a promotion if there is a promotion piece at the end of the move
-        let from_str = &mv[0..2];
-        let to_str = &mv[2..4];
-        println!("From: {}, To: {}", from_str, to_str);
         let from =
             Square::try_from(&mv[0..2]).map_err(|_| anyhow::anyhow!("Invalid from square"))?;
         let to = Square::try_from(&mv[2..4]).map_err(|_| anyhow::anyhow!("Invalid to square"))?;

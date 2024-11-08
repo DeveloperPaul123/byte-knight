@@ -1,22 +1,26 @@
 use byte_board::{board::Board, moves::Move};
 
-use super::{search, Timer};
+use crate::search::SearchParameters;
 
-pub struct ByteKnight {
-    search: search::Search,
-}
+use super::search;
+
+pub struct ByteKnight {}
 
 impl ByteKnight {
     pub fn new() -> ByteKnight {
-        ByteKnight {
-            search: search::Search::new(),
-        }
+        ByteKnight {}
     }
 
-    pub(crate) fn think(&mut self, board: &mut Board, _: &Timer) -> Option<Move> {
-        let _best_score = self.search.search(board);
+    pub(crate) fn think(
+        &mut self,
+        board: &mut Board,
+        search_params: &SearchParameters,
+    ) -> Option<Move> {
+        println!("Searching with params: {}", search_params);
+        let mut search = search::Search::new(*search_params);
+        let result = search.search(board);
         // TODO: Print out information about the search
-        Some(self.search.best_move)
+        result.best_move
     }
 }
 

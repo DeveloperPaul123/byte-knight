@@ -16,6 +16,7 @@ pub mod bitboard;
 mod bitboard_helpers;
 pub mod board;
 pub mod board_state;
+pub mod color;
 pub mod definitions;
 pub mod fen;
 pub mod file;
