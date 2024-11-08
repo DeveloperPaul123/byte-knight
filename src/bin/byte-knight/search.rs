@@ -252,9 +252,7 @@ impl Search {
 
         let alpha_original = alpha;
         if depth == 0 {
-            // TODO: Re-enable qsearch
-            // return self.quiescence(board, ply, alpha, beta);
-            return Evaluation::evaluate_position(board, &self.move_gen);
+            return self.quiescence(board, ply, alpha, beta);
         }
 
         // get all legal moves
@@ -333,6 +331,20 @@ impl Search {
         best_score
     }
 
+    /// Implements [quiescence search](https://www.chessprogramming.org/Quiescence_Search).
+    /// We use this to avoid the horizon effect. The idea is to evaluate quiet moves where there are no tactical moves to make.
+    ///
+    /// # Arguments
+    ///
+    /// - `board` - The current board state.
+    /// - `ply` - The current ply.
+    /// - `alpha` - The current alpha value.
+    /// - `beta` - The current beta value.
+    ///
+    /// # Returns
+    ///
+    /// The score of the position.
+    ///
     fn quiescence(
         self: &mut Self,
         board: &mut Board,
@@ -350,40 +362,42 @@ impl Search {
         let mut move_list = MoveList::new();
         self.move_gen.generate_legal_moves(board, &mut move_list);
 
+        // we only want captures here
         let captures = move_list
             .iter()
-            .filter(|mv| mv.captured_piece().is_some())
+            .filter(|mv: &&Move| mv.captured_piece().is_some())
             .collect_vec();
 
+        // no captures
         if captures.len() == 0 {
             return standing_eval;
         }
-
-        self.nodes += 1;
 
         let tt_move = self.transposition_table.get_entry(board.zobrist_hash());
         let sorted_moves = captures
             .into_iter()
             .sorted_by_cached_key(|mv| Evaluation::score_moves_for_ordering(*mv, &tt_move));
-
-        let mut best_score = standing_eval;
+        let mut best = standing_eval;
 
         for mv in sorted_moves {
             board.make_move_unchecked(mv).unwrap();
             let score = if board.is_draw() {
-                return Score::DRAW;
+                Score::DRAW
             } else {
-                -self.quiescence(board, ply + 1, -beta, -alpha)
+                let eval = -self.quiescence(board, ply + 1, -beta, -alpha);
+                self.nodes += 1;
+                eval
             };
             board.unmake_move().unwrap();
 
-            if score > best_score {
-                best_score = score;
-                if best_score > alpha {
-                    alpha = best_score;
+            if score > best {
+                best = score;
+
+                if score > alpha {
+                    alpha = score;
                 }
 
-                if best_score >= beta {
+                if score >= beta {
                     break;
                 }
             }
@@ -393,7 +407,7 @@ impl Search {
             }
         }
 
-        best_score
+        best
     }
 }
 
