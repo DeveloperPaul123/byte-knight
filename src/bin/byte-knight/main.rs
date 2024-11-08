@@ -179,40 +179,6 @@ fn run_uci() {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-enum EngineType {
-    EvilBot,
-    ByteKnight,
-}
-
-impl EngineType {
-    fn iter() -> Iter<'static, EngineType> {
-        static ENGINES: [EngineType; 2] = [EngineType::EvilBot, EngineType::ByteKnight];
-        return ENGINES.iter();
-    }
-}
-
-impl FromStr for EngineType {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "EvilBot" => Ok(EngineType::EvilBot),
-            "ByteKnight" => Ok(EngineType::ByteKnight),
-            _ => Err("Invalid engine".to_string()),
-        }
-    }
-}
-
-impl ToString for EngineType {
-    fn to_string(&self) -> String {
-        match self {
-            EngineType::EvilBot => "EvilBot".to_string(),
-            EngineType::ByteKnight => "ByteKnight".to_string(),
-        }
-    }
-}
-
 fn main() {
     let args = Options::parse();
     match args.command {
