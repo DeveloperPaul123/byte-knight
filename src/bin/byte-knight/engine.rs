@@ -19,7 +19,6 @@ impl ByteKnight {
         println!("Searching with params: {}", search_params);
         let mut search = search::Search::new(*search_params);
         let result = search.search(board);
-        // TODO: Print out information about the search
         result.best_move
     }
 }

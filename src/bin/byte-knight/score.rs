@@ -1,6 +1,6 @@
 use std::{
     fmt::{self, Display, Formatter},
-    ops::{AddAssign, Neg},
+    ops::{Add, AddAssign, Neg},
 };
 
 use uci_parser::UciScore;
@@ -51,5 +51,21 @@ impl AddAssign for Score {
 impl AddAssign<i64> for Score {
     fn add_assign(&mut self, other: i64) {
         self.0 += other;
+    }
+}
+
+impl Add for Score {
+    type Output = Score;
+
+    fn add(self, other: Score) -> Score {
+        Score(self.0 + other.0)
+    }
+}
+
+impl Add<i64> for Score {
+    type Output = Score;
+
+    fn add(self, other: i64) -> Score {
+        Score(self.0 + other)
     }
 }
