@@ -1,3 +1,4 @@
 /target
 /data/lichess_db_puzzle.csv
 **/build/*
+*.exe
