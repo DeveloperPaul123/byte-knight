@@ -1,14 +1,12 @@
-fast-chess `
-    -engine name="byte-knight (1)" cmd="$PSScriptRoot/../target/debug/byte-knight.exe" args="uci -e EvilBot" `
-    -engine name="byte-knight (2)" cmd="$PSScriptRoot/../target/debug/byte-knight.exe" args="uci -e EvilBot" `
-    -each tc=10+0 `
+./fastchess.exe `
+    -engine name="bk" cmd="$PSScriptRoot/../target/release/byte-knight.exe" `
+    -engine name="bk1" cmd="$PSScriptRoot/../target/release/byte-knight.exe" `
+    -each tc=0:10+1 `
     -draw movecount=2000 `
     -games 2 `
     -repeat `
     -output format=cutechess `
-    -log level=info file=out.log `
-    -rounds 1000 `
-    -concurrency 10 `
-    -pgnout notation=san file=out.pgn `
+    -rounds 100 `
+    -concurrency 20 `
     -sprt elo0=0 elo1=2 alpha=0.05 beta=0.05 `
-    -openings file="$PSScriptRoot/UHO_XXL_+1.00_+1.29.epd" format=epd order=random
+    -openings file="$PSScriptRoot/../data/Pohl.epd" format=epd order=random
