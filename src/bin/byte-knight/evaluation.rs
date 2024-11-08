@@ -65,6 +65,7 @@ impl Evaluation {
             score += 1000 * mv.captured_piece().unwrap() as i64 - mv.piece() as i64
         }
 
-        score
+        // negate the score to get the best move first
+        -score
     }
 }
