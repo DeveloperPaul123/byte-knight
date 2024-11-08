@@ -367,10 +367,10 @@ impl Search {
         // we only want captures here
         let captures = move_list
             .iter()
-            .filter(|mv| mv.captured_piece().is_some())
+            .filter(|mv: &&Move| mv.captured_piece().is_some())
             .collect_vec();
 
-        // no moves
+        // no captures
         if captures.len() == 0 {
             return standing_eval;
         }
@@ -379,6 +379,7 @@ impl Search {
         let sorted_moves = captures
             .into_iter()
             .sorted_by_cached_key(|mv| Evaluation::score_moves_for_ordering(*mv, &tt_move));
+        let mut best = standing_eval;
 
         for mv in sorted_moves {
             board.make_move_unchecked(mv).unwrap();
@@ -391,17 +392,24 @@ impl Search {
             };
             board.unmake_move().unwrap();
 
-            if score >= beta {
-                return beta;
+            if score > best {
+                best = score;
+
+                if score > alpha {
+                    alpha = score;
+                }
+
+                if score >= beta {
+                    break;
+                }
             }
-            alpha = alpha.max(score);
 
             if self.should_stop_searching() {
                 break;
             }
         }
 
-        alpha
+        best
     }
 }
 
