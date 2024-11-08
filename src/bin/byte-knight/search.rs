@@ -210,7 +210,7 @@ impl Search {
 
     fn negamax(
         self: &mut Self,
-        board: &mut Board,
+        board: &Board,
         depth: i64,
         ply: i64,
         mut alpha: Score,
@@ -263,9 +263,14 @@ impl Search {
 
         // loop through all moves
         for mv in sorted_moves {
-            if board.make_move_unchecked(mv).is_ok() {
-                let score = -self.negamax(board, depth - 1, ply + 1, -beta, -alpha, max_depth);
-                board.unmake_move().unwrap();
+            let mut new_board = board.clone();
+
+            if new_board.make_move_unchecked(mv).is_ok() {
+                let score = if new_board.is_draw() {
+                    Score::DRAW
+                } else {
+                    -self.negamax(&mut new_board, depth - 1, ply + 1, -beta, -alpha, max_depth)
+                };
 
                 if score > best_score {
                     best_score = score;
@@ -308,7 +313,7 @@ impl Search {
 
     fn quiescence(
         self: &mut Self,
-        board: &mut Board,
+        board: &Board,
         ply: i64,
         mut alpha: Score,
         beta: Score,
