@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Nov 06 2024
+ * Last Modified: Fri Nov 08 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -520,7 +520,8 @@ impl Board {
                     // break out early
                     return true;
                 }
-            } else
+            } else {
+            }
             // we only need to go back up to the last pawn move, castle, or capture as these moves reset the half-move clock
             // beyond this point, there can't be a repeated position
             if previous_state.half_move_clock == 0 {
@@ -556,12 +557,67 @@ mod tests {
         file::File,
         move_generation::MoveGenerator,
         move_list::MoveList,
-        moves::MoveType,
+        moves::{MoveDescriptor, MoveType},
         rank::Rank,
         side::Side,
     };
 
     use super::*;
+    #[test]
+    fn threefold_repetition_detection() {
+        let mut board = Board::from_fen("k7/8/KQ6/8/8/8/8/8 w - - 0 1").unwrap();
+
+        let bk_square_1 = Square::from_square_index(Squares::A8);
+        let bk_square_2 = Square::from_square_index(Squares::B8);
+
+        let wq_square_1 = Square::from_square_index(Squares::B6);
+        let wq_square_2 = Square::from_square_index(Squares::C5);
+
+        let white_queen_move = Move::new(
+            &wq_square_1,
+            &wq_square_2,
+            MoveDescriptor::None,
+            Piece::Queen,
+            None,
+            None,
+        );
+
+        let while_queen_reverse_move = Move::new(
+            &wq_square_2,
+            &wq_square_1,
+            MoveDescriptor::None,
+            Piece::Queen,
+            None,
+            None,
+        );
+
+        let black_king_move = Move::new(
+            &bk_square_1,
+            &bk_square_2,
+            MoveDescriptor::None,
+            Piece::King,
+            None,
+            None,
+        );
+
+        let black_king_reverse_move = Move::new(
+            &bk_square_2,
+            &bk_square_1,
+            MoveDescriptor::None,
+            Piece::King,
+            None,
+            None,
+        );
+
+        for _i in 0..2 {
+            assert!(board.make_move_unchecked(&white_queen_move).is_ok());
+            assert!(board.make_move_unchecked(&black_king_move).is_ok());
+            assert!(board.make_move_unchecked(&while_queen_reverse_move).is_ok());
+            assert!(board.make_move_unchecked(&black_king_reverse_move).is_ok());
+        }
+
+        assert!(board.is_repetition());
+    }
 
     #[test]
     fn checkmate() {
