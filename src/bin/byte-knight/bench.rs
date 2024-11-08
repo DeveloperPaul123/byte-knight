@@ -1,4 +1,7 @@
+use std::{fs::File, io::Read};
+
 use byte_board::board::Board;
+use itertools::Itertools;
 
 use crate::search::{Search, SearchParameters};
 
@@ -133,7 +136,15 @@ const BENCHMARKS: [&str; 128] = [
     "rnbqkb1r/ppppp1pp/7n/4Pp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3 ;D5 11139762 ;D6 244063299",
 ];
 
-pub(crate) fn bench(depth: u8) {
+pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
+    let benchmark_strings: Vec<String> = match epd_file {
+        Some(file) => {
+            let str = std::fs::read_to_string(file).unwrap();
+            str.lines().into_iter().map(|s| s.to_string()).collect()
+        }
+        None => BENCHMARKS.into_iter().map(|s| s.to_string()).collect(),
+    };
+
     let config = SearchParameters {
         max_depth: depth,
         ..Default::default()
@@ -142,7 +153,7 @@ pub(crate) fn bench(depth: u8) {
     let mut nodes = 0u128;
     let mut search = Search::new(config);
 
-    for bench in BENCHMARKS {
+    for bench in benchmark_strings {
         let fen: &str = bench.split(";").next().unwrap();
         let mut board = Board::from_fen(fen).unwrap();
 

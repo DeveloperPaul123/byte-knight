@@ -38,9 +38,6 @@ use std::io::{self, BufRead, Write};
 struct Options {
     #[command(subcommand)]
     command: Option<Command>,
-
-    #[arg(long, short, default_value = "ByteKnight")]
-    engine: String,
 }
 
 #[derive(Subcommand)]
@@ -50,6 +47,9 @@ enum Command {
     Bench {
         #[arg(short, long, default_value = "6")]
         depth: u8,
+
+        #[arg(short, long)]
+        epd_file: Option<String>,
     },
 }
 
@@ -183,8 +183,8 @@ fn main() {
     let args = Options::parse();
     match args.command {
         Some(command) => match command {
-            Command::Bench { depth } => {
-                bench::bench(depth);
+            Command::Bench { depth, epd_file } => {
+                bench::bench(depth, &epd_file);
             }
         },
         None => run_uci(),
