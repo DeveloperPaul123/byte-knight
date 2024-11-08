@@ -22,47 +22,47 @@ const MVV_LVA: [[i64; NumberOf::PIECE_TYPES + 1]; NumberOf::PIECE_TYPES + 1] = [
 
 impl Evaluation {
     pub(crate) fn evaluate_position(board: &Board, move_gen: &MoveGenerator) -> Score {
-        if board.is_in_check(move_gen) {
-            return if board.side_to_move() == Side::White {
-                -Score::INF
-            } else {
-                Score::INF
-            };
-        }
-        let mut sum: i64 = 0;
-        for piece in [
-            Piece::King,
-            Piece::Bishop,
-            Piece::Knight,
-            Piece::Pawn,
-            Piece::Queen,
-            Piece::Rook,
-        ]
-        .into_iter()
-        {
-            let black_bb = board.piece_bitboard(piece, Side::Black);
-            let white_bb = board.piece_bitboard(piece, Side::White);
-            let piece_value = match piece {
-                Piece::Pawn => 1,
-                Piece::Knight => 3,
-                Piece::Bishop => 3,
-                Piece::Rook => 5,
-                Piece::Queen => 9,
-                Piece::King => 0,
-                Piece::None => 0,
-            };
-            sum += (black_bb.as_number().count_ones() as i64
-                - white_bb.as_number().count_ones() as i64)
-                * piece_value;
-        }
-
-        let score_mult = if board.side_to_move() == Side::White {
-            1
+        let score = if board.is_in_check(move_gen) {
+            Score::MATE
+        } else if board.is_checkmate(move_gen) {
+            Score::INF
+        } else if board.is_draw() {
+            Score::DRAW
         } else {
-            -1
+            let mut sum: i64 = 0;
+            for piece in [
+                Piece::King,
+                Piece::Bishop,
+                Piece::Knight,
+                Piece::Pawn,
+                Piece::Queen,
+                Piece::Rook,
+            ]
+            .into_iter()
+            {
+                let black_bb = board.piece_bitboard(piece, Side::Black);
+                let white_bb = board.piece_bitboard(piece, Side::White);
+                let piece_value = match piece {
+                    Piece::Pawn => 1,
+                    Piece::Knight => 3,
+                    Piece::Bishop => 3,
+                    Piece::Rook => 5,
+                    Piece::Queen => 9,
+                    Piece::King => 0,
+                    Piece::None => 0,
+                };
+                sum += (black_bb.as_number().count_ones() as i64
+                    - white_bb.as_number().count_ones() as i64)
+                    * piece_value;
+            }
+            Score::new(sum)
         };
 
-        return Score::new(sum * score_mult);
+        if board.side_to_move() == Side::White {
+            score
+        } else {
+            -score
+        }
     }
 
     pub(crate) fn score_moves_for_ordering(
@@ -74,10 +74,7 @@ impl Evaluation {
         }
         let mut score = Score::new(0);
 
-        if mv.captured_piece().is_some() {
-            // poor mans MVV/LVA
-            score += MVV_LVA[mv.captured_piece().unwrap() as usize][mv.piece() as usize];
-        }
+        score += MVV_LVA[mv.captured_piece().unwrap_or(Piece::None) as usize][mv.piece() as usize];
 
         // negate the score to get the best move first
         -score
