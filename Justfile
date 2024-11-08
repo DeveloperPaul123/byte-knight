@@ -12,6 +12,10 @@ test:
 lint:
     cargo clippy
 
+search-bench:
+    echo "Running search benchmark..."
+    cargo run --release --bin byte-knight -- bench
+    
 perft depth:
     echo "Running perft..."
     cargo run --release --bin perft -- $(depth)
