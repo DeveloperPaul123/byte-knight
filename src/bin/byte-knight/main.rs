@@ -16,6 +16,7 @@ mod bench;
 mod defs;
 mod engine;
 mod evaluation;
+mod psqt;
 mod score;
 mod search;
 mod tt_table;

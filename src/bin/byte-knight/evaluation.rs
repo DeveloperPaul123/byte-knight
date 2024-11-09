@@ -3,7 +3,7 @@ use chess::{
     pieces::Piece, side::Side,
 };
 
-use crate::{score::Score, tt_table::TranspositionTableEntry};
+use crate::{psqt::Psqt, score::Score, tt_table::TranspositionTableEntry};
 
 // similar setup to Rustic https://rustic-chess.org/search/ordering/mvv_lva.html
 // MVV-LVA (Most Valuable Victim - Least Valuable Attacker) is a heuristic used to order captures.
@@ -34,42 +34,17 @@ pub const fn piece_value(kind: Piece) -> i64 {
     }
 }
 
-pub struct Evaluation;
+pub struct Evaluation {
+    psqt: Psqt,
+}
 
 impl Evaluation {
-    pub(crate) fn evaluate_position(board: &Board, move_gen: &MoveGenerator) -> Score {
-        let score = if board.is_in_check(move_gen) {
-            Score::MATE
-        } else if board.is_checkmate(move_gen) {
-            Score::INF
-        } else if board.is_draw() {
-            Score::DRAW
-        } else {
-            let mut sum: i64 = 0;
-            for piece in [
-                Piece::King,
-                Piece::Bishop,
-                Piece::Knight,
-                Piece::Pawn,
-                Piece::Queen,
-                Piece::Rook,
-            ]
-            .into_iter()
-            {
-                let black_bb = board.piece_bitboard(piece, Side::Black);
-                let white_bb = board.piece_bitboard(piece, Side::White);
-                sum += (white_bb.number_of_occupied_squares() as i64
-                    - black_bb.number_of_occupied_squares() as i64)
-                    * piece_value(piece);
-            }
-            Score::new(sum)
-        };
+    pub fn new() -> Self {
+        Evaluation { psqt: Psqt::new() }
+    }
 
-        if board.side_to_move() == Side::White {
-            score
-        } else {
-            -score
-        }
+    pub(crate) fn evaluate_position(self: &Self, board: &Board) -> Score {
+        self.psqt.evaluate(board)
     }
 
     pub(crate) fn score_moves_for_ordering(
