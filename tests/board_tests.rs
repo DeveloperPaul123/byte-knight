@@ -1,4 +1,4 @@
-use byte_board::{
+use chess::{
     board::Board,
     definitions::{CastlingAvailability, DEFAULT_FEN},
     file::File,

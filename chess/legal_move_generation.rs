@@ -777,9 +777,9 @@ impl MoveGenerator {
     /// # Examples
     ///
     /// ```
-    /// use byte_board::board::Board;
-    /// use byte_board::move_list::MoveList;
-    /// use byte_board::move_generation::MoveGenerator;
+    /// use chess::board::Board;
+    /// use chess::move_list::MoveList;
+    /// use chess::move_generation::MoveGenerator;
     ///
     /// let board = Board::default_board();
     /// let mut move_list = MoveList::new();

@@ -18,7 +18,7 @@ search-bench:
     
 perft depth:
     echo "Running perft..."
-    cargo run --release --bin perft -- $(depth)
+    cargo run --release --bin perft -- -d {{depth}}
 
 perft-epd:
     echo "Running EPD perft test suite..."

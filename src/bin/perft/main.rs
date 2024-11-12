@@ -7,7 +7,7 @@ use std::{
 use colored::Colorize;
 use rayon::prelude::*;
 
-use byte_board::{
+use chess::{
     board::Board,
     definitions::DEFAULT_FEN,
     move_generation::MoveGenerator,

@@ -27,7 +27,7 @@ use uci_parser::{UciCommand, UciInfo, UciMove, UciOption, UciResponse, UciScore}
 
 use std::{process::exit, slice::Iter, str::FromStr};
 
-use byte_board::{board::Board, move_generation::MoveGenerator, moves::Move, pieces::SQUARE_NAME};
+use chess::{board::Board, move_generation::MoveGenerator, moves::Move, pieces::SQUARE_NAME};
 use clap::{Parser, Subcommand};
 use std::io::{self, BufRead, Write};
 

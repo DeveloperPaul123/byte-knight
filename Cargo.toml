@@ -5,8 +5,8 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "byte_board"
-path = "board/lib.rs"
+name = "chess"
+path = "chess/lib.rs"
 test = true
 
 [dependencies]

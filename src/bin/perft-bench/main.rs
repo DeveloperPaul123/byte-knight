@@ -6,7 +6,7 @@
 
 use std::time::Instant;
 
-use byte_board::{board::Board, move_generation::MoveGenerator, perft::perft};
+use chess::{board::Board, move_generation::MoveGenerator, perft::perft};
 use clap::Parser;
 use colored::*;
 
