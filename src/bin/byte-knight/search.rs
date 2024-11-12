@@ -124,6 +124,7 @@ pub(crate) struct Search {
     move_gen: MoveGenerator,
     nodes: u128,
     parameters: SearchParameters,
+    eval: Evaluation,
 }
 
 impl Default for Search {
@@ -139,6 +140,7 @@ impl Search {
             move_gen: MoveGenerator::new(),
             nodes: 0,
             parameters,
+            eval: Evaluation::new(),
         }
     }
 
@@ -352,7 +354,7 @@ impl Search {
         mut alpha: Score,
         beta: Score,
     ) -> Score {
-        let standing_eval = Evaluation::evaluate_position(board, &self.move_gen);
+        let standing_eval = self.eval.evaluate_position(board);
         if standing_eval >= beta {
             return beta;
         }

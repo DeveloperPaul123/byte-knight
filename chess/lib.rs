@@ -13,7 +13,7 @@
  */
 
 pub mod bitboard;
-mod bitboard_helpers;
+pub mod bitboard_helpers;
 pub mod board;
 pub mod board_state;
 pub mod color;
