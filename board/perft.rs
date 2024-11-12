@@ -288,6 +288,16 @@ mod tests {
             let total_moves = perft(&mut board, &move_gen, 4, false).unwrap();
             assert_eq!(total_moves, 23527);
         }
+        {
+            let mut board =
+                Board::from_fen("6r1/2q2pp1/1PB2k2/3P1P2/5Q1B/8/6K1/7R b - - 0 56").unwrap();
+            let depths = [1, 2, 3, 4, 5, 6, 7];
+            let move_counts = [1, 48, 1060, 42723, 981168, 37765954, 891192699];
+            for (depth, count) in depths.iter().zip(move_counts.iter()) {
+                let total_moves = perft(&mut board, &move_gen, *depth, false).unwrap();
+                assert_eq!(total_moves, *count);
+            }
+        }
     }
 
     /// Helper to run the EPD tests below

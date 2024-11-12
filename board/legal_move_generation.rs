@@ -91,14 +91,20 @@ impl MoveGenerator {
                 }
                 // exactly 1 blockers, so this piece is pinned
                 1 => {
-                    pinned |= ray & our_pieces;
-                    if is_orthogonal {
-                        orthogonal_pin_rays |= ray | attacker_bb;
-                    } else if is_diagonal {
-                        diagonal_pin_rays |= ray | attacker_bb;
+                    // check that the blocking piece is ours
+                    let overlap = ray & our_pieces;
+                    if overlap.number_of_occupied_squares() == 1 {
+                        // we found a real pin
+                        pinned |= ray & our_pieces;
+                        if is_orthogonal {
+                            orthogonal_pin_rays |= ray | attacker_bb;
+                        } else if is_diagonal {
+                            diagonal_pin_rays |= ray | attacker_bb;
+                        }
                     }
                 }
-                // more than 1 piece in ray, so we don't care
+                // more than 1 piece in ray, so we don't care about this ray
+                // regardless of whose pieces are blocking the ray
                 _ => {}
             }
         }
@@ -324,7 +330,6 @@ impl MoveGenerator {
             Side::Both => panic!("Both side not allowed"),
         };
         let from_square = square.to_square_index();
-
         let to_square = match us {
             Side::White => {
                 let (result, did_overflow) = from_square.overflowing_add(direction);
@@ -387,7 +392,7 @@ impl MoveGenerator {
             }
         }
 
-        let en_passant_bb =
+        let en_passant_bb: Bitboard =
             self.calculate_en_passant_bitboard(from_square, board, push_mask, checkers);
 
         let hv_pin_ray_mask = if is_pinned {
@@ -920,6 +925,25 @@ mod tests {
         assert_eq!(pinned, Bitboard::from_square(Squares::D8));
         println!("capture mask:\n{}", capture_mask);
         println!("push mask:\n{}", push_mask);
+    }
+
+    #[test]
+    fn check_pinned_and_capture_mask_2() {
+        let move_gen = MoveGenerator::new();
+        let board = Board::from_fen("4B1r1/2q2p2/QP4k1/3P2p1/7B/8/6K1/7R b - - 3 59").unwrap();
+        let (checkers, capture_mask, push_mask, pinned, orthogonal_rays, diagonal_rays) =
+            move_gen.calculate_check_and_pin_metadata(&board);
+        println!("checkers:\n{}", checkers);
+        println!("check mask:\n{}", capture_mask);
+        println!("push mask:\n{}", push_mask);
+        println!("pinned:\n{}", pinned);
+        println!("orthogonal rays:\n{}", orthogonal_rays);
+        println!("diagonal rays:\n{}", diagonal_rays);
+
+        assert_eq!(checkers, 0);
+        assert_eq!(pinned, Bitboard::from_square(Squares::F7));
+        assert_eq!(orthogonal_rays, 0);
+        assert!(diagonal_rays > 0);
     }
 
     #[test]
