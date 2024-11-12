@@ -29,7 +29,7 @@ pub const fn piece_value(kind: Piece) -> i64 {
         Piece::Bishop => 330,
         Piece::Rook => 500,
         Piece::Queen => 900,
-        Piece::King => 20_000,
+        Piece::King => 0,
         Piece::None => 0,
     }
 }
