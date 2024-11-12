@@ -4,7 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use byte_board::{
+use chess::{
     board::Board,
     definitions::DEFAULT_FEN,
     move_generation::MoveGenerator,
@@ -415,7 +415,7 @@ impl Search {
 mod tests {
     use std::time::Duration;
 
-    use byte_board::board::Board;
+    use chess::board::Board;
 
     use crate::{
         score::Score,

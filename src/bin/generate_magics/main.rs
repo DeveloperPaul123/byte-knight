@@ -15,7 +15,7 @@
 use std::fmt::{Display, Formatter};
 
 use anyhow::{bail, Result};
-use byte_board::{
+use chess::{
     bitboard::Bitboard,
     definitions::{NumberOf, BISHOP_BLOCKER_PERMUTATIONS, ROOK_BLOCKER_PERMUTATIONS},
     magics::MagicNumber,

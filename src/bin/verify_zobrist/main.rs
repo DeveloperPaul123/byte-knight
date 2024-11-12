@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use byte_board::{board::Board, fen};
+use chess::{board::Board, fen};
 use console::Emoji;
 use indicatif::ParallelProgressIterator;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};

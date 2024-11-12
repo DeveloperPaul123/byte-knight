@@ -1,4 +1,4 @@
-use byte_board::{board::Board, moves::Move};
+use chess::{board::Board, moves::Move};
 
 use crate::score::Score;
 

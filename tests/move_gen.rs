@@ -1,4 +1,4 @@
-use byte_board::{
+use chess::{
     board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::MoveType,
 };
 

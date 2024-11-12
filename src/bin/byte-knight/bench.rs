@@ -1,6 +1,6 @@
 use std::{fs::File, io::Read};
 
-use byte_board::board::Board;
+use chess::board::Board;
 use itertools::Itertools;
 
 use crate::search::{Search, SearchParameters};

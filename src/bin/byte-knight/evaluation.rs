@@ -1,4 +1,4 @@
-use byte_board::{
+use chess::{
     board::Board, definitions::NumberOf, move_generation::MoveGenerator, moves::Move,
     pieces::Piece, side::Side,
 };
