@@ -89,9 +89,9 @@ fn run_uci() {
 
     loop {
         if let Some(Ok(line)) = input.next() {
-            let command = UciCommand::from_str(line.as_str()).unwrap();
+            let command = UciCommand::from_str(line.as_str());
             match command {
-                UciCommand::Uci => {
+                Ok(UciCommand::Uci) => {
                     let id = UciResponse::Id {
                         name: About::NAME,
                         author: About::AUTHORS,
@@ -108,16 +108,16 @@ fn run_uci() {
                     writeln!(stdout, "{}", id).unwrap();
                     writeln!(stdout, "{}", UciResponse::<String>::UciOk).unwrap();
                 }
-                UciCommand::Quit => {
+                Ok(UciCommand::Quit) => {
                     exit(0);
                 }
-                UciCommand::UciNewGame => {
+                Ok(UciCommand::UciNewGame) => {
                     board = Board::default_board();
                 }
-                UciCommand::IsReady => {
+                Ok(UciCommand::IsReady) => {
                     writeln!(stdout, "{}", UciResponse::<String>::ReadyOk).unwrap();
                 }
-                UciCommand::Position { fen, moves } => {
+                Ok(UciCommand::Position { fen, moves }) => {
                     match fen {
                         None => {
                             board = Board::default_board();
@@ -134,9 +134,8 @@ fn run_uci() {
                     // TODO: String output of board
                     // writeln!(stdout, "{}", Board::to_string(&board)).unwrap();
                 }
-                UciCommand::Go(search_options) => {
+                Ok(UciCommand::Go(search_options)) => {
                     let search_params = SearchParameters::new(&search_options, &board);
-
 
                     let board_info =
                         UciInfo::default().string(format!("searching {}", board.to_fen()));
