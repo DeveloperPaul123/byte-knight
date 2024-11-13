@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Nov 07 2024
+ * Last Modified: Tue Nov 12 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -26,6 +26,7 @@ pub const MAX_MOVE_RULE: u32 = 100;
 // see the tests in move_generation.rs for how these numbers were calculated
 pub const ROOK_BLOCKER_PERMUTATIONS: usize = 102_400;
 pub const BISHOP_BLOCKER_PERMUTATIONS: usize = 5_248;
+pub(crate) const MAX_REPETITION_COUNT: usize = 3;
 
 pub const QUEEN_OFFSETS: [(i8, i8); 8] = [
     // diagonals (bishop)

@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Nov 08 2024
+ * Last Modified: Tue Nov 12 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -15,7 +15,7 @@
 use std::iter::zip;
 
 use crate::board_state::BoardState;
-use crate::definitions::{CastlingAvailability, MAX_MOVE_RULE, SPACE};
+use crate::definitions::{CastlingAvailability, MAX_MOVE_RULE, MAX_REPETITION_COUNT, SPACE};
 use crate::fen::FenError;
 use crate::move_generation::MoveGenerator;
 use crate::move_history::BoardHistory;
@@ -516,7 +516,7 @@ impl Board {
             // we found a match, increment the repetition count
             if previous_state.zobrist_hash == self.zobrist_hash() {
                 repetition_count += 1;
-                if repetition_count >= 2 {
+                if repetition_count >= MAX_REPETITION_COUNT {
                     // break out early
                     return true;
                 }
