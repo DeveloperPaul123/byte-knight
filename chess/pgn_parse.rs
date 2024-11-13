@@ -64,22 +64,13 @@ fn parse_tag(line: &str, game: &mut PgnGame) -> Result<(String, String), String>
 
 fn parse_moves(line: &str, game: &mut PgnGame) -> Result<(), String> {
     let mut current_number = 0;
-    let mut current_white = String::new();
+    let mut current_white = None;
     let mut in_comment = false;
     let mut current_comment = String::new();
 
     for token in line.split_whitespace() {
         if token.ends_with('.') {
             if let Ok(num) = token[..token.len() - 1].parse::<u32>() {
-                if !current_white.is_empty() {
-                    game.moves.push(PgnMove {
-                        number: current_number,
-                        white: current_white.clone(),
-                        black: None,
-                        comment: None,
-                    });
-                    current_white.clear();
-                }
                 current_number = num;
             }
         } else if token.starts_with('{') {
@@ -89,43 +80,40 @@ fn parse_moves(line: &str, game: &mut PgnGame) -> Result<(), String> {
             in_comment = false;
             current_comment.push_str(" ");
             current_comment.push_str(&token[..token.len() - 1]);
-
-            if !current_white.is_empty() {
-                game.moves.push(PgnMove {
-                    number: current_number,
-                    white: current_white.clone(),
-                    black: None,
-                    comment: Some(current_comment.trim().to_string()),
-                });
-                current_white.clear();
-                current_comment.clear();
-            }
         } else if in_comment {
             current_comment.push_str(" ");
             current_comment.push_str(token);
         } else if let Ok(result) = GameResult::from_str(token) {
             game.result = result;
         } else {
-            if current_white.is_empty() {
-                current_white = token.to_string();
-            } else {
+            if let Some(white_move) = current_white.take() {
                 game.moves.push(PgnMove {
                     number: current_number,
-                    white: current_white.clone(),
+                    white: white_move,
                     black: Some(token.to_string()),
-                    comment: None,
+                    comment: if current_comment.is_empty() {
+                        None
+                    } else {
+                        Some(current_comment.trim().to_string())
+                    },
                 });
-                current_white.clear();
+                current_comment.clear();
+            } else {
+                current_white = Some(token.to_string());
             }
         }
     }
 
-    if !current_white.is_empty() {
+    if let Some(white_move) = current_white {
         game.moves.push(PgnMove {
             number: current_number,
-            white: current_white,
+            white: white_move,
             black: None,
-            comment: None,
+            comment: if current_comment.is_empty() {
+                None
+            } else {
+                Some(current_comment.trim().to_string())
+            },
         });
     }
 
