@@ -28,6 +28,8 @@ pub mod move_list;
 pub mod move_making;
 pub mod moves;
 pub mod perft;
+pub mod pgn;
+pub mod pgn_parse;
 pub mod pieces;
 pub mod rank;
 pub mod side;
