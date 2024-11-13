@@ -137,14 +137,6 @@ fn run_uci() {
                 UciCommand::Go(search_options) => {
                     let search_params = SearchParameters::new(&search_options, &board);
 
-                    let info = UciInfo::default()
-                        .score(UciScore::cp(20))
-                        .depth(1)
-                        .seldepth(1)
-                        .time(1)
-                        .nodes(1)
-                        .nps(0);
-                    writeln!(stdout, "{}", UciResponse::<String>::Info(Box::new(info))).unwrap();
 
                     let board_info =
                         UciInfo::default().string(format!("searching {}", board.to_fen()));
