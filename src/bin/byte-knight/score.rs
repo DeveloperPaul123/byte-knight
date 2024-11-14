@@ -18,9 +18,9 @@ impl Score {
     }
 }
 
-impl Into<UciScore> for Score {
-    fn into(self) -> UciScore {
-        UciScore::cp(self.0 as i32)
+impl From<Score> for UciScore {
+    fn from(value: Score) -> Self {
+        UciScore::cp(value.0 as i32)
     }
 }
 

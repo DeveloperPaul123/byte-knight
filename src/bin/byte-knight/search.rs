@@ -1,17 +1,10 @@
 use std::{
     fmt::Display,
-    i64::MAX,
     time::{Duration, Instant},
     u64,
 };
 
-use chess::{
-    board::Board,
-    definitions::DEFAULT_FEN,
-    move_generation::MoveGenerator,
-    move_list::MoveList,
-    moves::{Move, MoveType},
-};
+use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
 use itertools::Itertools;
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
@@ -162,9 +155,17 @@ impl Search {
         result
     }
 
+    /// Cancels the current search by setting the stop flag to true.
+    /// Will cancel the search at the next iteration (as soon as possible).
+    pub fn cancel_search(self: &mut Self) {
+        self.stop_search_flag
+            .store(true, std::sync::atomic::Ordering::Release);
+    }
+
     fn should_stop_searching(self: &Self) -> bool {
         self.parameters.start_time.elapsed() >= self.parameters.hard_timeout // hard timeout
         || self.nodes >= self.parameters.max_nodes // node limit reached
+        || self.stop_search_flag.load(std::sync::atomic::Ordering::Acquire) // stop flag set
     }
 
     fn iterative_deepening(self: &mut Self, board: &mut Board) -> SearchResult {
@@ -231,7 +232,7 @@ impl Search {
         ply: i64,
         mut alpha: Score,
         mut beta: Score,
-        max_depth: i64,
+        _max_depth: i64,
     ) -> Score {
         // increment node count
         self.nodes += 1;
@@ -296,7 +297,7 @@ impl Search {
             board.make_move_unchecked(mv).unwrap();
             // is it a draw?
             let score = // recursive call and lower depth, higher ply and negated alpha and beta (swapped)
-            -self.negamax(board, depth - 1, ply + 1, -beta, -alpha, max_depth);
+            -self.negamax(board, depth - 1, ply + 1, -beta, -alpha, _max_depth);
 
             // undo the move
             board.unmake_move().unwrap();
@@ -358,7 +359,7 @@ impl Search {
     fn quiescence(
         self: &mut Self,
         board: &mut Board,
-        ply: i64,
+        _ply: i64,
         mut alpha: Score,
         beta: Score,
     ) -> Score {
@@ -379,14 +380,14 @@ impl Search {
             .collect_vec();
 
         // no captures
-        if captures.len() == 0 {
+        if captures.is_empty() {
             return standing_eval;
         }
 
         let tt_move = self.transposition_table.get_entry(board.zobrist_hash());
         let sorted_moves = captures
             .into_iter()
-            .sorted_by_cached_key(|mv| Evaluation::score_moves_for_ordering(*mv, &tt_move));
+            .sorted_by_cached_key(|mv| Evaluation::score_moves_for_ordering(mv, &tt_move));
         let mut best = standing_eval;
 
         for mv in sorted_moves {
@@ -394,7 +395,7 @@ impl Search {
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
-                let eval = -self.quiescence(board, ply + 1, -beta, -alpha);
+                let eval = -self.quiescence(board, _ply + 1, -beta, -alpha);
                 self.nodes += 1;
                 eval
             };

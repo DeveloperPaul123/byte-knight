@@ -20,7 +20,7 @@ use crate::fen::FenError;
 use crate::move_generation::MoveGenerator;
 use crate::move_history::BoardHistory;
 use crate::move_list::MoveList;
-use crate::moves::{Move, MoveType};
+use crate::moves::Move;
 use crate::square::Square;
 use crate::zobrist::{ZobristHash, ZobristRandomValues};
 use crate::{bitboard_helpers, square};

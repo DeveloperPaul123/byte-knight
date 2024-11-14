@@ -3,7 +3,6 @@ use chess::{board::Board, moves::Move};
 use crate::score::Score;
 
 const BYTES_PER_MB: usize = 1024 * 1024;
-const DEFAULT_CAPACITY: usize = 64;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum EntryFlag {
@@ -44,9 +43,6 @@ pub(crate) struct TranspositionTable {
 }
 
 impl TranspositionTable {
-    pub(crate) fn new() -> TranspositionTable {
-        Self::from_capacity(DEFAULT_CAPACITY)
-    }
 
     pub(crate) fn from_capacity(capacity: usize) -> Self {
         Self {

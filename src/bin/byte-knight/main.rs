@@ -24,9 +24,9 @@ mod tt_table;
 use defs::About;
 use engine::ByteKnight;
 use search::SearchParameters;
-use uci_parser::{UciCommand, UciInfo, UciMove, UciOption, UciResponse, UciScore};
+use uci_parser::{UciCommand, UciInfo, UciMove, UciOption, UciResponse};
 
-use std::{process::exit, slice::Iter, str::FromStr};
+use std::{process::exit, str::FromStr};
 
 use chess::{board::Board, move_generation::MoveGenerator, moves::Move, pieces::SQUARE_NAME};
 use clap::{Parser, Subcommand};

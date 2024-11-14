@@ -7,7 +7,10 @@ use std::{
 use chess::{board::Board, move_generation::MoveGenerator, moves::Move, pieces::SQUARE_NAME};
 use uci_parser::{UciCommand, UciInfo, UciMove, UciOption, UciResponse};
 
-use crate::{defs::About, search::SearchParameters};
+use crate::{
+    defs::About,
+    search::{Search, SearchParameters},
+};
 
 use super::search;
 
