@@ -23,7 +23,7 @@ rand_chacha = "0.3.1"
 rayon = "1.10.0"
 serde = { version = "1.0.214", features = ["derive"] }
 stopwatch = "0.0.7"
-thiserror = "1.0.68"
+thiserror = "2.0.3"
 uci-parser = {version = "0.2.0", features = ["parse-go-perft", "parse-position-kiwipete", "types"]}
 
 [profile.dev]
