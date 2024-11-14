@@ -150,7 +150,7 @@ pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
         ..Default::default()
     };
 
-    let mut nodes = 0u128;
+    let mut nodes = 0u64;
     let mut search = Search::new(config);
 
     for bench in benchmark_strings {

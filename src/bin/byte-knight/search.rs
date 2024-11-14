@@ -2,6 +2,7 @@ use std::{
     fmt::Display,
     i64::MAX,
     time::{Duration, Instant},
+    u64,
 };
 
 use chess::{
@@ -26,7 +27,7 @@ const MAX_DEPTH: u8 = 128;
 pub(crate) struct SearchResult {
     pub score: Score,
     pub best_move: Option<Move>,
-    pub nodes: u128,
+    pub nodes: u64,
     pub depth: u8,
 }
 
@@ -62,6 +63,7 @@ pub(crate) struct SearchParameters {
     pub start_time: Instant,
     pub soft_timeout: Duration,
     pub hard_timeout: Duration,
+    pub max_nodes: u64,
 }
 
 impl SearchParameters {
@@ -71,6 +73,7 @@ impl SearchParameters {
             start_time: Instant::now(),
             soft_timeout: Duration::MAX,
             hard_timeout: Duration::MAX,
+            max_nodes: u64::MAX,
         }
     }
 
@@ -78,6 +81,10 @@ impl SearchParameters {
         let mut params = Self::default();
         if let Some(depth) = uci_options.depth {
             params.max_depth = depth as u8;
+        }
+
+        if let Some(nodes) = uci_options.nodes {
+            params.max_nodes = nodes as u64;
         }
 
         if let Some(time) = uci_options.movetime {
@@ -122,7 +129,7 @@ impl Default for SearchParameters {
 pub(crate) struct Search {
     transposition_table: TranspositionTable,
     move_gen: MoveGenerator,
-    nodes: u128,
+    nodes: u64,
     parameters: SearchParameters,
     eval: Evaluation,
 }
@@ -156,7 +163,8 @@ impl Search {
     }
 
     fn should_stop_searching(self: &Self) -> bool {
-        self.parameters.start_time.elapsed() >= self.parameters.hard_timeout
+        self.parameters.start_time.elapsed() >= self.parameters.hard_timeout // hard timeout
+        || self.nodes >= self.parameters.max_nodes // node limit reached
     }
 
     fn iterative_deepening(self: &mut Self, board: &mut Board) -> SearchResult {
@@ -293,11 +301,6 @@ impl Search {
             // undo the move
             board.unmake_move().unwrap();
 
-            // do we need to stop searching?
-            if self.should_stop_searching() {
-                break;
-            }
-
             // check the results
             if score > best_score {
                 // we improved, so update the score and best move
@@ -309,6 +312,11 @@ impl Search {
                 if alpha >= beta {
                     break;
                 }
+            }
+
+            // do we need to stop searching?
+            if self.should_stop_searching() {
+                break;
             }
         }
 
