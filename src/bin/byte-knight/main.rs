@@ -136,32 +136,20 @@ fn run_uci() {
                 }
                 Ok(UciCommand::Go(search_options)) => {
                     let search_params = SearchParameters::new(&search_options, &board);
-
-                    let board_info =
-                        UciInfo::default().string(format!("searching {}", board.to_fen()));
+                    let best_move = engine.think(&mut board, &search_params);
+                    let move_output = UciResponse::BestMove {
+                        bestmove: best_move.map_or(None, |bot_move| {
+                            Some(move_to_uci_move(&bot_move).to_string())
+                        }),
+                        ponder: None,
+                    };
                     writeln!(
                         stdout,
                         "{}",
-                        UciResponse::<String>::Info(Box::new(board_info))
+                        // TODO: Ponder
+                        move_output
                     )
                     .unwrap();
-
-                    let best_move = engine.think(&mut board, &search_params);
-
-                    if let Some(bot_move) = best_move {
-                        writeln!(
-                            stdout,
-                            "{}",
-                            // TODO: Ponder
-                            UciResponse::BestMove {
-                                bestmove: Some(move_to_uci_move(&bot_move).to_string()),
-                                ponder: None
-                            }
-                        )
-                        .unwrap();
-                    } else {
-                        // TODO Handle the case when best_move is None.
-                    }
                 }
                 _ => (),
             }

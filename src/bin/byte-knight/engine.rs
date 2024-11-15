@@ -9,7 +9,7 @@ use uci_parser::{UciCommand, UciInfo, UciMove, UciOption, UciResponse};
 
 use crate::{
     defs::About,
-    search::{Search, SearchParameters},
+    search::SearchParameters,
 };
 
 use super::search;
@@ -152,7 +152,6 @@ impl ByteKnight {
         board: &mut Board,
         search_params: &SearchParameters,
     ) -> Option<Move> {
-        println!("Searching with params: {}", search_params);
         let mut search = search::Search::new(*search_params);
         let result = search.search(board);
         result.best_move

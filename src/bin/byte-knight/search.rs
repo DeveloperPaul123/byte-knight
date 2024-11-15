@@ -155,23 +155,19 @@ impl Search {
         result
     }
 
-    /// Cancels the current search by setting the stop flag to true.
-    /// Will cancel the search at the next iteration (as soon as possible).
-    pub fn cancel_search(self: &mut Self) {
-        self.stop_search_flag
-            .store(true, std::sync::atomic::Ordering::Release);
-    }
-
     fn should_stop_searching(self: &Self) -> bool {
         self.parameters.start_time.elapsed() >= self.parameters.hard_timeout // hard timeout
         || self.nodes >= self.parameters.max_nodes // node limit reached
-        || self.stop_search_flag.load(std::sync::atomic::Ordering::Acquire) // stop flag set
     }
 
     fn iterative_deepening(self: &mut Self, board: &mut Board) -> SearchResult {
         // initialize the best result
         let mut best_result = SearchResult::default();
-
+        let mut move_list = MoveList::new();
+        self.move_gen.generate_legal_moves(board, &mut move_list);
+        if move_list.len() > 0 {
+            best_result.best_move = Some(*move_list.at(0).unwrap())
+        }
         while self.parameters.start_time.elapsed() < self.parameters.soft_timeout
             && best_result.depth <= self.parameters.max_depth
         {
@@ -502,6 +498,20 @@ mod tests {
             ..Default::default()
         };
 
+        let mut search = Search::new(config);
+        let res = search.search(&mut board);
+        assert!(res.best_move.is_some());
+        println!("{}", res.best_move.unwrap().to_long_algebraic());
+    }
+
+    #[test]
+    fn no_time() {
+        let mut board = Board::from_fen("8/7p/5p2/2K1qp2/7P/8/6k1/4q3 w - - 1 2").unwrap();
+        let config = SearchParameters {
+            soft_timeout: Duration::from_millis(0),
+            hard_timeout: Duration::from_millis(0),
+            ..Default::default()
+        };
         let mut search = Search::new(config);
         let res = search.search(&mut board);
         assert!(res.best_move.is_some());
