@@ -83,8 +83,6 @@ fn run_uci() {
     let mut board = Board::default_board();
 
     let mut engine = ByteKnight::new();
-    let move_gen = MoveGenerator::new();
-
     writeln!(stdout, "{}", About::BANNER).unwrap();
 
     loop {
@@ -128,13 +126,15 @@ fn run_uci() {
                     }
 
                     for mv in moves {
-                        board.make_uci_move(&mv.to_string(), &move_gen).unwrap();
+                        board.make_uci_move(&mv.to_string()).unwrap();
                     }
 
                     // TODO: String output of board
                     // writeln!(stdout, "{}", Board::to_string(&board)).unwrap();
                 }
                 Ok(UciCommand::Go(search_options)) => {
+                    let info = UciInfo::default().string(format!("searching {}", board.to_fen()));
+                    writeln!(stdout, "{}", UciResponse::info(info)).unwrap();
                     let search_params = SearchParameters::new(&search_options, &board);
                     let best_move = engine.think(&mut board, &search_params);
                     let move_output = UciResponse::BestMove {

@@ -7,10 +7,7 @@ use std::{
 use chess::{board::Board, move_generation::MoveGenerator, moves::Move, pieces::SQUARE_NAME};
 use uci_parser::{UciCommand, UciInfo, UciMove, UciOption, UciResponse};
 
-use crate::{
-    defs::About,
-    search::SearchParameters,
-};
+use crate::{defs::About, search::SearchParameters};
 
 use super::search;
 
@@ -107,9 +104,7 @@ impl ByteKnight {
                     }
 
                     for mv in moves {
-                        board
-                            .make_uci_move(&mv.to_string(), &self.move_gen)
-                            .unwrap();
+                        board.make_uci_move(&mv.to_string()).unwrap();
                     }
                 }
                 UciCommand::Go(search_options) => {

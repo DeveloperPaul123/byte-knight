@@ -31,7 +31,7 @@ impl Rank {
     }
 
     pub fn as_number(&self) -> u8 {
-        *self as u8 + 1u8
+        *self as u8
     }
 
     pub fn offset(&self, delta: i8) -> Option<Self> {
