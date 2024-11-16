@@ -28,7 +28,7 @@ use uci_parser::{UciCommand, UciInfo, UciMove, UciOption, UciResponse};
 
 use std::{process::exit, str::FromStr};
 
-use chess::{board::Board, move_generation::MoveGenerator, moves::Move, pieces::SQUARE_NAME};
+use chess::{board::Board, moves::Move, pieces::SQUARE_NAME};
 use clap::{Parser, Subcommand};
 use std::io::{self, BufRead, Write};
 
