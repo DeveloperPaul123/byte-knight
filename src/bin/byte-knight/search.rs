@@ -1,5 +1,9 @@
 use std::{
     fmt::Display,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
     time::{Duration, Instant},
     u64,
 };
@@ -50,7 +54,7 @@ impl Display for SearchResult {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct SearchParameters {
     pub max_depth: u8,
     pub start_time: Instant,
@@ -125,26 +129,34 @@ pub(crate) struct Search {
     nodes: u64,
     parameters: SearchParameters,
     eval: Evaluation,
+    stop_flag: Option<Arc<AtomicBool>>,
 }
 
 impl Default for Search {
     fn default() -> Self {
-        Search::new(SearchParameters::default())
+        Search::new(&SearchParameters::default())
     }
 }
 
 impl Search {
-    pub fn new(parameters: SearchParameters) -> Self {
+    pub fn new(parameters: &SearchParameters) -> Self {
         Search {
             transposition_table: TranspositionTable::from_size_in_mb(64),
             move_gen: MoveGenerator::new(),
             nodes: 0,
-            parameters,
+            parameters: parameters.clone(),
             eval: Evaluation::new(),
+            stop_flag: None,
         }
     }
 
-    pub(crate) fn search(self: &mut Self, board: &mut Board) -> SearchResult {
+    pub(crate) fn search(
+        self: &mut Self,
+        board: &mut Board,
+        stop_flag: Option<Arc<AtomicBool>>,
+    ) -> SearchResult {
+        self.stop_flag = stop_flag;
+
         let info = UciInfo::default().string(format!("searching {}", self.parameters));
         let message = UciResponse::info(info);
         println!("{}", message);
@@ -158,6 +170,7 @@ impl Search {
     fn should_stop_searching(self: &Self) -> bool {
         self.parameters.start_time.elapsed() >= self.parameters.hard_timeout // hard timeout
         || self.nodes >= self.parameters.max_nodes // node limit reached
+        || self.stop_flag.as_ref().is_some_and(|f| f.load(Ordering::Relaxed)) // stop flag set
     }
 
     fn iterative_deepening(self: &mut Self, board: &mut Board) -> SearchResult {
@@ -438,8 +451,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(config);
-        let res = search.search(&mut board.clone());
+        let mut search = Search::new(&config);
+        let res = search.search(&mut board.clone(), None);
         // b6a7
         assert_eq!(
             res.best_move.unwrap().to_long_algebraic(),
@@ -456,8 +469,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(config);
-        let res = search.search(&mut board);
+        let mut search = Search::new(&config);
+        let res = search.search(&mut board, None);
 
         assert_eq!(res.best_move.unwrap().to_long_algebraic(), "b8a8")
     }
@@ -468,8 +481,8 @@ mod tests {
         let mut board = Board::from_fen(&fen).unwrap();
         let config = SearchParameters::default();
 
-        let mut search = Search::new(config);
-        let res = search.search(&mut board);
+        let mut search = Search::new(&config);
+        let res = search.search(&mut board, None);
         assert!(res.best_move.is_none());
         assert_eq!(res.score, Score::DRAW);
     }
@@ -483,8 +496,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(config);
-        let res = search.search(&mut board);
+        let mut search = Search::new(&config);
+        let res = search.search(&mut board, None);
 
         assert!(res.best_move.is_some());
         assert!(config.start_time.elapsed() <= config.hard_timeout);
@@ -498,8 +511,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(config);
-        let res = search.search(&mut board);
+        let mut search = Search::new(&config);
+        let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
     }
@@ -512,8 +525,8 @@ mod tests {
             hard_timeout: Duration::from_millis(0),
             ..Default::default()
         };
-        let mut search = Search::new(config);
-        let res = search.search(&mut board);
+        let mut search = Search::new(&config);
+        let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
     }
