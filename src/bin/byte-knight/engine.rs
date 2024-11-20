@@ -1,74 +1,35 @@
-use std::{
-    io::{self, BufRead, Write},
-    str::FromStr,
-    sync::mpsc::{self, Receiver, Sender},
+use std::io::{self, Write};
+
+use chess::board::Board;
+use uci_parser::{UciCommand, UciInfo, UciOption, UciResponse};
+
+use crate::{
+    defs::About, input_handler::InputHandler, search::SearchParameters, search_thread::SearchThread,
 };
 
-use chess::{board::Board, move_generation::MoveGenerator, moves::Move, pieces::SQUARE_NAME};
-use uci_parser::{UciCommand, UciInfo, UciMove, UciOption, UciResponse};
-
-use crate::{defs::About, search::SearchParameters};
-
-use super::search;
-
-fn square_index_to_uci_square(square: u8) -> uci_parser::Square {
-    uci_parser::Square::from_str(SQUARE_NAME[square as usize]).unwrap()
-}
-
-fn move_to_uci_move(mv: &Move) -> UciMove {
-    let promotion = mv.promotion_piece().map(|p| p.as_char());
-
-    match promotion {
-        Some(promotion) => UciMove {
-            src: square_index_to_uci_square(mv.from()),
-            dst: square_index_to_uci_square(mv.to()),
-            promote: Some(uci_parser::Piece::from_str(&promotion.to_string()).unwrap()),
-        },
-        None => UciMove {
-            src: square_index_to_uci_square(mv.from()),
-            dst: square_index_to_uci_square(mv.to()),
-            promote: None,
-        },
-    }
-}
-
 pub struct ByteKnight {
-    sender: Sender<UciCommand>,
-    receiver: Receiver<UciCommand>,
-    move_gen: MoveGenerator,
+    input_handler: InputHandler,
+    search_thread: SearchThread,
 }
 
 impl ByteKnight {
     pub fn new() -> ByteKnight {
-        let (sender, receiver) = mpsc::channel();
         ByteKnight {
-            sender,
-            receiver,
-            move_gen: MoveGenerator::new(),
+            input_handler: InputHandler::new(),
+            search_thread: SearchThread::new(),
         }
     }
 
-    pub fn run(self: &mut Self, stdin: io::Stdin) -> anyhow::Result<()> {
+    pub fn run(&mut self) -> anyhow::Result<()> {
         // spawn thread to handle UCI commands
-        let sender = self.sender.clone();
-        std::thread::spawn(move || {
-            let mut input = stdin.lock().lines();
-            loop {
-                if let Some(Ok(line)) = input.next() {
-                    let command = UciCommand::from_str(line.as_str());
-                    if let Ok(command) = command {
-                        sender.send(command).unwrap();
-                    }
-                }
-            }
-        });
         let stdout = io::stdout();
         let mut board = Board::default_board();
-        while let Ok(command) = self.receiver.recv() {
+        'engine_loop: while let Ok(command) = &self.input_handler.receiver().recv() {
             let mut stdout = stdout.lock();
             match command {
                 UciCommand::Quit => {
-                    !todo!("Implement a way to interupt the engine if we're searching");
+                    self.input_handler.stop();
+                    break 'engine_loop;
                 }
                 UciCommand::IsReady => {
                     writeln!(stdout, "{}", UciResponse::<String>::ReadyOk).unwrap();
@@ -108,48 +69,22 @@ impl ByteKnight {
                     }
                 }
                 UciCommand::Go(search_options) => {
+                    let info = UciInfo::default().string(format!("searching {}", board.to_fen()));
+                    writeln!(stdout, "{}", UciResponse::info(info)).unwrap();
+
+                    // create the search parameters
                     let search_params = SearchParameters::new(&search_options, &board);
-
-                    let board_info =
-                        UciInfo::default().string(format!("searching {}", board.to_fen()));
-                    writeln!(
-                        stdout,
-                        "{}",
-                        UciResponse::<String>::Info(Box::new(board_info))
-                    )
-                    .unwrap();
-
-                    let best_move = self.think(&mut board, &search_params);
-
-                    if let Some(bot_move) = best_move {
-                        writeln!(
-                            stdout,
-                            "{}",
-                            // TODO: Ponder
-                            UciResponse::BestMove {
-                                bestmove: Some(move_to_uci_move(&bot_move).to_string()),
-                                ponder: None
-                            }
-                        )
-                        .unwrap();
-                    } else {
-                        // TODO Handle the case when best_move is None.
-                    }
+                    // send them and the current board to the search thread
+                    self.search_thread.start_search(&board, search_params);
+                }
+                UciCommand::Stop => {
+                    self.search_thread.stop_search();
                 }
                 _ => {}
             }
         }
 
         Ok(())
-    }
-    pub(crate) fn think(
-        &mut self,
-        board: &mut Board,
-        search_params: &SearchParameters,
-    ) -> Option<Move> {
-        let mut search = search::Search::new(*search_params);
-        let result = search.search(board);
-        result.best_move
     }
 }
 

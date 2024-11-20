@@ -148,13 +148,13 @@ pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
     };
 
     let mut nodes = 0u64;
-    let mut search = Search::new(config);
+    let mut search = Search::new(&config);
 
     for bench in benchmark_strings {
         let fen: &str = bench.split(";").next().unwrap();
         let mut board = Board::from_fen(fen).unwrap();
 
-        let result = search.search(&mut board);
+        let result = search.search(&mut board, None);
         nodes += result.nodes;
     }
 
