@@ -1,3 +1,17 @@
+/*
+ * bench.rs
+ * Part of the byte-knight project
+ * Created Date: Thursday, November 21st 2024
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified: Thu Nov 21 2024
+ * -----
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ * 
+ */
+
 use chess::board::Board;
 
 use crate::search::{Search, SearchParameters};
@@ -148,13 +162,13 @@ pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
     };
 
     let mut nodes = 0u64;
-    let mut search = Search::new(config);
+    let mut search = Search::new(&config);
 
     for bench in benchmark_strings {
         let fen: &str = bench.split(";").next().unwrap();
         let mut board = Board::from_fen(fen).unwrap();
 
-        let result = search.search(&mut board);
+        let result = search.search(&mut board, None);
         nodes += result.nodes;
     }
 
