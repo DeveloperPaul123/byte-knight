@@ -1,3 +1,17 @@
+/*
+ * worker_thread.rs
+ * Part of the byte-knight project
+ * Created Date: Thursday, November 21st 2024
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified: Thu Nov 21 2024
+ * -----
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ *
+ */
+
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -9,7 +23,7 @@ use std::{
 
 /// WorkerThread is a wrapper around a thread that runs a worker function. The worker function is
 /// passed to the constructor and is executed in a loop until the worker thread is stopped.
-/// 
+///
 /// The worker function is passed an `Arc<AtomicBool>` that can be used to check if the worker
 /// thread should stop.
 ///

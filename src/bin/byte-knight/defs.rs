@@ -1,3 +1,17 @@
+/*
+ * defs.rs
+ * Part of the byte-knight project
+ * Created Date: Friday, November 8th 2024
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified: Thu Nov 21 2024
+ * -----
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ * 
+ */
+
 #[rustfmt::skip]
 const BANNER: &str = r#"
  _         _           _        _      _   _   
