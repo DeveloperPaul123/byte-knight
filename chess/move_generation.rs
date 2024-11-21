@@ -1129,11 +1129,8 @@ mod tests {
         for square in 0..NumberOf::SQUARES {
             let rook_magic = move_gen.rook_magics[square];
             let bishop_magic = move_gen.bishop_magics[square];
-            assert_eq!(rook_magic.magic_value, ROOK_MAGIC_VALUES[square as usize]);
-            assert_eq!(
-                bishop_magic.magic_value,
-                BISHOP_MAGIC_VALUES[square as usize]
-            );
+            assert_eq!(rook_magic.magic_value, ROOK_MAGIC_VALUES[square]);
+            assert_eq!(bishop_magic.magic_value, BISHOP_MAGIC_VALUES[square]);
         }
     }
 
@@ -1513,10 +1510,10 @@ mod tests {
         ];
 
         let mut offset_sum: u64 = 0;
-        const BASE: u64 = 2 as u64;
-        for square in 0..NumberOf::SQUARES {
+        const BASE: u64 = 2_u64;
+        for (square, value) in rook_relevant_bit_expected.into_iter().enumerate() {
             let rook_bits = move_generation::MoveGenerator::relevant_rook_bits(square as u8);
-            assert_eq!(rook_bits.as_number(), rook_relevant_bit_expected[square]);
+            assert_eq!(rook_bits.as_number(), value);
 
             offset_sum += BASE.pow(rook_bits.as_number().count_ones());
         }
@@ -1593,14 +1590,11 @@ mod tests {
         ];
 
         let mut offset_sum: u64 = 0;
-        const BASE: u64 = 2 as u64;
+        const BASE: u64 = 2_u64;
 
-        for square in 0..NumberOf::SQUARES {
+        for (square, value) in bishop_relevant_bit_expected.into_iter().enumerate() {
             let bishop_bits = move_generation::MoveGenerator::relevant_bishop_bits(square as u8);
-            assert_eq!(
-                bishop_bits.as_number(),
-                bishop_relevant_bit_expected[square]
-            );
+            assert_eq!(bishop_bits.as_number(), value);
 
             offset_sum += BASE.pow(bishop_bits.as_number().count_ones());
         }
@@ -1610,7 +1604,7 @@ mod tests {
 
     #[test]
     fn check_blocker_permutations() {
-        const BASE: u64 = 2 as u64;
+        const BASE: u64 = 2_u64;
 
         for sq in 0..NumberOf::SQUARES {
             let rook_bb = MoveGenerator::relevant_rook_bits(sq as u8);

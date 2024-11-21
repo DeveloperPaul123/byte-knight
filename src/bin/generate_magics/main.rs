@@ -131,14 +131,11 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
 
         while !found {
             let magic_result = find_magic(piece, use_mask, &mut rng, sq);
-            match magic_result {
-                Ok(mut magic) => {
-                    found = true;
-                    // set the offset before saving it
-                    magic.offset = offset;
-                    magic_numbers.push(magic);
-                }
-                Err(_) => {}
+            if let Ok(mut magic) = magic_result {
+                found = true;
+                // set the offset before saving it
+                magic.offset = offset;
+                magic_numbers.push(magic);
             }
         }
         println!(

@@ -17,6 +17,8 @@ use crate::{
     rank::Rank,
 };
 
+use anyhow::Result;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Square {
     pub file: File,
@@ -28,7 +30,7 @@ impl Square {
         Self { file, rank }
     }
 
-    pub fn from_file_rank(file: char, rank: u8) -> Result<Self, ()> {
+    pub fn from_file_rank(file: char, rank: u8) -> Result<Self> {
         let file = File::try_from(file)?;
         let rank = Rank::try_from(rank)?;
         Ok(Self { file, rank })
@@ -79,11 +81,14 @@ impl Square {
 }
 
 impl TryFrom<&str> for Square {
-    type Error = ();
+    type Error = anyhow::Error;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         if value.len() != 2 {
-            return Err(());
+            return Err(anyhow::Error::msg(format!(
+                "Input square must be at least 2 characters {}",
+                value
+            )));
         }
 
         // file can match directly to a char so we don't alter it

@@ -9,7 +9,7 @@
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
- * 
+ *
  */
 
 use chess::{bitboard_helpers, board::Board, side::Side};
@@ -225,16 +225,13 @@ impl Psqt {
         while occupancy.as_number() > 0 {
             let sq = bitboard_helpers::next_bit(&mut occupancy);
             let maybe_piece = board.piece_on_square(sq as u8);
-            match maybe_piece {
-                Some((piece, side)) => {
-                    let pc_idx = piece as usize * 2 + side as usize;
+            if let Some((piece, side)) = maybe_piece {
+                let pc_idx = piece as usize * 2 + side as usize;
 
-                    mg[side as usize] += self.mg_table[pc_idx][sq];
-                    eg[side as usize] += self.eg_table[pc_idx][sq];
+                mg[side as usize] += self.mg_table[pc_idx][sq];
+                eg[side as usize] += self.eg_table[pc_idx][sq];
 
-                    game_phase += GAMEPHASE_INC[piece as usize];
-                }
-                None => (), // Do nothing
+                game_phase += GAMEPHASE_INC[piece as usize];
             }
         }
 

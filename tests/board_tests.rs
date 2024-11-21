@@ -70,19 +70,19 @@ fn construct_board_from_fen_string_2() {
     let all_pieces = board.all_pieces();
     let white_pieces = board.white_pieces();
     let black_pieces = board.black_pieces();
-    let black_pieces_bb = black_pawn_bb.clone()
-        | black_knight_bb.clone()
-        | black_bishop_bb.clone()
-        | black_rook_bb.clone()
-        | black_queen_bb.clone()
-        | black_king_bb.clone();
+    let black_pieces_bb = *black_pawn_bb
+        | *black_knight_bb
+        | *black_bishop_bb
+        | *black_rook_bb
+        | *black_queen_bb
+        | *black_king_bb;
 
-    let white_pieces_bb = white_pawn_bb.clone()
-        | white_knight_bb.clone()
-        | white_bishop_bb.clone()
-        | white_rook_bb.clone()
-        | white_queen_bb.clone()
-        | white_king_bb.clone();
+    let white_pieces_bb = *white_pawn_bb
+        | *white_knight_bb
+        | *white_bishop_bb
+        | *white_rook_bb
+        | *white_queen_bb
+        | *white_king_bb;
 
     assert_eq!(white_pieces, white_pieces_bb);
     assert_eq!(black_pieces, black_pieces_bb);

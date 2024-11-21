@@ -78,9 +78,7 @@ impl Board {
 
                 while bitboard != 0 {
                     let square = bitboard_helpers::next_bit(&mut bitboard);
-                    zobrist_hash ^=
-                        self.zobrist_values
-                            .get_piece_value(piece, side, square);
+                    zobrist_hash ^= self.zobrist_values.get_piece_value(piece, side, square);
                 }
             }
         }
@@ -723,20 +721,19 @@ mod tests {
             Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
         move_gen.generate_moves(&board, &mut move_list, MoveType::All);
 
-        let initial_mv = move_list
+        let initial_mv = *move_list
             .iter()
             .find(|mv| mv.to_long_algebraic() == "d7c8q")
-            .unwrap()
-            .clone();
+            .unwrap();
 
-        let mut queen_bb = board.piece_bitboard(Piece::Queen, Side::White).clone();
+        let mut queen_bb = *board.piece_bitboard(Piece::Queen, Side::White);
         assert_eq!(queen_bb.number_of_occupied_squares(), 1);
         assert_eq!(queen_bb, Bitboard::from_square(Squares::D1));
 
         let mv_ok = board.make_move(&initial_mv, &move_gen);
         assert!(mv_ok.is_ok());
 
-        queen_bb = board.piece_bitboard(Piece::Queen, Side::White).clone();
+        queen_bb = *board.piece_bitboard(Piece::Queen, Side::White);
         assert_eq!(queen_bb.number_of_occupied_squares(), 2);
         let mut compare_bb = Bitboard::from_square(Squares::D1);
         compare_bb.set_square(Squares::C8);
@@ -745,7 +742,7 @@ mod tests {
         let undo_result = board.unmake_move();
         assert!(undo_result.is_ok());
 
-        queen_bb = board.piece_bitboard(Piece::Queen, Side::White).clone();
+        queen_bb = *board.piece_bitboard(Piece::Queen, Side::White);
         assert_eq!(queen_bb.number_of_occupied_squares(), 1);
         assert_eq!(queen_bb, Bitboard::from_square(Squares::D1));
     }
@@ -758,17 +755,15 @@ mod tests {
             Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
         move_gen.generate_moves(&board, &mut move_list, MoveType::All);
 
-        let initial_mv = move_list
+        let initial_mv = *move_list
             .iter()
             .find(|mv| mv.to_long_algebraic() == "d7c8q")
-            .unwrap()
-            .clone();
+            .unwrap();
 
-        let next_move = move_list
+        let next_move = *move_list
             .iter()
             .find(|mv| mv.to_long_algebraic() == "d7c8r")
-            .unwrap()
-            .clone();
+            .unwrap();
 
         let mut mv_ok = board.make_move(&initial_mv, &move_gen);
         assert!(mv_ok.is_ok());

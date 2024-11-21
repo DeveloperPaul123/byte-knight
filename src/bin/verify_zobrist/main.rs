@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{hash_map, HashMap},
     path::{Path, PathBuf},
     process::exit,
 };
@@ -93,7 +93,7 @@ fn main() {
                     assert!(board.is_ok());
                     let board = board.unwrap();
                     let hash = board.zobrist_hash();
-                    return (hash, record.fen.clone());
+                    (hash, record.fen.clone())
                 })
                 .collect_into_vec(&mut hashes);
 
@@ -102,11 +102,11 @@ fn main() {
             let mut hash_map: HashMap<u64, Vec<String>> = std::collections::HashMap::new();
 
             for (hash, fen) in hashes {
-                if hash_map.contains_key(&hash) {
+                if let hash_map::Entry::Vacant(e) = hash_map.entry(hash) {
+                    e.insert(vec![fen]);
+                } else {
                     let vec = hash_map.get_mut(&hash).unwrap();
                     vec.push(fen);
-                } else {
-                    hash_map.insert(hash, vec![fen]);
                 }
             }
 

@@ -199,12 +199,7 @@ impl Board {
             if cap == Piece::Rook {
                 // check if the rook was on a corner square
                 // if so, remove the castling rights for that side
-                let corners = [
-                    Squares::A8,
-                    Squares::H8,
-                    Squares::A1,
-                    Squares::H1,
-                ];
+                let corners = [Squares::A8, Squares::H8, Squares::A1, Squares::H1];
                 if corners.iter().any(|sq| *sq == to) {
                     self.set_castling_rights(
                         self.castling_rights() & !(get_casting_right_to_remove(them, to)),
@@ -416,17 +411,23 @@ impl Board {
             // we don't need to update the castling rights here as it is restored from the game state
         }
 
-        if captured_piece.is_some() && !chess_move.is_en_passant_capture() {
-            // Restore the captured piece to the board
-            self.add_piece(them, captured_piece.unwrap(), to, update_zobrist_hash);
-        } else if chess_move.is_en_passant_capture() {
-            let en_passant_square: u8 = if us == Side::White {
-                to - 8u8
-            } else {
-                to + 8u8
-            };
-            self.add_piece(them, Piece::Pawn, en_passant_square, update_zobrist_hash);
-            // we don't need to set the en passant square here as it is restored from the game state
+        // check if we have a captured piece
+        if let Some(captured_piece) = captured_piece {
+            match chess_move.is_en_passant_capture() {
+                true => {
+                    let en_passant_square: u8 = if us == Side::White {
+                        to - 8u8
+                    } else {
+                        to + 8u8
+                    };
+                    self.add_piece(them, Piece::Pawn, en_passant_square, update_zobrist_hash);
+                    // we don't need to set the en passant square here as it is restored from the game state
+                }
+                false => {
+                    // Restore the captured piece to the board
+                    self.add_piece(them, captured_piece, to, update_zobrist_hash);
+                }
+            }
         }
 
         Ok(())
@@ -544,11 +545,11 @@ mod tests {
 
         let en_passant_move = move_list
             .iter()
-            .find(|mv| mv.to() == crate::definitions::Squares::D6 as u8)
+            .find(|mv| mv.to() == crate::definitions::Squares::D6)
             .unwrap();
 
         println!("Making en passant move: {}", en_passant_move);
-        assert!(board.piece_on_square(Squares::C5 as u8).is_some());
+        assert!(board.piece_on_square(Squares::C5).is_some());
         assert!(board.check_move_preconditions(en_passant_move).is_ok());
         let move_result = board.make_move(en_passant_move, &move_gen);
         assert!(move_result.is_ok());

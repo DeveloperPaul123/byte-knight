@@ -9,13 +9,10 @@
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
- * 
+ *
  */
 
-use chess::{
-    board::Board, definitions::NumberOf, move_generation::MoveGenerator, moves::Move,
-    pieces::Piece, side::Side,
-};
+use chess::{board::Board, definitions::NumberOf, moves::Move, pieces::Piece};
 
 use crate::{psqt::Psqt, score::Score, tt_table::TranspositionTableEntry};
 
@@ -52,16 +49,16 @@ impl Evaluation {
     }
 
     /// Scores a move for ordering. This will return the _negative_ score of
-    /// the move so that if you sort moves by their score, the best move will 
+    /// the move so that if you sort moves by their score, the best move will
     /// be first (at index 0).
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// - `mv`: The move to score.
     /// - `tt_entry`: The transposition table entry for the current position.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// The score of the move.
     pub(crate) fn score_move_for_ordering(
         mv: &Move,

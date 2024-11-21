@@ -9,7 +9,7 @@
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
- * 
+ *
  */
 
 use std::{
@@ -180,7 +180,7 @@ impl Search {
         result
     }
 
-    fn should_stop_searching(self: &Self) -> bool {
+    fn should_stop_searching(&self) -> bool {
         self.parameters.start_time.elapsed() >= self.parameters.hard_timeout // hard timeout
         || self.nodes >= self.parameters.max_nodes // node limit reached
         || self.stop_flag.as_ref().is_some_and(|f| f.load(Ordering::Relaxed)) // stop flag set
@@ -261,26 +261,23 @@ impl Search {
 
         // get the tt entry
         let tt_entry = self.transposition_table.get_entry(board.zobrist_hash());
-        match tt_entry {
-            Some(tt) => {
-                if tt.depth >= depth as u8 {
-                    match tt.flag {
-                        EntryFlag::Exact => {
-                            return tt.score;
-                        }
-                        EntryFlag::LowerBound => {
-                            alpha = alpha.max(tt.score);
-                        }
-                        EntryFlag::UpperBound => {
-                            beta = beta.min(tt.score);
-                        }
-                    }
-                    if alpha >= beta {
+        if let Some(tt) = tt_entry {
+            if tt.depth >= depth as u8 {
+                match tt.flag {
+                    EntryFlag::Exact => {
                         return tt.score;
                     }
+                    EntryFlag::LowerBound => {
+                        alpha = alpha.max(tt.score);
+                    }
+                    EntryFlag::UpperBound => {
+                        beta = beta.min(tt.score);
+                    }
+                }
+                if alpha >= beta {
+                    return tt.score;
                 }
             }
-            None => {} // do nothing
         }
 
         let alpha_original = alpha;
@@ -485,7 +482,7 @@ mod tests {
     #[test]
     fn stalemate() {
         let fen = "k7/8/KQ6/8/8/8/8/8 b - - 0 1";
-        let mut board = Board::from_fen(&fen).unwrap();
+        let mut board = Board::from_fen(fen).unwrap();
         let config = SearchParameters::default();
 
         let mut search = Search::new(&config);

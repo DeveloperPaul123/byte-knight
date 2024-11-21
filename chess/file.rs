@@ -1,3 +1,5 @@
+use anyhow::Result;
+
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum File {
@@ -35,7 +37,7 @@ impl File {
 }
 
 impl TryFrom<u8> for File {
-    type Error = ();
+    type Error = anyhow::Error;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
@@ -47,15 +49,14 @@ impl TryFrom<u8> for File {
             5 => Ok(Self::F),
             6 => Ok(Self::G),
             7 => Ok(Self::H),
-            _ => Err(()),
+            _ => Err(anyhow::Error::msg(format!("Invalid file {}", value))),
         }
     }
 }
 
 impl TryFrom<char> for File {
-    type Error = ();
-
-    fn try_from(value: char) -> Result<Self, Self::Error> {
+    type Error = anyhow::Error;
+    fn try_from(value: char) -> Result<Self> {
         match value {
             'a' => Ok(Self::A),
             'b' => Ok(Self::B),
@@ -65,7 +66,7 @@ impl TryFrom<char> for File {
             'f' => Ok(Self::F),
             'g' => Ok(Self::G),
             'h' => Ok(Self::H),
-            _ => Err(()),
+            _ => Err(anyhow::Error::msg(format!("Invalid file {}", value))),
         }
     }
 }

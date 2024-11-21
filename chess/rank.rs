@@ -1,4 +1,5 @@
 use crate::side::Side;
+use anyhow::Result;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -44,7 +45,7 @@ impl Rank {
 }
 
 impl TryFrom<u8> for Rank {
-    type Error = ();
+    type Error = anyhow::Error;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
@@ -56,7 +57,7 @@ impl TryFrom<u8> for Rank {
             5 => Ok(Self::R6),
             6 => Ok(Self::R7),
             7 => Ok(Self::R8),
-            _ => Err(()),
+            _ => Err(anyhow::Error::msg(format!("Invalid rank {}", value))),
         }
     }
 }

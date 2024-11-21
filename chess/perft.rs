@@ -306,7 +306,7 @@ mod tests {
             println!("{}", fen);
             let mut board = Board::from_fen(fen).unwrap();
             for (idx, result) in results.iter().enumerate() {
-                let nodes = perft(&mut board, &move_gen, idx + 1, false).unwrap();
+                let nodes = perft(&mut board, move_gen, idx + 1, false).unwrap();
                 assert_eq!(nodes, *result as u64);
             }
         }
