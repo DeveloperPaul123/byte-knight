@@ -66,7 +66,7 @@ impl Evaluation {
         tt_entry: &Option<TranspositionTableEntry>,
     ) -> Score {
         if tt_entry.is_some_and(|tt| *mv == tt.board_move) {
-            return -Score::INF;
+            return Score::new(i64::MIN);
         }
         let mut score = Score::new(0);
 
