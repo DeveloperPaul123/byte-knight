@@ -1,4 +1,5 @@
 use crate::side::Side;
+use anyhow::Result;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -36,15 +37,15 @@ impl Rank {
 
     pub fn offset(&self, delta: i8) -> Option<Self> {
         let new_rank = (*self as i8) + delta;
-        if new_rank < 0 || new_rank > 7 {
-            return None;
+        if (0..=7).contains(&new_rank) {
+            return Some(unsafe { std::mem::transmute::<u8, Rank>(new_rank as u8) });
         }
-        Some(unsafe { std::mem::transmute(new_rank as u8) })
+        None
     }
 }
 
 impl TryFrom<u8> for Rank {
-    type Error = ();
+    type Error = anyhow::Error;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
@@ -56,7 +57,7 @@ impl TryFrom<u8> for Rank {
             5 => Ok(Self::R6),
             6 => Ok(Self::R7),
             7 => Ok(Self::R8),
-            _ => Err(()),
+            _ => Err(anyhow::Error::msg(format!("Invalid rank {}", value))),
         }
     }
 }

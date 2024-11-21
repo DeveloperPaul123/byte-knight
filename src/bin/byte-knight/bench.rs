@@ -9,7 +9,7 @@
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
- * 
+ *
  */
 
 use chess::board::Board;
@@ -151,7 +151,7 @@ pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
     let benchmark_strings: Vec<String> = match epd_file {
         Some(file) => {
             let str = std::fs::read_to_string(file).unwrap();
-            str.lines().into_iter().map(|s| s.to_string()).collect()
+            str.lines().map(|s| s.to_string()).collect()
         }
         None => BENCHMARKS.into_iter().map(|s| s.to_string()).collect(),
     };

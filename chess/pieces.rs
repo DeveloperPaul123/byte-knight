@@ -35,7 +35,7 @@ pub const ALL_PIECES: [Piece; 6] = [
 ];
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Piece {
     King = 0,
     Queen = 1,
@@ -43,6 +43,7 @@ pub enum Piece {
     Bishop = 3,
     Knight = 4,
     Pawn = 5,
+    #[default]
     None = 6,
 }
 
@@ -127,12 +128,6 @@ impl Display for Piece {
             Piece::Pawn => write!(f, "Pawn"),
             Piece::None => write!(f, "None"),
         }
-    }
-}
-
-impl Default for Piece {
-    fn default() -> Self {
-        Piece::None
     }
 }
 

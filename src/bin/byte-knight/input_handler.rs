@@ -107,9 +107,8 @@ mod tests {
         sender.send(UciCommand::IsReady).unwrap();
         sender.send(UciCommand::UciNewGame).unwrap();
 
-        let inputs: Vec<UciCommand>;
         let receiver = input_handler.receiver();
-        inputs = receiver.iter().take(3).collect();
+        let inputs: Vec<UciCommand> = receiver.iter().take(3).collect();
 
         assert_eq!(
             inputs,

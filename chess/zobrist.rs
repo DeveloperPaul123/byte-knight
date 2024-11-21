@@ -15,15 +15,21 @@ pub struct ZobristRandomValues {
 impl Clone for ZobristRandomValues {
     fn clone(&self) -> Self {
         Self {
-            piece_values: self.piece_values.clone(),
-            castling_values: self.castling_values.clone(),
-            en_passant_values: self.en_passant_values.clone(),
-            side_values: self.side_values.clone(),
+            piece_values: self.piece_values,
+            castling_values: self.castling_values,
+            en_passant_values: self.en_passant_values,
+            side_values: self.side_values,
         }
     }
 }
 
 const RANDOM_SEED: [u8; 32] = [115; 32];
+
+impl Default for ZobristRandomValues {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl ZobristRandomValues {
     pub fn new() -> Self {
@@ -62,25 +68,25 @@ impl ZobristRandomValues {
             *value = random.gen();
         });
 
-        return random_values;
+        random_values
     }
 
     pub fn get_piece_value(&self, piece: usize, side: usize, square: usize) -> u64 {
-        return self.piece_values[side][piece][square];
+        self.piece_values[side][piece][square]
     }
 
     pub fn get_castling_value(&self, castling: usize) -> u64 {
-        return self.castling_values[castling];
+        self.castling_values[castling]
     }
 
     pub fn get_en_passant_value(&self, square: Option<u8>) -> u64 {
         match square {
-            None => return self.en_passant_values[NumberOf::SQUARES],
-            Some(square) => return self.en_passant_values[square as usize],
+            None => self.en_passant_values[NumberOf::SQUARES],
+            Some(square) => self.en_passant_values[square as usize],
         }
     }
 
     pub fn get_side_value(&self, side: usize) -> u64 {
-        return self.side_values[side];
+        self.side_values[side]
     }
 }

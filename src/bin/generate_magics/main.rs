@@ -4,7 +4,7 @@
  * Created Date: Friday, August 30th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 11 2024
+ * Last Modified: Thu Nov 21 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -130,15 +130,12 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
         // Using `loop` and `break` didn't work here and caused the loop to break early or never end.
 
         while !found {
-            let magic_result = find_magic(piece, use_mask, &mut rng, sq as u8);
-            match magic_result {
-                Ok(mut magic) => {
-                    found = true;
-                    // set the offset before saving it
-                    magic.offset = offset;
-                    magic_numbers.push(magic);
-                }
-                Err(_) => {}
+            let magic_result = find_magic(piece, use_mask, &mut rng, sq);
+            if let Ok(mut magic) = magic_result {
+                found = true;
+                // set the offset before saving it
+                magic.offset = offset;
+                magic_numbers.push(magic);
             }
         }
         println!(
@@ -157,7 +154,7 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
     };
     assert_eq!(offset, total as u64, "Permutations were skipped.");
 
-    return magic_numbers;
+    magic_numbers
 }
 
 fn main() {

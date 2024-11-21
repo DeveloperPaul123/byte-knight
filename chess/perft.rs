@@ -15,7 +15,7 @@ pub fn split_perft(
     print_moves: bool,
 ) -> Result<Vec<SplitPerftResult>> {
     let mut move_list = MoveList::new();
-    move_gen.generate_legal_moves(&board, &mut move_list);
+    move_gen.generate_legal_moves(board, &mut move_list);
 
     let mut results = Vec::new();
     for mv in move_list.iter() {
@@ -59,7 +59,7 @@ pub fn perft(
 ) -> Result<u64> {
     let mut nodes = 0;
     let mut move_list = MoveList::new();
-    move_gen.generate_legal_moves(&board, &mut move_list);
+    move_gen.generate_legal_moves(board, &mut move_list);
 
     if print_moves {
         for mv in move_list.iter() {
@@ -306,7 +306,7 @@ mod tests {
             println!("{}", fen);
             let mut board = Board::from_fen(fen).unwrap();
             for (idx, result) in results.iter().enumerate() {
-                let nodes = perft(&mut board, &move_gen, idx + 1, false).unwrap();
+                let nodes = perft(&mut board, move_gen, idx + 1, false).unwrap();
                 assert_eq!(nodes, *result as u64);
             }
         }

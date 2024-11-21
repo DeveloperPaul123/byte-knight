@@ -9,7 +9,7 @@
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
- * 
+ *
  */
 
 use chess::{board::Board, moves::Move};
@@ -57,7 +57,6 @@ pub(crate) struct TranspositionTable {
 }
 
 impl TranspositionTable {
-
     pub(crate) fn from_capacity(capacity: usize) -> Self {
         Self {
             table: vec![None; capacity],
@@ -69,16 +68,16 @@ impl TranspositionTable {
         Self::from_capacity(capacity)
     }
 
-    fn get_index(self: &Self, zobrist: u64) -> usize {
+    fn get_index(&self, zobrist: u64) -> usize {
         zobrist as usize % self.table.len()
     }
 
-    pub(crate) fn get_entry(self: &Self, zobrist: u64) -> Option<TranspositionTableEntry> {
+    pub(crate) fn get_entry(&self, zobrist: u64) -> Option<TranspositionTableEntry> {
         let index = self.get_index(zobrist);
         self.table[index]
     }
 
-    pub(crate) fn store_entry(self: &mut Self, entry: TranspositionTableEntry) {
+    pub(crate) fn store_entry(&mut self, entry: TranspositionTableEntry) {
         let index = self.get_index(entry.zobrist);
         self.table[index] = Some(entry);
     }

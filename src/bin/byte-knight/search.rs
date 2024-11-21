@@ -9,7 +9,7 @@
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
- * 
+ *
  */
 
 use std::{
@@ -19,7 +19,6 @@ use std::{
         Arc,
     },
     time::{Duration, Instant},
-    u64,
 };
 
 use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
@@ -155,7 +154,7 @@ impl Default for Search {
 impl Search {
     pub fn new(parameters: &SearchParameters) -> Self {
         Search {
-            transposition_table: TranspositionTable::from_size_in_mb(64),
+            transposition_table: TranspositionTable::from_size_in_mb(16),
             move_gen: MoveGenerator::new(),
             nodes: 0,
             parameters: parameters.clone(),
@@ -165,7 +164,7 @@ impl Search {
     }
 
     pub(crate) fn search(
-        self: &mut Self,
+        &mut self,
         board: &mut Board,
         stop_flag: Option<Arc<AtomicBool>>,
     ) -> SearchResult {
@@ -181,18 +180,18 @@ impl Search {
         result
     }
 
-    fn should_stop_searching(self: &Self) -> bool {
+    fn should_stop_searching(&self) -> bool {
         self.parameters.start_time.elapsed() >= self.parameters.hard_timeout // hard timeout
         || self.nodes >= self.parameters.max_nodes // node limit reached
         || self.stop_flag.as_ref().is_some_and(|f| f.load(Ordering::Relaxed)) // stop flag set
     }
 
-    fn iterative_deepening(self: &mut Self, board: &mut Board) -> SearchResult {
+    fn iterative_deepening(&mut self, board: &mut Board) -> SearchResult {
         // initialize the best result
         let mut best_result = SearchResult::default();
         let mut move_list = MoveList::new();
         self.move_gen.generate_legal_moves(board, &mut move_list);
-        if move_list.len() > 0 {
+        if !move_list.is_empty() {
             best_result.best_move = Some(*move_list.at(0).unwrap())
         }
         while self.parameters.start_time.elapsed() < self.parameters.soft_timeout
@@ -249,7 +248,7 @@ impl Search {
     }
 
     fn negamax(
-        self: &mut Self,
+        &mut self,
         board: &mut Board,
         depth: i64,
         ply: i64,
@@ -262,26 +261,23 @@ impl Search {
 
         // get the tt entry
         let tt_entry = self.transposition_table.get_entry(board.zobrist_hash());
-        match tt_entry {
-            Some(tt) => {
-                if tt.depth >= depth as u8 {
-                    match tt.flag {
-                        EntryFlag::Exact => {
-                            return tt.score;
-                        }
-                        EntryFlag::LowerBound => {
-                            alpha = alpha.max(tt.score);
-                        }
-                        EntryFlag::UpperBound => {
-                            beta = beta.min(tt.score);
-                        }
-                    }
-                    if alpha >= beta {
+        if let Some(tt) = tt_entry {
+            if tt.depth >= depth as u8 {
+                match tt.flag {
+                    EntryFlag::Exact => {
                         return tt.score;
                     }
+                    EntryFlag::LowerBound => {
+                        alpha = alpha.max(tt.score);
+                    }
+                    EntryFlag::UpperBound => {
+                        beta = beta.min(tt.score);
+                    }
+                }
+                if alpha >= beta {
+                    return tt.score;
                 }
             }
-            None => {} // do nothing
         }
 
         let alpha_original = alpha;
@@ -294,7 +290,7 @@ impl Search {
         self.move_gen.generate_legal_moves(board, &mut move_list);
 
         // do we have moves?
-        if move_list.len() == 0 {
+        if move_list.is_empty() {
             if board.is_in_check(&self.move_gen) {
                 return -Score::MATE + ply;
             } else {
@@ -305,7 +301,7 @@ impl Search {
         // sort moves by MVV/LVA
         let sorted_moves = move_list
             .iter()
-            .sorted_by_cached_key(|mv| Evaluation::score_moves_for_ordering(mv, &tt_entry))
+            .sorted_by_cached_key(|mv| Evaluation::score_move_for_ordering(mv, &tt_entry))
             .collect_vec();
 
         // initialize best move and best score
@@ -379,13 +375,7 @@ impl Search {
     ///
     /// The score of the position.
     ///
-    fn quiescence(
-        self: &mut Self,
-        board: &mut Board,
-        _ply: i64,
-        mut alpha: Score,
-        beta: Score,
-    ) -> Score {
+    fn quiescence(&mut self, board: &mut Board, _ply: i64, mut alpha: Score, beta: Score) -> Score {
         let standing_eval = self.eval.evaluate_position(board);
         if standing_eval >= beta {
             return beta;
@@ -410,7 +400,7 @@ impl Search {
         let tt_move = self.transposition_table.get_entry(board.zobrist_hash());
         let sorted_moves = captures
             .into_iter()
-            .sorted_by_cached_key(|mv| Evaluation::score_moves_for_ordering(mv, &tt_move));
+            .sorted_by_cached_key(|mv| Evaluation::score_move_for_ordering(mv, &tt_move));
         let mut best = standing_eval;
 
         for mv in sorted_moves {
@@ -492,7 +482,7 @@ mod tests {
     #[test]
     fn stalemate() {
         let fen = "k7/8/KQ6/8/8/8/8/8 b - - 0 1";
-        let mut board = Board::from_fen(&fen).unwrap();
+        let mut board = Board::from_fen(fen).unwrap();
         let config = SearchParameters::default();
 
         let mut search = Search::new(&config);

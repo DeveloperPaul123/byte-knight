@@ -4,7 +4,7 @@
  * Created Date: Monday, August 19th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Oct 28 2024
+ * Last Modified: Wed Nov 20 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -57,7 +57,7 @@ pub enum PromotionDescriptor {
 }
 
 impl PromotionDescriptor {
-    pub(crate) fn to_piece(&self) -> Piece {
+    pub(crate) fn to_piece(self) -> Piece {
         match self {
             PromotionDescriptor::Queen => Piece::Queen,
             PromotionDescriptor::Knight => Piece::Knight,
@@ -77,7 +77,7 @@ pub enum MoveType {
 /// Compact, 32-bit move representation
 /// Taken from https://github.com/SebLague/Chess-Challenge/blob/main/Chess-Challenge/src/Framework/Chess/Board/Move.cs
 /// Also inspired by Rustic's move representation: https://github.com/mvanthoor/rustic/blob/master/src/movegen/defs.rs
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct Move {
     /// The move information, from LSB to MSB:
     /// The first 2 bits represent the move descriptor
@@ -90,12 +90,6 @@ pub struct Move {
     /// The last 9 bits are unused.
     /// 000 000 000 ccc ppp fffff tttttt pp P mm
     move_info: u32,
-}
-
-impl Default for Move {
-    fn default() -> Self {
-        Self { move_info: 0 }
-    }
 }
 
 impl Display for Move {
@@ -114,13 +108,13 @@ impl Display for Move {
 
 impl PartialEq for Move {
     fn eq(&self, other: &Self) -> bool {
-        return self.move_info == other.move_info;
+        self.move_info == other.move_info
     }
 }
 
 impl PartialOrd for Move {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        return self.move_info.partial_cmp(&other.move_info);
+        self.move_info.partial_cmp(&other.move_info)
     }
 }
 
@@ -157,18 +151,18 @@ impl Move {
         Self { move_info }
     }
     pub fn is_valid(&self) -> bool {
-        return self.move_info != 0;
+        self.move_info != 0
     }
 
     pub fn new_castle(king_from: &Square, king_to: &Square) -> Self {
-        return Self::new(
+        Self::new(
             king_from,
             king_to,
             MoveDescriptor::Castle,
             Piece::King,
             None,
             None,
-        );
+        )
     }
 
     pub fn new_king_move(
@@ -176,14 +170,14 @@ impl Move {
         king_to: &Square,
         captured_piece: Option<Piece>,
     ) -> Self {
-        return Self::new(
+        Self::new(
             king_from,
             king_to,
             MoveDescriptor::None,
             Piece::King,
             captured_piece,
             None,
-        );
+        )
     }
 
     pub fn new_short_move(from: &Square, to: &Square, promotion: Option<Piece>) -> Self {
@@ -192,38 +186,38 @@ impl Move {
 
     /// Returns the from [`Square`] of the move.
     pub fn from(&self) -> u8 {
-        return ((self.move_info & MOVE_INFO_FROM_MASK) >> MOVE_INFO_FROM_SHIFT) as u8;
+        ((self.move_info & MOVE_INFO_FROM_MASK) >> MOVE_INFO_FROM_SHIFT) as u8
     }
 
     /// Returns the to [`Square`] of the move.
     pub fn to(&self) -> u8 {
-        return ((self.move_info & MOVE_INFO_TO_MASK) >> MOVE_INFO_TO_SHIFT) as u8;
+        ((self.move_info & MOVE_INFO_TO_MASK) >> MOVE_INFO_TO_SHIFT) as u8
     }
 
     pub fn move_descriptor(&self) -> MoveDescriptor {
-        return match self.move_info & 0b11 {
+        match self.move_info & 0b11 {
             0 => MoveDescriptor::None,
             1 => MoveDescriptor::EnPassantCapture,
             2 => MoveDescriptor::Castle,
             3 => MoveDescriptor::PawnTwoUp,
             _ => MoveDescriptor::None,
-        };
+        }
     }
 
     pub fn is_en_passant_capture(&self) -> bool {
-        return self.move_descriptor() == MoveDescriptor::EnPassantCapture;
+        self.move_descriptor() == MoveDescriptor::EnPassantCapture
     }
 
     pub fn is_castle(&self) -> bool {
-        return self.move_descriptor() == MoveDescriptor::Castle;
+        self.move_descriptor() == MoveDescriptor::Castle
     }
 
     pub fn is_pawn_two_up(&self) -> bool {
-        return self.move_descriptor() == MoveDescriptor::PawnTwoUp;
+        self.move_descriptor() == MoveDescriptor::PawnTwoUp
     }
 
     pub fn promotion_description(&self) -> PromotionDescriptor {
-        return match (self.move_info & MOVE_PROMOTION_DESCRIPTOR_MASK)
+        match (self.move_info & MOVE_PROMOTION_DESCRIPTOR_MASK)
             >> MOVE_INFO_PROMOTION_DESCRIPTOR_SHIFT
         {
             0 => PromotionDescriptor::Queen,
@@ -231,64 +225,64 @@ impl Move {
             2 => PromotionDescriptor::Rook,
             3 => PromotionDescriptor::Bishop,
             _ => PromotionDescriptor::Queen,
-        };
+        }
     }
 
     pub fn is_promote_to_queen(&self) -> bool {
-        return self.is_promotion() && self.promotion_description() == PromotionDescriptor::Queen;
+        self.is_promotion() && self.promotion_description() == PromotionDescriptor::Queen
     }
 
     pub fn is_promote_to_knight(&self) -> bool {
-        return self.is_promotion() && self.promotion_description() == PromotionDescriptor::Knight;
+        self.is_promotion() && self.promotion_description() == PromotionDescriptor::Knight
     }
 
     pub fn is_promote_to_rook(&self) -> bool {
-        return self.is_promotion() && self.promotion_description() == PromotionDescriptor::Rook;
+        self.is_promotion() && self.promotion_description() == PromotionDescriptor::Rook
     }
 
     pub fn is_promote_to_bishop(&self) -> bool {
-        return self.is_promotion() && self.promotion_description() == PromotionDescriptor::Bishop;
+        self.is_promotion() && self.promotion_description() == PromotionDescriptor::Bishop
     }
 
     pub fn is_promotion(&self) -> bool {
-        return (self.move_info >> MOVE_INFO_IS_PROMOTION_SHIFT) & 0b1 == 1;
+        (self.move_info >> MOVE_INFO_IS_PROMOTION_SHIFT) & 0b1 == 1
     }
 
     pub fn promotion_piece(&self) -> Option<Piece> {
         if self.is_promote_to_queen() {
-            return Some(Piece::Queen);
+            Some(Piece::Queen)
         } else if self.is_promote_to_knight() {
-            return Some(Piece::Knight);
+            Some(Piece::Knight)
         } else if self.is_promote_to_rook() {
-            return Some(Piece::Rook);
+            Some(Piece::Rook)
         } else if self.is_promote_to_bishop() {
-            return Some(Piece::Bishop);
+            Some(Piece::Bishop)
         } else {
-            return None;
+            None
         }
     }
 
     pub fn captured_piece(&self) -> Option<Piece> {
         // shift right and then mask 3 bits
-        let piece_value = (self.move_info >> MOVE_INFO_CAPTURED_PIECE_SHIFT) & 0b111 as u32;
+        let piece_value = (self.move_info >> MOVE_INFO_CAPTURED_PIECE_SHIFT) & 0b111_u32;
         if piece_value == Piece::None as u32 {
             return None;
         }
 
-        return Some(Piece::try_from(piece_value as u8).unwrap());
+        Some(Piece::try_from(piece_value as u8).unwrap())
     }
 
     pub fn piece(&self) -> Piece {
         // shift right and then mask 3 bits
-        let piece_value = (self.move_info >> MOVE_INFO_PIECE_SHIFT) & 0b111 as u32;
-        return Piece::try_from(piece_value as u8).unwrap();
+        let piece_value = (self.move_info >> MOVE_INFO_PIECE_SHIFT) & 0b111_u32;
+        Piece::try_from(piece_value as u8).unwrap()
     }
 
     pub(crate) fn is_null_move(&self) -> bool {
         // this is the default value, and should be interpreted as a null move
         // the reason for this is that a move at a minimum should always have a to and from square
         // and a piece. So if there is no information about the move, it is a null move
-        return self.move_info == 0;
+        self.move_info == 0
     }
 
     pub fn to_long_algebraic(&self) -> String {

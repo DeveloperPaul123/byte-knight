@@ -1,6 +1,4 @@
-use chess::{
-    board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::MoveType,
-};
+use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::MoveType};
 
 #[test]
 fn make_promotion_move() {
@@ -10,7 +8,7 @@ fn make_promotion_move() {
     let mut move_list = MoveList::new();
     move_gen.generate_moves(&board, &mut move_list, MoveType::All);
     let promotion_move = move_list.iter().find(|m| m.is_promotion()).unwrap();
-    board.make_move(&promotion_move, &move_gen).unwrap();
+    board.make_move(promotion_move, &move_gen).unwrap();
     println!("{}", board.to_fen());
     assert_eq!(
         board.to_fen(),

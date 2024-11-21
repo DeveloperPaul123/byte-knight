@@ -109,7 +109,7 @@ pub fn split_fen_string(fen: &str) -> SplitFenStringResult {
         return Err(FenError::new("FEN string does not have 6 parts"));
     }
 
-    return Ok(parts);
+    Ok(parts)
 }
 
 /// Parses the piece placement part of a FEN string and updates the board accordingly.
@@ -164,7 +164,7 @@ fn parse_piece_placement(board: &mut Board, part: &str) -> FenResult {
         }
     }
 
-    return Ok(());
+    Ok(())
 }
 
 /// Parses the piece placement part of a FEN string and updates the board accordingly.
@@ -209,7 +209,7 @@ pub(crate) fn piece_placement_to_fen(board: &Board) -> String {
         }
     }
 
-    return fen;
+    fen
 }
 
 /// Parses the active color part of a FEN string and updates the board accordingly.
@@ -237,16 +237,16 @@ fn parse_active_color(board: &mut Board, part: &str) -> FenResult {
             )));
         }
     }
-    return Ok(());
+    Ok(())
 }
 
 /// Converts the active color of a board to a FEN string.
 pub(crate) fn active_color_to_fen(board: &Board) -> String {
-    return match board.side_to_move() {
+    match board.side_to_move() {
         Side::White => "w".to_string(),
         Side::Black => "b".to_string(),
         _ => panic!("Invalid side"),
-    };
+    }
 }
 
 /// Parses the en passant target square (if any) part of a FEN string and updates the board accordingly.
@@ -276,18 +276,18 @@ fn parse_en_passant_target_square(board: &mut Board, part: &str) -> FenResult {
         return Ok(());
     }
 
-    return Err(FenError::new(&format!(
+    Err(FenError::new(&format!(
         "Invalid en passant target square found in FEN part {}",
         FenPart::EnPassantTargetSquare,
-    )));
+    )))
 }
 
 /// Converts the en passant target square of a board to a FEN string.
 pub(crate) fn en_passant_target_square_to_fen(board: &Board) -> String {
-    return match board.en_passant_square() {
+    match board.en_passant_square() {
         Some(square) => SQUARE_NAME[square as usize].to_string(),
         None => "-".to_string(),
-    };
+    }
 }
 
 /// Parses the castling availability part of a FEN string and updates the board accordingly.
@@ -322,7 +322,7 @@ fn parse_castling_availability(board: &mut Board, part: &str) -> FenResult {
 
     board.set_castling_rights(castle_rights);
 
-    return Ok(());
+    Ok(())
 }
 
 /// Converts the castling availability of a board to a FEN string.
@@ -346,29 +346,29 @@ pub(crate) fn castling_availability_to_fen(board: &Board) -> String {
         fen.push('q');
     }
 
-    return fen;
+    fen
 }
 
 /// Parses the halfmove clock part of a FEN string and updates the board accordingly.
 fn parse_halfmove_clock(board: &mut Board, part: &str) -> FenResult {
     let halfmove_clock = part.trim().parse::<u32>().unwrap();
     board.set_half_move_clock(halfmove_clock);
-    return Ok(());
+    Ok(())
 }
 
 /// Converts the halfmove clock of a board to a FEN string.
 pub(crate) fn halfmove_clock_to_fen(board: &Board) -> String {
-    return board.half_move_clock().to_string();
+    board.half_move_clock().to_string()
 }
 
 /// Parses the fullmove number part of a FEN string and updates the board accordingly.
 fn parse_fullmove_number(board: &mut Board, part: &str) -> FenResult {
     let fullmove_number = part.trim().parse::<u32>().unwrap();
     board.set_full_move_number(fullmove_number);
-    return Ok(());
+    Ok(())
 }
 
 /// Converts the fullmove number of a board to a FEN string.
 pub(crate) fn fullmove_number_to_fen(board: &Board) -> String {
-    return board.full_move_number().to_string();
+    board.full_move_number().to_string()
 }
