@@ -13,7 +13,7 @@
  */
 
 use std::{
-    io::{stdin, BufRead, Write},
+    io::{stdin, BufRead},
     str::FromStr,
     sync::mpsc::{self, Receiver, Sender},
 };
@@ -64,10 +64,10 @@ impl InputHandler {
                             break;
                         }
                     } else {
-                        writeln!(std::io::stderr(), "Invalid UCI command: {}", line).unwrap();
+                        eprintln!("Invalid UCI command: {}", line);
                     }
                 } else {
-                    writeln!(std::io::stderr(), "Error reading from stdin").unwrap();
+                    eprintln!("Error reading from stdin");
                 }
             }
         });
@@ -89,7 +89,7 @@ impl InputHandler {
 
     /// Signal to the worker thread that it should stop. This method does not block the calling
     /// thread.
-    pub(crate) fn stop(&mut self) {
+    pub(crate) fn exit(&mut self) {
         self.worker.stop();
     }
 }

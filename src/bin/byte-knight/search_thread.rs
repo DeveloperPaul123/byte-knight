@@ -49,13 +49,13 @@ fn move_to_uci_move(mv: &Move) -> UciMove {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 pub(crate) enum SearchThreadValue {
     Params(Board, SearchParameters),
     Exit,
 }
 
 pub(crate) struct SearchThread {
-    // ...
     sender: Sender<SearchThreadValue>,
     handle: Option<JoinHandle<()>>,
     stop_search_flag: Arc<AtomicBool>,
@@ -68,7 +68,7 @@ impl SearchThread {
         let stop_flag_clone = stop_flag.clone();
         let handle = std::thread::spawn(move || {
             let mut stdout = std::io::stdout();
-            loop {
+            'search_loop: loop {
                 let value = receiver.recv().unwrap();
                 match value {
                     SearchThreadValue::Params(mut board, params) => {
@@ -76,9 +76,8 @@ impl SearchThread {
                         let result = Search::new(&params).search(&mut board, Some(flag));
                         let best_move = result.best_move;
                         let move_output = UciResponse::BestMove {
-                            bestmove: best_move.map_or(None, |bot_move| {
-                                Some(move_to_uci_move(&bot_move).to_string())
-                            }),
+                            bestmove: best_move
+                                .map(|bot_move| move_to_uci_move(&bot_move).to_string()),
                             ponder: None,
                         };
                         writeln!(
@@ -90,7 +89,9 @@ impl SearchThread {
                         .unwrap();
                     }
 
-                    SearchThreadValue::Exit => {}
+                    SearchThreadValue::Exit => {
+                        break 'search_loop;
+                    }
                 }
             }
         });
@@ -101,6 +102,11 @@ impl SearchThread {
         }
     }
 
+    pub(crate) fn exit(&mut self) {
+        self.stop_search();
+        self.sender.send(SearchThreadValue::Exit).unwrap();
+        self.handle.take().unwrap().join().unwrap();
+    }
     pub(crate) fn stop_search(&self) {
         self.stop_search_flag.store(true, Ordering::Relaxed);
     }
