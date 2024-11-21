@@ -1,4 +1,5 @@
 set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+
 default: build
 
 build:
@@ -15,10 +16,10 @@ lint:
 search-bench:
     echo "Running search benchmark..."
     cargo run --release --bin byte-knight -- bench
-    
+
 perft depth:
     echo "Running perft..."
-    cargo run --release --bin perft -- -d {{depth}}
+    cargo run --release --bin perft -- -d {{ depth }}
 
 perft-epd:
     echo "Running EPD perft test suite..."
