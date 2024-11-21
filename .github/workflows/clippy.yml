@@ -19,6 +19,6 @@ jobs:
       with:
         lfs: true
     - name: Install just
-      run: cargo install --bin just
+      uses: extractions/setup-just@v2
     - name: clippy
       run: just lint
