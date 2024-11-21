@@ -22,7 +22,6 @@ mod score;
 mod search;
 mod search_thread;
 mod tt_table;
-mod worker_thread;
 
 use defs::About;
 use engine::ByteKnight;
