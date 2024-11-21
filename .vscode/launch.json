@@ -8,7 +8,7 @@
             "type": "cppvsdbg",
             "request": "launch",
             "name": "byte-knight (Windows)",
-            "program": "${workspaceRoot}/target/debug/byte_knight.exe",
+            "program": "${workspaceRoot}/target/debug/byte-knight.exe",
             "cwd": "${workspaceRoot}",
         },
         {
@@ -38,6 +38,19 @@
                 "-s",
             ],
             "cwd": "${workspaceRoot}",
-        }
+        },
+        {
+            "type": "cppdbg",
+            "request": "launch",
+            "name": "byte-knight (Mac)",
+            "program": "${workspaceRoot}/target/debug/byte-knight",
+            "cwd": "${workspaceRoot}",
+            "MIMode": "lldb",
+            "args": [
+                "uci",
+                "position fen rn1qkb1r/1b4pp/1pp1pn2/p2p1p2/P1PP4/1P1BPN2/5PPP/RNBQ1RK1 w kq - 0 1 moves b1c3 b8d7 c1b2 d5c4 b3c4 f8b4 f1e1 d8e7 d4d5 e8c8 d1c1 d7c5 d3c2 c6d5 c4d5 b4c3 b2c3 b7d5 c2d1 d8d7 a1b1 e7e8 c3f6 g7f6 c1c3 e8d8 d1e2 d5e4 b1b2 e4f3 e2f3 d7c7 c3c4 c7e7 c4b5 c5d7 f3c6 d8c7 b5a6 c8d8 a6a8 d7b8 e1b1 c7a7 b2d2 d8c8 c6d7 e7d7 d2c2 c8d8 a8a7 d7a7 b1b6 d8e7 b6b1 b8d7 b1c1 a7a8 c2c7 h8d8 c1d1 e7e8 d1d6 e8e7 c7c6 d7c5 d6d8 a8d8 c6c7 d8d7 c7d7 e7d7 g1f1 c5a4 f1e2 d7d6 e2d3 d6e5 d3e2 e5e4 e2d2 a4b6 d2d1 e4d3 d1e1 a5a4 e1d1 b6c4 d1c1 d3e2 e3e4 f5e4 f2f3 e4e3 c1c2 e2f2 c2c3 e3e2 c3c4 f2g2 c4b5 a4a3 f3f4 e2e1q f4f5 e6f5 b5c4 a3a2 c4c5 a2a1q h2h4 a1e5",
+                "go wtime 84 btime 73 winc 20 binc 20"
+            ]
+        },
     ]
 }

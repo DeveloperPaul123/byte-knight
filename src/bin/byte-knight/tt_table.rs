@@ -1,9 +1,22 @@
+/*
+ * tt_table.rs
+ * Part of the byte-knight project
+ * Created Date: Thursday, November 21st 2024
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified: Thu Nov 21 2024
+ * -----
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ * 
+ */
+
 use chess::{board::Board, moves::Move};
 
 use crate::score::Score;
 
 const BYTES_PER_MB: usize = 1024 * 1024;
-const DEFAULT_CAPACITY: usize = 64;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum EntryFlag {
@@ -44,9 +57,6 @@ pub(crate) struct TranspositionTable {
 }
 
 impl TranspositionTable {
-    pub(crate) fn new() -> TranspositionTable {
-        Self::from_capacity(DEFAULT_CAPACITY)
-    }
 
     pub(crate) fn from_capacity(capacity: usize) -> Self {
         Self {

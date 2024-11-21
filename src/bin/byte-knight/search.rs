@@ -1,16 +1,28 @@
+/*
+ * search.rs
+ * Part of the byte-knight project
+ * Created Date: Thursday, November 21st 2024
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified: Thu Nov 21 2024
+ * -----
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ * 
+ */
+
 use std::{
     fmt::Display,
-    i64::MAX,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
     time::{Duration, Instant},
+    u64,
 };
 
-use chess::{
-    board::Board,
-    definitions::DEFAULT_FEN,
-    move_generation::MoveGenerator,
-    move_list::MoveList,
-    moves::{Move, MoveType},
-};
+use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
 use itertools::Itertools;
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
@@ -26,7 +38,7 @@ const MAX_DEPTH: u8 = 128;
 pub(crate) struct SearchResult {
     pub score: Score,
     pub best_move: Option<Move>,
-    pub nodes: u128,
+    pub nodes: u64,
     pub depth: u8,
 }
 
@@ -56,12 +68,13 @@ impl Display for SearchResult {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct SearchParameters {
     pub max_depth: u8,
     pub start_time: Instant,
     pub soft_timeout: Duration,
     pub hard_timeout: Duration,
+    pub max_nodes: u64,
 }
 
 impl SearchParameters {
@@ -71,6 +84,7 @@ impl SearchParameters {
             start_time: Instant::now(),
             soft_timeout: Duration::MAX,
             hard_timeout: Duration::MAX,
+            max_nodes: u64::MAX,
         }
     }
 
@@ -78,6 +92,10 @@ impl SearchParameters {
         let mut params = Self::default();
         if let Some(depth) = uci_options.depth {
             params.max_depth = depth as u8;
+        }
+
+        if let Some(nodes) = uci_options.nodes {
+            params.max_nodes = nodes as u64;
         }
 
         if let Some(time) = uci_options.movetime {
@@ -122,29 +140,37 @@ impl Default for SearchParameters {
 pub(crate) struct Search {
     transposition_table: TranspositionTable,
     move_gen: MoveGenerator,
-    nodes: u128,
+    nodes: u64,
     parameters: SearchParameters,
     eval: Evaluation,
+    stop_flag: Option<Arc<AtomicBool>>,
 }
 
 impl Default for Search {
     fn default() -> Self {
-        Search::new(SearchParameters::default())
+        Search::new(&SearchParameters::default())
     }
 }
 
 impl Search {
-    pub fn new(parameters: SearchParameters) -> Self {
+    pub fn new(parameters: &SearchParameters) -> Self {
         Search {
             transposition_table: TranspositionTable::from_size_in_mb(64),
             move_gen: MoveGenerator::new(),
             nodes: 0,
-            parameters,
+            parameters: parameters.clone(),
             eval: Evaluation::new(),
+            stop_flag: None,
         }
     }
 
-    pub(crate) fn search(self: &mut Self, board: &mut Board) -> SearchResult {
+    pub(crate) fn search(
+        self: &mut Self,
+        board: &mut Board,
+        stop_flag: Option<Arc<AtomicBool>>,
+    ) -> SearchResult {
+        self.stop_flag = stop_flag;
+
         let info = UciInfo::default().string(format!("searching {}", self.parameters));
         let message = UciResponse::info(info);
         println!("{}", message);
@@ -156,13 +182,19 @@ impl Search {
     }
 
     fn should_stop_searching(self: &Self) -> bool {
-        self.parameters.start_time.elapsed() >= self.parameters.hard_timeout
+        self.parameters.start_time.elapsed() >= self.parameters.hard_timeout // hard timeout
+        || self.nodes >= self.parameters.max_nodes // node limit reached
+        || self.stop_flag.as_ref().is_some_and(|f| f.load(Ordering::Relaxed)) // stop flag set
     }
 
     fn iterative_deepening(self: &mut Self, board: &mut Board) -> SearchResult {
         // initialize the best result
         let mut best_result = SearchResult::default();
-
+        let mut move_list = MoveList::new();
+        self.move_gen.generate_legal_moves(board, &mut move_list);
+        if move_list.len() > 0 {
+            best_result.best_move = Some(*move_list.at(0).unwrap())
+        }
         while self.parameters.start_time.elapsed() < self.parameters.soft_timeout
             && best_result.depth <= self.parameters.max_depth
         {
@@ -223,7 +255,7 @@ impl Search {
         ply: i64,
         mut alpha: Score,
         mut beta: Score,
-        max_depth: i64,
+        _max_depth: i64,
     ) -> Score {
         // increment node count
         self.nodes += 1;
@@ -288,15 +320,10 @@ impl Search {
             board.make_move_unchecked(mv).unwrap();
             // is it a draw?
             let score = // recursive call and lower depth, higher ply and negated alpha and beta (swapped)
-            -self.negamax(board, depth - 1, ply + 1, -beta, -alpha, max_depth);
+            -self.negamax(board, depth - 1, ply + 1, -beta, -alpha, _max_depth);
 
             // undo the move
             board.unmake_move().unwrap();
-
-            // do we need to stop searching?
-            if self.should_stop_searching() {
-                break;
-            }
 
             // check the results
             if score > best_score {
@@ -309,6 +336,11 @@ impl Search {
                 if alpha >= beta {
                     break;
                 }
+            }
+
+            // do we need to stop searching?
+            if self.should_stop_searching() {
+                break;
             }
         }
 
@@ -350,7 +382,7 @@ impl Search {
     fn quiescence(
         self: &mut Self,
         board: &mut Board,
-        ply: i64,
+        _ply: i64,
         mut alpha: Score,
         beta: Score,
     ) -> Score {
@@ -371,14 +403,14 @@ impl Search {
             .collect_vec();
 
         // no captures
-        if captures.len() == 0 {
+        if captures.is_empty() {
             return standing_eval;
         }
 
         let tt_move = self.transposition_table.get_entry(board.zobrist_hash());
         let sorted_moves = captures
             .into_iter()
-            .sorted_by_cached_key(|mv| Evaluation::score_moves_for_ordering(*mv, &tt_move));
+            .sorted_by_cached_key(|mv| Evaluation::score_moves_for_ordering(mv, &tt_move));
         let mut best = standing_eval;
 
         for mv in sorted_moves {
@@ -386,7 +418,7 @@ impl Search {
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
-                let eval = -self.quiescence(board, ply + 1, -beta, -alpha);
+                let eval = -self.quiescence(board, _ply + 1, -beta, -alpha);
                 self.nodes += 1;
                 eval
             };
@@ -433,8 +465,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(config);
-        let res = search.search(&mut board.clone());
+        let mut search = Search::new(&config);
+        let res = search.search(&mut board.clone(), None);
         // b6a7
         assert_eq!(
             res.best_move.unwrap().to_long_algebraic(),
@@ -451,8 +483,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(config);
-        let res = search.search(&mut board);
+        let mut search = Search::new(&config);
+        let res = search.search(&mut board, None);
 
         assert_eq!(res.best_move.unwrap().to_long_algebraic(), "b8a8")
     }
@@ -463,8 +495,8 @@ mod tests {
         let mut board = Board::from_fen(&fen).unwrap();
         let config = SearchParameters::default();
 
-        let mut search = Search::new(config);
-        let res = search.search(&mut board);
+        let mut search = Search::new(&config);
+        let res = search.search(&mut board, None);
         assert!(res.best_move.is_none());
         assert_eq!(res.score, Score::DRAW);
     }
@@ -478,8 +510,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(config);
-        let res = search.search(&mut board);
+        let mut search = Search::new(&config);
+        let res = search.search(&mut board, None);
 
         assert!(res.best_move.is_some());
         assert!(config.start_time.elapsed() <= config.hard_timeout);
@@ -493,8 +525,22 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(config);
-        let res = search.search(&mut board);
+        let mut search = Search::new(&config);
+        let res = search.search(&mut board, None);
+        assert!(res.best_move.is_some());
+        println!("{}", res.best_move.unwrap().to_long_algebraic());
+    }
+
+    #[test]
+    fn no_time() {
+        let mut board = Board::from_fen("8/7p/5p2/2K1qp2/7P/8/6k1/4q3 w - - 1 2").unwrap();
+        let config = SearchParameters {
+            soft_timeout: Duration::from_millis(0),
+            hard_timeout: Duration::from_millis(0),
+            ..Default::default()
+        };
+        let mut search = Search::new(&config);
+        let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
     }

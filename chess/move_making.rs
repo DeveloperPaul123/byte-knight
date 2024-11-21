@@ -35,7 +35,7 @@ impl Board {
     /// * `mv` - The move to make in UCI notation.
     ///
     ///
-    pub fn make_uci_move(&mut self, mv: &str, move_gen: &MoveGenerator) -> Result<()> {
+    pub fn make_uci_move(&mut self, mv: &str) -> Result<()> {
         if mv.len() < 4 {
             bail!("Invalid move length");
         }
@@ -75,6 +75,7 @@ impl Board {
 
         let is_double_push = can_double_push
             && (from.rank.as_number() as i8).abs_diff(to.rank.as_number() as i8) == 2;
+
         let is_castle = piece == Piece::King && (from.file as i8).abs_diff(to.file as i8) == 2;
         let is_en_passant = piece == Piece::Pawn
             && self.en_passant_square().is_some()
@@ -102,7 +103,7 @@ impl Board {
             captured_piece,
             promotion_piece,
         );
-        self.make_move(&mv, move_gen)
+        self.make_move_unchecked(&mv)
     }
 
     fn check_move_preconditions(&mut self, mv: &Move) -> Result<()> {
@@ -320,7 +321,7 @@ impl Board {
 
         // update full move number
         if us == Side::Black {
-            self.set_full_move_number(self.half_move_clock() + 1);
+            self.set_full_move_number(self.full_move_number() + 1);
         }
 
         Ok(())
@@ -552,5 +553,29 @@ mod tests {
         assert!(board.check_move_preconditions(en_passant_move).is_ok());
         let move_result = board.make_move(en_passant_move, &move_gen);
         assert!(move_result.is_ok());
+    }
+
+    #[test]
+    fn make_uci_moves() {
+        let starting_fen = "r1bqk2r/ppp2pb1/3p1npp/2nPp3/2P1P3/2N2N1P/PP2BPP1/R1BQK2R w KQkq - 0 1";
+        let mut board = Board::from_fen(starting_fen).unwrap();
+
+        let uci_moves: [&str; 61] = [
+            "d1c2", "c8d7", "c1e3", "e8e7", "f3e5", "c5e4", "c3e4", "d7f5", "e2d3", "d6e5", "e3c5",
+            "e7e8", "e4f6", "d8f6", "c2a4", "f5d7", "a4b4", "b7b6", "c5e3", "e5e4", "d3f1", "f6b2",
+            "b4b2", "g7b2", "a1b1", "b2c3", "e1e2", "d7a4", "b1c1", "c3b2", "c1b1", "b2c3", "b1c1",
+            "e8d7", "c1c3", "d7e7", "e2d2", "a4d7", "c4c5", "d7f5", "c5b6", "c7b6", "c3c7", "e7d6",
+            "c7f7", "d6d5", "f1e2", "d5e6", "e2c4", "e6e5", "h1e1", "e5d6", "g2g4", "f5d7", "f7f6",
+            "d6e5", "f6g6", "a8d8", "d2c3", "h8e8", "f2f4",
+        ];
+
+        for mv in uci_moves {
+            println!("{}", mv);
+            assert!(board.make_uci_move(mv).is_ok());
+            println!("after {}: {}", mv, board.to_fen());
+        }
+
+        let expected_fen = "3rr3/p2b4/1p4Rp/4k3/2B1pPP1/2K1B2P/P7/4R3 b - f3 0 31";
+        assert_eq!(board.to_fen(), expected_fen);
     }
 }
