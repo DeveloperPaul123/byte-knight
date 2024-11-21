@@ -10,7 +10,7 @@ test:
     cargo test --release --
 
 lint:
-    cargo clippy
+    cargo clippy --all --all-features --tests -- -D warnings
 
 search-bench:
     echo "Running search benchmark..."
