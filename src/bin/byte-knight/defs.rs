@@ -9,9 +9,10 @@ const BANNER: &str = r#"
 
 pub struct About;
 impl About {
-    pub const NAME: &'static str = "ByteKnight";
-    pub const VERSION: &'static str = "0.1.0";
-    pub const SHORT_DESCRIPTION: &'static str = "ByteKnight is a UCI compliant chess engine.";
+    pub const NAME: &'static str = "byte-knight";
+    pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+    pub const EMAIL: &'static str = "developer.paul.123@gmail.com";
+    pub const SHORT_DESCRIPTION: &'static str = "byte-knight is a UCI compliant chess engine.";
     pub const AUTHORS: &'static str = "Paul T. (DeveloperPaul123)";
     pub const BANNER: &'static str = BANNER;
 }

@@ -21,14 +21,23 @@ impl ByteKnight {
     }
 
     pub fn run(&mut self) -> anyhow::Result<()> {
-        // spawn thread to handle UCI commands
-        let stdout = io::stdout();
+        println!("{}", About::BANNER);
+        println!(
+            "{} {} by {} <{}>",
+            About::NAME,
+            About::VERSION,
+            About::AUTHORS,
+            About::EMAIL
+        );
+        let stdout: io::Stdout = io::stdout();
         let mut board = Board::default_board();
         'engine_loop: while let Ok(command) = &self.input_handler.receiver().recv() {
             let mut stdout = stdout.lock();
             match command {
                 UciCommand::Quit => {
-                    self.input_handler.stop();
+                    // clean up
+                    self.search_thread.exit();
+                    self.input_handler.exit();
                     break 'engine_loop;
                 }
                 UciCommand::IsReady => {
@@ -73,7 +82,7 @@ impl ByteKnight {
                     writeln!(stdout, "{}", UciResponse::info(info)).unwrap();
 
                     // create the search parameters
-                    let search_params = SearchParameters::new(&search_options, &board);
+                    let search_params = SearchParameters::new(search_options, &board);
                     // send them and the current board to the search thread
                     self.search_thread.start_search(&board, search_params);
                 }
