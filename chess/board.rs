@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 12 2024
+ * Last Modified: Wed Nov 20 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -40,9 +40,9 @@ pub struct Board {
 impl Clone for Board {
     fn clone(&self) -> Self {
         Self {
-            piece_bitboards: self.piece_bitboards.clone(),
+            piece_bitboards: self.piece_bitboards,
             history: self.history.clone(),
-            state: self.state.clone(),
+            state: self.state,
             zobrist_values: self.zobrist_values.clone(),
         }
     }
@@ -74,13 +74,13 @@ impl Board {
         // XOR the zobrist values for each piece on the board
         for side in 0..NumberOf::SIDES {
             for piece in 0..NumberOf::PIECE_TYPES {
-                let mut bitboard = self.piece_bitboards[side][piece].clone();
+                let mut bitboard = self.piece_bitboards[side][piece];
 
                 while bitboard != 0 {
                     let square = bitboard_helpers::next_bit(&mut bitboard);
                     zobrist_hash ^=
                         self.zobrist_values
-                            .get_piece_value(piece, side, square as usize);
+                            .get_piece_value(piece, side, square);
                 }
             }
         }
@@ -138,7 +138,7 @@ impl Board {
     }
 
     pub(crate) fn mut_piece_bitboard(&mut self, piece: Piece, side: Side) -> &mut Bitboard {
-        return &mut self.piece_bitboards[side as usize][piece as usize];
+        &mut self.piece_bitboards[side as usize][piece as usize]
     }
 
     pub(crate) fn set_piece_square(&mut self, piece: usize, side: usize, square: u8) {
@@ -199,7 +199,7 @@ impl Board {
     }
 
     pub(crate) fn board_state(&self) -> &BoardState {
-        return &self.state;
+        &self.state
     }
 
     pub(crate) fn set_board_state(&mut self, state: BoardState) {
@@ -223,7 +223,7 @@ impl Board {
         board.set_side_to_move(Side::White);
         board.set_castling_rights(CastlingAvailability::ALL);
         board.set_zobrist_hash(board.initialize_zobrist_hash());
-        return board;
+        board
     }
 
     /// Create a new board from a FEN string.
@@ -248,31 +248,31 @@ impl Board {
         // initializing the board will handle initializing anything that isn't set by the FEN parser
         board.initialize();
 
-        return Ok(board);
+        Ok(board)
     }
 
     /// Convert the board to a FEN string.
     pub fn to_fen(&self) -> String {
         let mut fen = String::new();
         // Piece placement
-        fen.push_str(&fen::piece_placement_to_fen(&self));
+        fen.push_str(&fen::piece_placement_to_fen(self));
         fen.push(SPACE);
         // Active color
-        fen.push_str(&fen::active_color_to_fen(&self));
+        fen.push_str(&fen::active_color_to_fen(self));
         fen.push(SPACE);
         // Castling availability
-        fen.push_str(&fen::castling_availability_to_fen(&self));
+        fen.push_str(&fen::castling_availability_to_fen(self));
         fen.push(SPACE);
         // En passant target square
-        fen.push_str(&fen::en_passant_target_square_to_fen(&self));
+        fen.push_str(&fen::en_passant_target_square_to_fen(self));
         fen.push(SPACE);
         // Halfmove clock
-        fen.push_str(&fen::halfmove_clock_to_fen(&self));
+        fen.push_str(&fen::halfmove_clock_to_fen(self));
         fen.push(SPACE);
         // Fullmove number
-        fen.push_str(&fen::fullmove_number_to_fen(&self));
+        fen.push_str(&fen::fullmove_number_to_fen(self));
 
-        return fen;
+        fen
     }
 
     /// Returns the all pieces of this [`Board`].
@@ -284,7 +284,7 @@ impl Board {
                 all_pieces |= self.piece_bitboards[side][piece_type];
             }
         }
-        return all_pieces;
+        all_pieces
     }
 
     /// Returns all the pieces of a given side in a single [`Bitboard`].
@@ -293,17 +293,17 @@ impl Board {
         for piece_type in 0..NumberOf::PIECE_TYPES {
             pieces |= self.piece_bitboards[side as usize][piece_type];
         }
-        return pieces;
+        pieces
     }
 
     /// Returns the white pieces of this [`Board`] in a single [`Bitboard`].
     pub fn white_pieces(&self) -> Bitboard {
-        return self.pieces(Side::White);
+        self.pieces(Side::White)
     }
 
     /// Returns the black pieces of this [`Board`] in a single [`Bitboard`].
     pub fn black_pieces(&self) -> Bitboard {
-        return self.pieces(Side::Black);
+        self.pieces(Side::Black)
     }
 
     /// Returns the bitboard for a specific piece and side.
@@ -314,7 +314,7 @@ impl Board {
 
     pub fn king_square(&self, side: Side) -> u8 {
         let king_bb = self.piece_bitboard(Piece::King, side);
-        return bitboard_helpers::next_bit(&mut king_bb.clone()) as u8;
+        bitboard_helpers::next_bit(&mut king_bb.clone()) as u8
     }
 
     /// Find what piece is on a given square.
@@ -331,76 +331,74 @@ impl Board {
                 }
             }
         }
-        return None;
+        None
     }
 
     /// Returns the side to move of this [`Board`].
     pub fn side_to_move(&self) -> Side {
-        return self.state.side_to_move;
+        self.state.side_to_move
     }
 
     pub fn en_passant_square(&self) -> Option<u8> {
-        return self.state.en_passant_square;
+        self.state.en_passant_square
     }
 
     pub fn half_move_clock(&self) -> u32 {
-        return self.state.half_move_clock;
+        self.state.half_move_clock
     }
 
     pub fn full_move_number(&self) -> u32 {
-        return self.state.full_move_number;
+        self.state.full_move_number
     }
 
     pub fn castling_rights(&self) -> u8 {
-        return self.state.castling_rights;
+        self.state.castling_rights
     }
 
     pub fn zobrist_hash(&self) -> u64 {
-        return self.state.zobrist_hash;
+        self.state.zobrist_hash
     }
 
     pub fn is_square_on_rank(square: u8, rank: u8) -> bool {
         let (_, rnk) = square::from_square(square);
-        return rnk == rank;
+        rnk == rank
     }
 
     pub fn is_square_empty(&self, square: &Square) -> bool {
-        return !self
+        !self
             .all_pieces()
-            .is_square_occupied(square.to_square_index());
+            .is_square_occupied(square.to_square_index())
     }
 
     pub fn can_castle_kingside(&self, side: Side) -> bool {
         let castling_rights = self.castling_rights();
-        return match side {
+        match side {
             Side::White => castling_rights & CastlingAvailability::WHITE_KINGSIDE != 0,
             Side::Black => castling_rights & CastlingAvailability::BLACK_KINGSIDE != 0,
             Side::Both => panic!("Cannot check if both sides can castle kingside"),
-        };
+        }
     }
 
     pub fn can_castle_queenside(&self, side: Side) -> bool {
         let castling_rights = self.castling_rights();
-        return match side {
+        match side {
             Side::White => castling_rights & CastlingAvailability::WHITE_QUEENSIDE != 0,
             Side::Black => castling_rights & CastlingAvailability::BLACK_QUEENSIDE != 0,
             Side::Both => panic!("Cannot check if both sides can castle queenside"),
-        };
+        }
     }
 
     pub fn is_in_check(&self, move_gen: &MoveGenerator) -> bool {
         // pseudo legal check
         // check if we are in check
         // get the kings location and check if that square is attacked by the opponent
-        let mut king_bb = self
-            .piece_bitboard(Piece::King, self.side_to_move())
-            .clone();
+        let mut king_bb = *self.piece_bitboard(Piece::King, self.side_to_move());
         let king_square = bitboard_helpers::next_bit(&mut king_bb) as u8;
-        return move_gen.is_square_attacked(
+        move_gen.is_square_attacked(
             self,
             &Square::from_square_index(king_square),
             Side::opposite(self.side_to_move()),
-        );
+        )
     }
 
     pub fn is_checkmate(&self, move_gen: &MoveGenerator) -> bool {
@@ -437,7 +435,7 @@ impl Board {
                 return true;
             }
         }
-        return false;
+        false
     }
 
     /// Get the color of the piece on a given square.
@@ -455,9 +453,7 @@ impl Board {
         }
     }
     pub fn is_draw(&self) -> bool {
-        return self.is_draw_by_fifty_move_rule()
-            || self.insufficient_material()
-            || self.is_repetition();
+        self.is_draw_by_fifty_move_rule() || self.insufficient_material() || self.is_repetition()
     }
 
     /// Check if the game is a draw by insufficient material. We use the FIDE rules for this check.
@@ -520,8 +516,8 @@ impl Board {
                     // break out early
                     return true;
                 }
-            } else {
             }
+
             // we only need to go back up to the last pawn move, castle, or capture as these moves reset the half-move clock
             // beyond this point, there can't be a repeated position
             if previous_state.half_move_clock == 0 {
@@ -546,7 +542,7 @@ impl Board {
                 return false;
             }
         }
-        return true;
+        true
     }
 }
 

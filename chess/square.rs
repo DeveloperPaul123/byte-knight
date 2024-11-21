@@ -4,7 +4,7 @@
  * Created Date: Friday, August 16th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 18 2024
+ * Last Modified: Thu Nov 21 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -92,7 +92,7 @@ impl TryFrom<&str> for Square {
         let rank = value.chars().nth(1).unwrap();
         // rank values are 1-8, so we need to convert to 0-7
         let rank_digit = rank.to_digit(10).unwrap() - 1;
-        Ok(Square::from_file_rank(file, rank_digit as u8)?)
+        Square::from_file_rank(file, rank_digit as u8)
     }
 }
 
@@ -136,7 +136,7 @@ pub fn to_square_object(file: u8, rank: u8) -> Square {
 pub const fn from_square(square: u8) -> (u8, u8) {
     let rank = square / 8;
     let file = square % 8;
-    return (file, rank);
+    (file, rank)
 }
 
 #[cfg(test)]

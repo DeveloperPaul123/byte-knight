@@ -1,4 +1,8 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    process::exit,
+};
 
 use chess::{board::Board, fen};
 use console::Emoji;
@@ -9,10 +13,7 @@ mod utils;
 static CHECK_BOX: Emoji = Emoji("✅", "");
 static CROSS_MARK: Emoji = Emoji("❌", "");
 
-fn decompress_data(
-    output_data_path: &PathBuf,
-    compressed_data_path: &PathBuf,
-) -> anyhow::Result<()> {
+fn decompress_data(output_data_path: &Path, compressed_data_path: &Path) -> anyhow::Result<()> {
     let mut decompress_command = std::process::Command::new("zstd");
     decompress_command
         .arg("-d")
@@ -47,7 +48,7 @@ fn main() {
                 "Failed to decompress data file: {:?}",
                 decompress_result.err()
             );
-            assert!(false);
+            exit(-1);
         }
     }
 
@@ -76,7 +77,7 @@ fn main() {
             }
         }
 
-        return true;
+        true
     };
 
     match records_result {
@@ -136,14 +137,14 @@ fn main() {
             }
 
             if duplicates == 0 {
-                println!("{} No hash collisions detected!", CHECK_BOX.to_string());
+                println!("{} No hash collisions detected!", CHECK_BOX);
             } else {
                 println!("{} {} hash collisions detected", CROSS_MARK, duplicates);
             }
         }
         Err(e) => {
             println!("Failed to read records: {:?}", e);
-            assert!(false);
+            exit(-1);
         }
     }
 }

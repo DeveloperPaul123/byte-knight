@@ -32,22 +32,7 @@ const MVV_LVA: [[i64; NumberOf::PIECE_TYPES + 1]; NumberOf::PIECE_TYPES + 1] = [
     [0, 0, 0, 0, 0, 0, 0],             // victim None, attacker K, Q, R, B, N, P, None
 ];
 
-/// Returns a value of the provided `PieceKind`.
-///
-/// Values are obtained from here: <https://www.chessprogramming.org/Simplified_Evaluation_Function>
-#[inline(always)]
-pub const fn piece_value(kind: Piece) -> i64 {
-    match kind {
-        Piece::Pawn => 100,
-        Piece::Knight => 320,
-        Piece::Bishop => 330,
-        Piece::Rook => 500,
-        Piece::Queen => 900,
-        Piece::King => 0,
-        Piece::None => 0,
-    }
-}
-
+/// Provides static evaluation of a given chess position.
 pub struct Evaluation {
     psqt: Psqt,
 }
@@ -57,11 +42,28 @@ impl Evaluation {
         Evaluation { psqt: Psqt::new() }
     }
 
-    pub(crate) fn evaluate_position(self: &Self, board: &Board) -> Score {
+    /// Evaluates the given position.
+    ///
+    /// # Arguments
+    ///
+    /// - `board`: The [`Board`] to evaluate.
+    pub(crate) fn evaluate_position(&self, board: &Board) -> Score {
         self.psqt.evaluate(board)
     }
 
-    pub(crate) fn score_moves_for_ordering(
+    /// Scores a move for ordering. This will return the _negative_ score of
+    /// the move so that if you sort moves by their score, the best move will 
+    /// be first (at index 0).
+    /// 
+    /// # Arguments
+    /// 
+    /// - `mv`: The move to score.
+    /// - `tt_entry`: The transposition table entry for the current position.
+    /// 
+    /// # Returns
+    /// 
+    /// The score of the move.
+    pub(crate) fn score_move_for_ordering(
         mv: &Move,
         tt_entry: &Option<TranspositionTableEntry>,
     ) -> Score {

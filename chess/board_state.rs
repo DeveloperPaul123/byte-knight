@@ -1,10 +1,5 @@
+use crate::{definitions::CastlingAvailability, moves::Move, side::Side, zobrist::ZobristHash};
 use std::fmt::Display;
-use crate::{
-    definitions::{CastlingAvailability},
-    side::Side,
-    moves::Move,
-    zobrist::ZobristHash,
-};
 
 #[derive(Debug, Clone, Copy)]
 pub struct BoardState {
@@ -15,6 +10,12 @@ pub struct BoardState {
     pub castling_rights: u8,
     pub zobrist_hash: ZobristHash,
     pub next_move: Move,
+}
+
+impl Default for BoardState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl BoardState {

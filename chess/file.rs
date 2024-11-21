@@ -14,10 +14,10 @@ pub enum File {
 impl File {
     pub fn offset(&self, delta: i8) -> Option<Self> {
         let new_file = (*self as i8) + delta;
-        if new_file < 0 || new_file > 7 {
-            return None;
+        match (0..=7).contains(&new_file) {
+            true => Some(unsafe { std::mem::transmute::<u8, File>(new_file as u8) }),
+            false => None,
         }
-        Some(unsafe { std::mem::transmute(new_file as u8) })
     }
 
     pub fn to_char(&self) -> char {

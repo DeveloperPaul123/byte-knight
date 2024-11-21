@@ -6,6 +6,12 @@ pub struct MoveList {
     moves: ArrayVec<Move, MAX_MOVE_LIST_SIZE>,
 }
 
+impl Default for MoveList {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MoveList {
     pub fn new() -> Self {
         MoveList {
@@ -15,6 +21,10 @@ impl MoveList {
 
     pub fn len(&self) -> usize {
         self.moves.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.moves.is_empty()
     }
 
     pub fn push(&mut self, mv: Move) {

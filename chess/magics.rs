@@ -4,7 +4,7 @@
  * Created Date: Friday, August 30th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Oct 11 2024
+ * Last Modified: Wed Nov 20 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -156,7 +156,7 @@ pub(crate) const ROOK_MAGIC_VALUES: [u64; NumberOf::SQUARES] = [
     864972604513985025,
 ];
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+#[derive(Serialize, Default, Deserialize, Debug, Clone, Copy)]
 pub struct MagicNumber {
     pub relevant_bits_mask: u64,
     pub shift: u8,
@@ -173,14 +173,6 @@ impl MagicNumber {
             magic_value,
         }
     }
-    pub fn default() -> Self {
-        MagicNumber {
-            relevant_bits_mask: 0,
-            shift: 0,
-            offset: 0,
-            magic_value: 0,
-        }
-    }
 
     /// Returns the index of the magic number in the table.
     /// This is basically the same formula used to calculate magic numbers, but it's just missing the magic value.
@@ -190,7 +182,7 @@ impl MagicNumber {
         // need to shift
         let blocker_num = blockers.as_number();
         let hash = blocker_num.wrapping_mul(self.magic_value);
-        return ((hash >> self.shift) + self.offset) as usize;
+        ((hash >> self.shift) + self.offset) as usize
     }
 }
 

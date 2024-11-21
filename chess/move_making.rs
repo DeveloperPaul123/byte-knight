@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Nov 07 2024
+ * Last Modified: Wed Nov 20 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -60,10 +60,9 @@ impl Board {
         let (piece, side) = self
             .piece_on_square(from.to_square_index())
             .ok_or_else(|| anyhow::anyhow!("No piece on square"))?;
-        let captured_piece = match self.piece_on_square(to.to_square_index()) {
-            Some((piece, _)) => Some(piece),
-            None => None,
-        };
+        let captured_piece = self
+            .piece_on_square(to.to_square_index())
+            .map(|(piece, _)| piece);
 
         // now just figure out the move descriptor
         // need to check if the move is a castle, en passant, promotion or a pawn two up move
@@ -174,8 +173,8 @@ impl Board {
         // validate pre-conditions first before even bothering to go further
         self.check_move_preconditions(mv)?;
 
-        let mut current_state = self.board_state().clone();
-        current_state.next_move = mv.clone();
+        let mut current_state = *self.board_state();
+        current_state.next_move = *mv;
         // update history before modifying the current state
         self.history.push(current_state);
 
@@ -201,10 +200,10 @@ impl Board {
                 // check if the rook was on a corner square
                 // if so, remove the castling rights for that side
                 let corners = [
-                    Squares::A8 as u8,
-                    Squares::H8 as u8,
-                    Squares::A1 as u8,
-                    Squares::H1 as u8,
+                    Squares::A8,
+                    Squares::H8,
+                    Squares::A1,
+                    Squares::H1,
                 ];
                 if corners.iter().any(|sq| *sq == to) {
                     self.set_castling_rights(
@@ -243,7 +242,7 @@ impl Board {
                 self.remove_piece(
                     them,
                     Piece::Pawn,
-                    en_passant_pawn_location as u8,
+                    en_passant_pawn_location,
                     update_zobrist_hash,
                 );
             }
@@ -393,10 +392,10 @@ impl Board {
         let piece = chess_move.piece();
         let captured_piece = chess_move.captured_piece();
         let promoted_piece = chess_move.promotion_piece();
-        if promoted_piece.is_some() {
+        if let Some(promoted_piece) = promoted_piece {
             // remove the promoted piece
             // note that we don't update the zobrist hash here
-            self.remove_piece(us, promoted_piece.unwrap(), to, update_zobrist_hash);
+            self.remove_piece(us, promoted_piece, to, update_zobrist_hash);
             // put the pawn back
             self.add_piece(us, Piece::Pawn, from, update_zobrist_hash);
         } else {
@@ -430,7 +429,7 @@ impl Board {
             // we don't need to set the en passant square here as it is restored from the game state
         }
 
-        return Ok(());
+        Ok(())
     }
 
     pub fn null_move(&mut self) {

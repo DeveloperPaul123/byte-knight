@@ -214,13 +214,13 @@ impl Psqt {
         psqt
     }
 
-    pub(crate) fn evaluate(self: &Self, board: &Board) -> Score {
+    pub(crate) fn evaluate(&self, board: &Board) -> Score {
         let side_to_move = board.side_to_move();
         let mut mg = [0; 2];
         let mut eg = [0; 2];
         let mut game_phase = 0;
 
-        let mut occupancy = board.all_pieces().clone();
+        let mut occupancy = board.all_pieces();
         // loop through occupied squares
         while occupancy.as_number() > 0 {
             let sq = bitboard_helpers::next_bit(&mut occupancy);
@@ -228,8 +228,7 @@ impl Psqt {
             match maybe_piece {
                 Some((piece, side)) => {
                     let pc_idx = piece as usize * 2 + side as usize;
-                    // TODO: This eval is wrong, the mg and eg tables are index by piece + color (12 total)
-                    // But we only do piece
+
                     mg[side as usize] += self.mg_table[pc_idx][sq];
                     eg[side as usize] += self.eg_table[pc_idx][sq];
 
@@ -246,7 +245,7 @@ impl Psqt {
         Score::new((mg_score * mg_phase + eg_score * eg_phase) / 24)
     }
 
-    fn initialize_tables(self: &mut Self) {
+    fn initialize_tables(&mut self) {
         for (p, pc) in (0..6).zip((0..12).step_by(2)) {
             for sq in 0..64 {
                 self.mg_table[pc][sq] = MG_VALUE[p] + MG_PESTO_TABLE[p][sq];

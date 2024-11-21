@@ -12,5 +12,5 @@ pub fn read_lichess_puzzles(path_buf: PathBuf) -> Result<Vec<LichessPuzzleRecord
         .deserialize()
         .collect::<Result<Vec<LichessPuzzleRecord>, _>>()?;
 
-    return Ok(records);
+    Ok(records)
 }

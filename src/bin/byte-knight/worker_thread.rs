@@ -16,7 +16,7 @@ use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::{self, Receiver, Sender},
-        Arc, Mutex,
+        Arc,
     },
     thread::JoinHandle,
 };

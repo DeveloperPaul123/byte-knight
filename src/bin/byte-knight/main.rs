@@ -30,7 +30,6 @@ use engine::ByteKnight;
 use std::process::exit;
 
 use clap::{Parser, Subcommand};
-use std::io::{self, Write};
 
 #[derive(Parser)]
 #[command(
@@ -60,7 +59,7 @@ fn run_uci() {
     match engine_run_result {
         Ok(_) => (),
         Err(e) => {
-            writeln!(io::stderr(), "Error running engine: {}", e).unwrap();
+            eprintln!("Error running engine: {}", e);
             exit(1);
         }
     }

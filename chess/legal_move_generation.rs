@@ -1,5 +1,3 @@
-use std::u64;
-
 use crate::move_generation::NORTH;
 use crate::move_generation::RANK_BITBOARDS;
 use crate::move_generation::SOUTH;
@@ -123,7 +121,7 @@ impl MoveGenerator {
             // special case for single check
             if is_single_check {
                 // if we're in single check, we can block the checker or capture it
-                let mut checkers_clone = checkers.clone();
+                let mut checkers_clone = checkers;
                 let checker = bitboard_helpers::next_bit(&mut checkers_clone) as u8;
 
                 // calculate the ray between the checker and the king
@@ -150,7 +148,7 @@ impl MoveGenerator {
         // Add the en passant square to our capture mask if it's viable
         let en_passant_bb = board
             .en_passant_square()
-            .map(|sq| Bitboard::from(sq))
+            .map(Bitboard::from)
             .unwrap_or_default();
         // we need to first check if the en passant square would capture a checker
         // if "us" is white, then we should shift the en passant square left
@@ -215,13 +213,11 @@ impl MoveGenerator {
         let enemy_queens = board.piece_bitboard(Piece::Queen, them);
 
         // calculate our checkers bb
-        let checkers = knight_attacks & *enemy_knights
+        knight_attacks & *enemy_knights
             | rook_attacks & *enemy_rooks
             | bishop_attacks & *enemy_bishops
             | queen_attacks & *enemy_queens
-            | pawn_attacks & *enemy_pawns;
-
-        checkers
+            | pawn_attacks & *enemy_pawns
     }
 
     /// Calculate the en passant bitboard for the current position.
@@ -246,9 +242,7 @@ impl MoveGenerator {
 
         match en_passant_sq {
             Some(sq) => {
-                let en_passant_bb = en_passant_sq
-                    .map(|sq| Bitboard::from(sq))
-                    .unwrap_or_default();
+                let en_passant_bb = en_passant_sq.map(Bitboard::from).unwrap_or_default();
 
                 // check for discovered checks
                 // remove the captured and capturing pawns from the bitboard
@@ -308,6 +302,7 @@ impl MoveGenerator {
     /// A [`Bitboard`] with the legal moves for the pawn.
     ///
     /// These moves need to be enumerated to get the actual moves. See [`MoveGenerator::enumerate_moves`]
+    #[allow(clippy::too_many_arguments)]
     fn generate_legal_pawn_mobility(
         &self,
         board: &Board,
@@ -382,13 +377,10 @@ impl MoveGenerator {
                 Side::Both => panic!("Both side not allowed"),
             };
 
-            match double_push_sq {
-                Some(to) => {
-                    let bb = Bitboard::from_square(to);
-                    // append to our pushes
-                    pushes |= bb;
-                }
-                None => {}
+            if let Some(to) = double_push_sq {
+                let bb = Bitboard::from_square(to);
+                // append to our pushes
+                pushes |= bb;
             }
         }
 
@@ -435,6 +427,7 @@ impl MoveGenerator {
     /// A [`Bitboard`] with the legal moves for the piece.
     ///
     /// These moves need to be enumerated to get the actual moves. See [`MoveGenerator::enumerate_moves`]
+    #[allow(clippy::too_many_arguments)]
     fn generate_normal_piece_legal_mobility(
         &self,
         piece: Piece,
@@ -475,7 +468,7 @@ impl MoveGenerator {
             // at least one of our moves intersects with the pin ray, so we're attacking the pinner or moving along the pin ray
             // we need to ensure that we move along the correct pin ray
             let mut pinners = their_pieces & pin_rays;
-            let piece_bb = Bitboard::from_square(square.to_square_index() as u8);
+            let piece_bb = Bitboard::from_square(square.to_square_index());
             let mut true_ray_mask = Bitboard::default();
 
             while pinners.as_number() > 0 {
@@ -688,7 +681,7 @@ impl MoveGenerator {
             | king_non_checker_attacks;
 
         // do any of our attacks put us in check?
-        let mut k_att = king_attacks.clone();
+        let mut k_att = king_attacks;
         while k_att.as_number() > 0 {
             let capture_sq = bitboard_helpers::next_bit(&mut k_att) as u8;
             // remove the piece we're capturing and the king from the occupancy
@@ -726,6 +719,7 @@ impl MoveGenerator {
     /// # Returns
     ///
     /// A [`Bitboard`] of legal moves for the piece that can them be enumerated.
+    #[allow(clippy::too_many_arguments)]
     fn generate_legal_mobility(
         &self,
         piece: Piece,

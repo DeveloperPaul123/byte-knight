@@ -59,7 +59,7 @@ fn process_epd_file(path: &str, move_generation: &MoveGenerator) {
                 let depth = parts[0].replace("D", "").parse::<usize>().unwrap();
                 let expected_nodes = parts[1].parse::<u64>().unwrap();
                 let mut board = Board::from_fen(fen).unwrap();
-                let nodes = perft::perft(&mut board, &move_generation, depth, false).unwrap();
+                let nodes = perft::perft(&mut board, move_generation, depth, false).unwrap();
                 if expected_nodes != nodes {
                     print!("{} ", "[FAIL]".red().bold());
                     println!(
