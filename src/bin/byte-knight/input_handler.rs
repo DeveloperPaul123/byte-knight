@@ -15,16 +15,21 @@
 use std::{
     io::{stdin, BufRead},
     str::FromStr,
-    sync::mpsc::{self, Receiver, Sender},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::{self, Receiver},
+        Arc,
+    },
+    thread::JoinHandle,
 };
 
 use uci_parser::UciCommand;
 
-use crate::worker_thread::WorkerThread;
-
 #[derive(Debug)]
 pub(crate) struct InputHandler {
-    worker: WorkerThread<UciCommand>,
+    handle: Option<JoinHandle<()>>,
+    stop_flag: Arc<AtomicBool>,
+    receiver: Receiver<UciCommand>,
 }
 
 impl InputHandler {
@@ -49,8 +54,10 @@ impl InputHandler {
     /// ```
     ///
     pub(crate) fn new() -> InputHandler {
+        let stop_flag = Arc::new(AtomicBool::new(false));
+        let stop_flag_clone = stop_flag.clone();
         let (sender, receiver) = mpsc::channel();
-        let worker = WorkerThread::new(sender.clone(), receiver, move |stop_flag| {
+        let worker = std::thread::spawn(move || {
             let stdin = stdin();
             let mut input = stdin.lock().lines();
             while !stop_flag.load(std::sync::atomic::Ordering::Relaxed) {
@@ -71,48 +78,28 @@ impl InputHandler {
                 }
             }
         });
-        InputHandler { worker }
+        InputHandler {
+            handle: Some(worker),
+            stop_flag: stop_flag_clone,
+            receiver,
+        }
     }
 
-    fn sender(&self) -> Sender<UciCommand> {
-        self.worker.sender()
+    pub fn stop(&mut self) {
+        self.stop_flag.store(true, Ordering::Relaxed);
+
+        if let Some(handle) = self.handle.take() {
+            handle.join().unwrap();
+        }
     }
 
-    /// Returns a reference to the receiver end of the channel.
-    ///
-    /// # Returns
-    ///
-    /// A reference to the receiver end of the channel.
-    pub(crate) fn receiver(&self) -> &Receiver<UciCommand> {
-        self.worker.receiver()
+    pub fn receiver(&self) -> &Receiver<UciCommand> {
+        &self.receiver
     }
 
     /// Signal to the worker thread that it should stop. This method does not block the calling
     /// thread.
     pub(crate) fn exit(&mut self) {
-        self.worker.stop();
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_input_handler() {
-        let input_handler = InputHandler::new();
-        let sender = input_handler.sender();
-
-        sender.send(UciCommand::Uci).unwrap();
-        sender.send(UciCommand::IsReady).unwrap();
-        sender.send(UciCommand::UciNewGame).unwrap();
-
-        let receiver = input_handler.receiver();
-        let inputs: Vec<UciCommand> = receiver.iter().take(3).collect();
-
-        assert_eq!(
-            inputs,
-            vec![UciCommand::Uci, UciCommand::IsReady, UciCommand::UciNewGame]
-        );
+        self.stop();
     }
 }
