@@ -15,7 +15,8 @@ lint:
 
 search-bench:
     echo "Running search benchmark..."
-    cargo run --release --bin byte-knight -- bench
+    cargo rustc --release --bin byte-knight -- -C target-cpu=native
+    ./target/release/byte-knight bench
 
 perft depth:
     echo "Running perft..."
