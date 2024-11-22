@@ -186,6 +186,27 @@ impl Search {
         || self.stop_flag.as_ref().is_some_and(|f| f.load(Ordering::Relaxed)) // stop flag set
     }
 
+    fn send_info(
+        &self,
+        depth: u8,
+        nodes: u64,
+        score: Score,
+        nps: f32,
+        time: u64,
+        best_move: Option<Move>,
+    ) {
+        // create UciInfo and print it
+        let info = UciInfo::new()
+            .depth(depth)
+            .nodes(nodes)
+            .score(score)
+            .nps(nps.trunc())
+            .time(time)
+            .pv(best_move.map(|m| m.to_long_algebraic()));
+        let message = UciResponse::info(info);
+        println!("{}", message);
+    }
+
     fn iterative_deepening(&mut self, board: &mut Board) -> SearchResult {
         // initialize the best result
         let mut best_result = SearchResult::default();
@@ -194,6 +215,7 @@ impl Search {
         if !move_list.is_empty() {
             best_result.best_move = Some(*move_list.at(0).unwrap())
         }
+
         while self.parameters.start_time.elapsed() <= self.parameters.soft_timeout
             && best_result.depth <= self.parameters.max_depth
         {
@@ -222,19 +244,15 @@ impl Search {
                 .get_entry(board.zobrist_hash())
                 .map(|e| e.board_move);
 
-            // create UciInfo and print it
-            let info = UciInfo::new()
-                .depth(best_result.depth)
-                .nodes(self.nodes)
-                .score(best_result.score)
-                .nps(
-                    (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32())
-                        .trunc(),
-                )
-                .time(self.parameters.start_time.elapsed().as_millis() as u64)
-                .pv(best_result.best_move.map(|m| m.to_long_algebraic()));
-            let message = UciResponse::info(info);
-            println!("{}", message);
+            // send UCI info
+            self.send_info(
+                best_result.depth,
+                self.nodes,
+                best_result.score,
+                (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32()).trunc(),
+                self.parameters.start_time.elapsed().as_millis() as u64,
+                best_result.best_move,
+            );
 
             // increment depth for next iteration
             best_result.depth += 1;
@@ -242,6 +260,16 @@ impl Search {
 
         // update total nodes for the current search
         best_result.nodes = self.nodes;
+
+        // send final info line
+        self.send_info(
+            best_result.depth,
+            self.nodes,
+            best_result.score,
+            (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32()).trunc(),
+            self.parameters.start_time.elapsed().as_millis() as u64,
+            best_result.best_move,
+        );
 
         // return our best result so far
         best_result
