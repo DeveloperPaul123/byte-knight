@@ -194,7 +194,7 @@ impl Search {
         if !move_list.is_empty() {
             best_result.best_move = Some(*move_list.at(0).unwrap())
         }
-        while self.parameters.start_time.elapsed() < self.parameters.soft_timeout
+        while self.parameters.start_time.elapsed() <= self.parameters.soft_timeout
             && best_result.depth <= self.parameters.max_depth
         {
             // search the tree, starting at the current depth (starts at 1)
