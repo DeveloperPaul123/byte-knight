@@ -8,10 +8,26 @@ use chess::{board::Board, fen};
 use console::Emoji;
 use indicatif::ParallelProgressIterator;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
-mod utils;
 
 static CHECK_BOX: Emoji = Emoji("✅", "");
 static CROSS_MARK: Emoji = Emoji("❌", "");
+
+use std::error::Error;
+
+#[derive(Debug, serde::Deserialize)]
+pub struct LichessPuzzleRecord {
+    #[serde(rename = "FEN")]
+    pub(crate) fen: String,
+}
+
+pub fn read_lichess_puzzles(path_buf: PathBuf) -> Result<Vec<LichessPuzzleRecord>, Box<dyn Error>> {
+    let reader = csv::Reader::from_path(path_buf);
+    let records = reader?
+        .deserialize()
+        .collect::<Result<Vec<LichessPuzzleRecord>, _>>()?;
+
+    Ok(records)
+}
 
 fn decompress_data(output_data_path: &Path, compressed_data_path: &Path) -> anyhow::Result<()> {
     let mut decompress_command = std::process::Command::new("zstd");
@@ -54,7 +70,7 @@ fn main() {
 
     assert!(data_path.exists());
     println!("Reading test data...");
-    let records_result = utils::read_lichess_puzzles(data_path);
+    let records_result = read_lichess_puzzles(data_path);
 
     // Compare two FEN strings for equality only using the first four parts
     let fen_match = |fen_left: &String, fen_right: &String| -> bool {

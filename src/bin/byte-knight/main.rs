@@ -13,22 +13,11 @@
  */
 
 mod bench;
-mod defs;
-mod engine;
-mod evaluation;
-mod input_handler;
-mod psqt;
-mod score;
-mod search;
-mod search_thread;
-mod tt_table;
-
-use defs::About;
-use engine::ByteKnight;
-
-use std::process::exit;
 
 use clap::{Parser, Subcommand};
+use engine::defs::About;
+use engine::engine::ByteKnight;
+use std::process::exit;
 
 #[derive(Parser)]
 #[command(
