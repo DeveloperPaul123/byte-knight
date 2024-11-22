@@ -1,0 +1,15 @@
+[package]
+name = "engine"
+version = "0.1.0"
+# 2024 isn't stable yet
+edition = "2021"
+
+[dependencies]
+chess = { path = "../chess" }
+anyhow = "1.0.93"
+itertools = "0.13.0"
+uci-parser = { version = "0.2.0", features = [
+    "parse-go-perft",
+    "parse-position-kiwipete",
+    "types",
+] }

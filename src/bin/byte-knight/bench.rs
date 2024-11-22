@@ -13,8 +13,7 @@
  */
 
 use chess::board::Board;
-
-use crate::search::{Search, SearchParameters};
+use engine::search::{Search, SearchParameters};
 
 const BENCHMARKS: [&str; 128] = [
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ;D1 20 ;D2 400 ;D3 8902 ;D4 197281 ;D5 4865609 ;D6 119060324",

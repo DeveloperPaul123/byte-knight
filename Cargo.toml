@@ -4,12 +4,12 @@ version = "0.1.0"
 # 2024 isn't stable yet
 edition = "2021"
 
-[lib]
-name = "chess"
-path = "chess/lib.rs"
-test = true
+[workspace]
+members = ["engine", "chess"]
 
 [dependencies]
+engine = { path = "engine" }
+chess = { path = "chess" }
 anyhow = "1.0.93"
 arrayvec = "0.7.6"
 clap = { version = "4.5.21", features = ["derive"] }
@@ -24,7 +24,11 @@ rayon = "1.10.0"
 serde = { version = "1.0.215", features = ["derive"] }
 stopwatch = "0.0.7"
 thiserror = "2.0.3"
-uci-parser = {version = "0.2.0", features = ["parse-go-perft", "parse-position-kiwipete", "types"]}
+uci-parser = { version = "0.2.0", features = [
+    "parse-go-perft",
+    "parse-position-kiwipete",
+    "types",
+] }
 
 [profile.dev]
 opt-level = 1

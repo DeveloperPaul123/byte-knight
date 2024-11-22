@@ -81,10 +81,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arrayvec",
+ "chess",
  "clap",
  "colored",
  "console",
  "csv",
+ "engine",
  "indicatif",
  "itertools",
  "rand 0.8.5",
@@ -107,6 +109,26 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
+name = "chess"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arrayvec",
+ "clap",
+ "colored",
+ "console",
+ "csv",
+ "indicatif",
+ "itertools",
+ "rand 0.8.5",
+ "rand_chacha",
+ "rayon",
+ "serde",
+ "stopwatch",
+ "thiserror 2.0.3",
+]
 
 [[package]]
 name = "clap"
@@ -234,6 +256,16 @@ name = "encode_unicode"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
+
+[[package]]
+name = "engine"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chess",
+ "itertools",
+ "uci-parser",
+]
 
 [[package]]
 name = "fuchsia-cprng"

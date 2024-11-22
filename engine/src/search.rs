@@ -34,7 +34,7 @@ use crate::{
 const MAX_DEPTH: u8 = 128;
 
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct SearchResult {
+pub struct SearchResult {
     pub score: Score,
     pub best_move: Option<Move>,
     pub nodes: u64,
@@ -68,7 +68,7 @@ impl Display for SearchResult {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct SearchParameters {
+pub struct SearchParameters {
     pub max_depth: u8,
     pub start_time: Instant,
     pub soft_timeout: Duration,
@@ -136,7 +136,7 @@ impl Default for SearchParameters {
     }
 }
 
-pub(crate) struct Search {
+pub struct Search {
     transposition_table: TranspositionTable,
     move_gen: MoveGenerator,
     nodes: u64,
@@ -163,7 +163,7 @@ impl Search {
         }
     }
 
-    pub(crate) fn search(
+    pub fn search(
         &mut self,
         board: &mut Board,
         stop_flag: Option<Arc<AtomicBool>>,
