@@ -8,7 +8,7 @@ build:
 
 test:
     echo "Running tests..."
-    cargo test --release --
+    cargo test --release --all --all-features
 
 lint:
     cargo clippy --all --all-features --tests -- -D warnings
