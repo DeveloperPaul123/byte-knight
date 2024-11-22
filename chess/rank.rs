@@ -38,7 +38,7 @@ impl Rank {
     pub fn offset(&self, delta: i8) -> Option<Self> {
         let new_rank = (*self as i8) + delta;
         if (0..=7).contains(&new_rank) {
-            return Some(unsafe { std::mem::transmute::<u8, Rank>(new_rank as u8) });
+            return Rank::try_from(new_rank as u8).ok();
         }
         None
     }

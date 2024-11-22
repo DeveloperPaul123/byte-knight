@@ -16,10 +16,10 @@ pub enum File {
 impl File {
     pub fn offset(&self, delta: i8) -> Option<Self> {
         let new_file = (*self as i8) + delta;
-        match (0..=7).contains(&new_file) {
-            true => Some(unsafe { std::mem::transmute::<u8, File>(new_file as u8) }),
-            false => None,
+        if (0..=7).contains(&new_file) {
+            return File::try_from(new_file as u8).ok();
         }
+        None
     }
 
     pub fn to_char(&self) -> char {
