@@ -76,8 +76,8 @@ pub struct SearchParameters {
     pub max_nodes: u64,
 }
 
-impl SearchParameters {
-    pub fn default() -> SearchParameters {
+impl Default for SearchParameters {
+    fn default() -> Self {
         SearchParameters {
             max_depth: MAX_DEPTH,
             start_time: Instant::now(),
@@ -86,7 +86,9 @@ impl SearchParameters {
             max_nodes: u64::MAX,
         }
     }
+}
 
+impl SearchParameters {
     pub fn new(uci_options: &UciSearchOptions, board: &Board) -> Self {
         let mut params = Self::default();
         if let Some(depth) = uci_options.depth {
@@ -127,12 +129,6 @@ impl Display for SearchParameters {
             "max depth {} start_time {:?} soft_timeout {:?} hard_timeout {:?}",
             self.max_depth, self.start_time, self.soft_timeout, self.hard_timeout
         )
-    }
-}
-
-impl Default for SearchParameters {
-    fn default() -> SearchParameters {
-        SearchParameters::default()
     }
 }
 

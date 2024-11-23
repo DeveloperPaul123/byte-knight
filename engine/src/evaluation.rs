@@ -34,6 +34,12 @@ pub struct Evaluation {
     psqt: Psqt,
 }
 
+impl Default for Evaluation {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Evaluation {
     pub fn new() -> Self {
         Evaluation { psqt: Psqt::new() }
