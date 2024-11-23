@@ -862,7 +862,12 @@ mod tests {
     #[test]
     fn from_fen_round_trip() {
         // load Pohl.epd from data and go through each FEN. Load it into the board and then output the FEN to see if they match
-        let path = format!("{}/../{}/{}", env!("CARGO_MANIFEST_DIR"), "data", "Pohl.epd");
+        let path = format!(
+            "{}/../{}/{}",
+            env!("CARGO_MANIFEST_DIR"),
+            "data",
+            "Pohl.epd"
+        );
         let lines = std::fs::read_to_string(path).unwrap();
         println!("Loaded {} FEN strings from Pohl.epd", lines.lines().count());
         for fen in lines.lines() {
