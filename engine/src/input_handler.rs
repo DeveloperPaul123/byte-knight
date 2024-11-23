@@ -45,14 +45,6 @@ impl InputHandler {
     ///
     /// A new [`InputHandler`] instance.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use engine::InputHandler;
-    /// let input_handler = InputHandler::new();
-    /// let receiver = input_handler.receiver();
-    /// ```
-    ///
     pub(crate) fn new() -> InputHandler {
         let stop_flag = Arc::new(AtomicBool::new(false));
         let stop_flag_clone = stop_flag.clone();
