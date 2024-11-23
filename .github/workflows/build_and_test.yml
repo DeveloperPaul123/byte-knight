@@ -18,7 +18,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         lfs: true
-    - name: Build
-      run: cargo build --release --verbose
+    - name: Install just
+      uses: extractions/setup-just@v2
     - name: Run tests
-      run: cargo test --release --verbose
+      run: just test
