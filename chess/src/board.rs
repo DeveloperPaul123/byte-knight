@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Nov 20 2024
+ * Last Modified: Tue Nov 26 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -14,6 +14,7 @@
 
 use std::iter::zip;
 
+use crate::bitboard_helpers;
 use crate::board_state::BoardState;
 use crate::definitions::{CastlingAvailability, MAX_MOVE_RULE, MAX_REPETITION_COUNT, SPACE};
 use crate::fen::FenError;
@@ -23,13 +24,13 @@ use crate::move_list::MoveList;
 use crate::moves::Move;
 use crate::square::Square;
 use crate::zobrist::{ZobristHash, ZobristRandomValues};
-use crate::{bitboard_helpers, square};
 
 use super::definitions::NumberOf;
 use super::fen;
 use super::side::Side;
 use super::{bitboard::Bitboard, pieces::Piece};
 
+/// Represents a chess board position.
 pub struct Board {
     piece_bitboards: [[Bitboard; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
     pub(crate) history: BoardHistory,
@@ -47,8 +48,10 @@ impl Clone for Board {
         }
     }
 }
+
 // Private methods
 impl Board {
+    /// Create a new board in the default, *uninitialized*, state.
     fn new() -> Self {
         Board {
             piece_bitboards: [[Bitboard::default(); NumberOf::PIECE_TYPES]; NumberOf::SIDES],
@@ -225,6 +228,15 @@ impl Board {
     }
 
     /// Create a new board from a FEN string.
+    ///
+    /// # Arguments
+    ///
+    /// - `fen` - A FEN string representing the board state.
+    ///
+    /// # Returns
+    ///
+    /// - a Result containing a [`Board`] if parsing was successful or
+    /// [`FenError`] if the FEN string is invalid or cannot be parsed.
     pub fn from_fen(fen: &str) -> Result<Board, FenError> {
         let mut board = Board::new();
 
@@ -310,6 +322,7 @@ impl Board {
         &self.piece_bitboards[side as usize][piece as usize]
     }
 
+    /// Returns the current square of the king for a given side.
     pub fn king_square(&self, side: Side) -> u8 {
         let king_bb = self.piece_bitboard(Piece::King, side);
         bitboard_helpers::next_bit(&mut king_bb.clone()) as u8
@@ -317,7 +330,13 @@ impl Board {
 
     /// Find what piece is on a given square.
     ///
-    /// Returns an optional tuple of the piece and the side that the piece belongs to.
+    /// # Arguments
+    ///
+    /// - `square` - The square to check.
+    ///
+    /// # Returns
+    ///
+    /// - Optional tuple of the piece and the side that the piece belongs to. (Piece, Side)
     pub fn piece_on_square(&self, square: u8) -> Option<(Piece, Side)> {
         for piece in 0..NumberOf::PIECE_TYPES {
             for side in 0..NumberOf::SIDES {
@@ -337,37 +356,47 @@ impl Board {
         self.state.side_to_move
     }
 
+    /// Returns the en passant square of this [`Board`] (if it exists)
     pub fn en_passant_square(&self) -> Option<u8> {
         self.state.en_passant_square
     }
 
+    /// Returns the half move clock of this [`Board`].
     pub fn half_move_clock(&self) -> u32 {
         self.state.half_move_clock
     }
 
+    /// Returns the full move number of this [`Board`].
     pub fn full_move_number(&self) -> u32 {
         self.state.full_move_number
     }
 
+    /// Returns the castling rights of this [`Board`].
     pub fn castling_rights(&self) -> u8 {
         self.state.castling_rights
     }
 
+    /// Returns the Zobrist hash of this [`Board`].
     pub fn zobrist_hash(&self) -> u64 {
         self.state.zobrist_hash
     }
 
-    pub fn is_square_on_rank(square: u8, rank: u8) -> bool {
-        let (_, rnk) = square::from_square(square);
-        rnk == rank
-    }
-
+    /// Checks if a given square is empty.
     pub fn is_square_empty(&self, square: &Square) -> bool {
         !self
             .all_pieces()
             .is_square_occupied(square.to_square_index())
     }
 
+    /// Helper function to check if a given side has kingside castling rights.
+    ///
+    /// # Arguments
+    ///
+    /// - `side` - The side to check.
+    ///
+    /// # Returns
+    ///
+    /// - `true` if the side has kingside castling rights, otherwise `false`.
     pub fn can_castle_kingside(&self, side: Side) -> bool {
         let castling_rights = self.castling_rights();
         match side {
@@ -377,6 +406,15 @@ impl Board {
         }
     }
 
+    /// Helper function to check if a given side has queenside castling rights.
+    ///
+    /// # Arguments
+    ///
+    /// - `side` - The side to check.
+    ///
+    /// # Returns
+    ///
+    /// - `true` if the side has queenside castling rights, otherwise `false`.
     pub fn can_castle_queenside(&self, side: Side) -> bool {
         let castling_rights = self.castling_rights();
         match side {
@@ -386,6 +424,15 @@ impl Board {
         }
     }
 
+    /// Check if the side to move is in check.
+    ///
+    /// # Arguments
+    ///
+    /// - `move_gen` - The move generator to use for generating moves.
+    ///
+    /// # Returns
+    ///
+    /// - `true` if the side to move is in check, otherwise `false`.
     pub fn is_in_check(&self, move_gen: &MoveGenerator) -> bool {
         // pseudo legal check
         // check if we are in check
@@ -399,6 +446,7 @@ impl Board {
         )
     }
 
+    /// Check if the side to move is in checkmate.
     pub fn is_checkmate(&self, move_gen: &MoveGenerator) -> bool {
         // if the side to move is not in check, it's not checkmate
         if !self.is_in_check(move_gen) {
@@ -450,6 +498,13 @@ impl Board {
             None
         }
     }
+
+    /// Checks for draws for the current [`Board`].
+    ///
+    /// This function checks for:
+    /// - Fifty move rule
+    /// - Insufficient material
+    /// - Threefold repetition
     pub fn is_draw(&self) -> bool {
         self.is_draw_by_fifty_move_rule() || self.insufficient_material() || self.is_repetition()
     }
@@ -499,10 +554,12 @@ impl Board {
         }
     }
 
+    /// Check if the game is a draw by the fifty move rule.
     pub fn is_draw_by_fifty_move_rule(&self) -> bool {
         self.half_move_clock() >= MAX_MOVE_RULE
     }
 
+    /// Check if the game is a draw by threefold repetition.
     pub fn is_repetition(&self) -> bool {
         let mut repetition_count = 0;
         // go through the history and check if the current position has been repeated
@@ -526,12 +583,16 @@ impl Board {
         repetition_count >= 2
     }
 
+    /// Check if a given move is legal. This function does not alter the current board state.
+    /// Instead it makes a copy of the current state and tries to make the move. There is a performance
+    /// penalty for this, so use this function sparingly.
     pub fn is_legal(&self, mv: &Move, move_gen: &MoveGenerator) -> bool {
         // check if a move is legal without altering the current board state
         let mut board_copy = self.clone();
         board_copy.make_move(mv, move_gen).is_ok()
     }
 
+    /// Check if a list of moves are legal. This function does not alter the current board state.
     pub fn are_legal(&self, list: &MoveList, move_gen: &MoveGenerator) -> bool {
         // check if a list of moves are legal without altering the current board state
         let mut board_copy = self.clone();
@@ -692,13 +753,6 @@ mod tests {
         // Opposing Bishops on different color squares
         let diff_square_bishops = Board::from_fen("8/3bk3/8/8/3K4/8/5B2/8 w - - 0 1").unwrap();
         assert!(!diff_square_bishops.insufficient_material());
-    }
-
-    #[test]
-    fn check_square_on_rank() {
-        assert!(Board::is_square_on_rank(Squares::A1, Rank::R1 as u8));
-        assert!(!Board::is_square_on_rank(Squares::A1, Rank::R2 as u8));
-        assert!(Board::is_square_on_rank(Squares::C5, Rank::R5 as u8));
     }
 
     #[test]
