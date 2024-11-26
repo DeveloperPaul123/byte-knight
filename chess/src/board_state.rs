@@ -1,6 +1,11 @@
 use crate::{definitions::CastlingAvailability, moves::Move, side::Side, zobrist::ZobristHash};
 use std::fmt::Display;
 
+/// Represents the state of the board at a given point in time.
+/// This includes the half move clock, full move number, side to move,
+/// en passant square, castling rights, and the Zobrist hash.
+///
+/// This is used to restore the state in [`Board`] when un-making a move.
 #[derive(Debug, Clone, Copy)]
 pub struct BoardState {
     pub half_move_clock: u32,
