@@ -1,5 +1,6 @@
 use anyhow::Result;
 
+/// Represents a file on the chess board.
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum File {
@@ -14,6 +15,23 @@ pub enum File {
 }
 
 impl File {
+    /// Returns the file offset by `delta` if it is within range.
+    /// Returns `None` if the resulting file is out of bounds.
+    ///
+    /// # Arguments
+    ///
+    /// - `delta`: The offset to apply to the file.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use chess::file::File;
+    ///
+    /// assert_eq!(File::A.offset(1), Some(File::B));
+    /// assert_eq!(File::A.offset(-1), None);
+    /// assert_eq!(File::H.offset(1), None);
+    /// assert_eq!(File::H.offset(-1), Some(File::G));
+    /// ```
     pub fn offset(&self, delta: i8) -> Option<Self> {
         let new_file = (*self as i8) + delta;
         if (0..=7).contains(&new_file) {
@@ -22,6 +40,7 @@ impl File {
         None
     }
 
+    /// Returns the character representation of the file (lowercase)
     pub fn to_char(&self) -> char {
         match self {
             Self::A => 'a',
