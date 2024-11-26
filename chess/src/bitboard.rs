@@ -56,6 +56,7 @@ impl Bitboard {
         Bitboard { data: 0 }
     }
 
+    /// Create a bitboard from the given square index.
     pub const fn from_square(square: u8) -> Self {
         Bitboard { data: 1 << square }
     }
@@ -86,6 +87,25 @@ impl Bitboard {
         self.data
     }
 
+    /// Check if the bitboard intersects with another bitboard.
+    ///
+    /// # Arguments
+    ///
+    /// - `other` - The other bitboard to check for intersection.
+    ///
+    /// # Returns
+    ///
+    /// - `bool` - True if the bitboards intersect, false otherwise.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use chess::bitboard::Bitboard;
+    ///
+    /// let bb1 = Bitboard::new(0x8000000000000001);
+    /// let bb2 = Bitboard::new(0x0000000000000001);
+    /// assert!(bb1.intersects(bb2));
+    /// ```
     pub fn intersects(&self, other: impl Into<Self>) -> bool {
         (*self & other.into()).number_of_occupied_squares() > 0
     }
@@ -103,7 +123,6 @@ impl PartialEq<u64> for Bitboard {
     }
 }
 
-// Implement bitwise operations for Bitboard
 impl BitAnd for Bitboard {
     type Output = Self;
     fn bitand(self, rhs: Self) -> Self::Output {
