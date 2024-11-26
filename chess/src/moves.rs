@@ -75,8 +75,8 @@ pub enum MoveType {
 }
 
 /// Compact, 32-bit move representation
-/// Taken from https://github.com/SebLague/Chess-Challenge/blob/main/Chess-Challenge/src/Framework/Chess/Board/Move.cs
-/// Also inspired by Rustic's move representation: https://github.com/mvanthoor/rustic/blob/master/src/movegen/defs.rs
+/// Taken from <https://github.com/SebLague/Chess-Challenge/blob/main/Chess-Challenge/src/Framework/Chess/Board/Move.cs>
+/// Also inspired by Rustic's move representation: <https://github.com/mvanthoor/rustic/blob/master/src/movegen/defs.rs>
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Move {
     /// The move information, from LSB to MSB:
