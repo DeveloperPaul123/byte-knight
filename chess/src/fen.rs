@@ -10,6 +10,7 @@ use crate::{
     square::to_square,
 };
 
+/// Represents the 6 parts of a FEN string.
 #[derive(Debug)]
 pub enum FenPart {
     PiecePlacement = 1,
@@ -33,6 +34,7 @@ impl Display for FenPart {
     }
 }
 
+/// Represents an error that occurred while parsing a FEN string.
 #[derive(Error, Debug)]
 pub struct FenError {
     offending_parts: Option<Vec<FenPart>>,
