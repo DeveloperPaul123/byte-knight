@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 12 2024
+ * Last Modified: Tue Nov 26 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -20,6 +20,7 @@ pub const SLASH: char = '/';
 
 /// max number of moves in a game from this pos R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1
 pub const MAX_MOVE_LIST_SIZE: usize = 218;
+/// Maximum number of moves saved in the history
 pub const MAX_MOVES: usize = 3072;
 pub const MAX_MOVE_RULE: u32 = 100;
 
