@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 28th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Nov 20 2024
+ * Last Modified: Tue Nov 26 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -807,8 +807,8 @@ impl MoveGenerator {
                 let bb_push = Bitboard::new(1u64 << to_square);
                 let bb_single_push = bb_push & empty;
                 let can_double_push = match us {
-                    Side::White => Board::is_square_on_rank(from_square, Rank::R2 as u8),
-                    Side::Black => Board::is_square_on_rank(from_square, Rank::R7 as u8),
+                    Side::White => square::is_square_on_rank(from_square, Rank::R2 as u8),
+                    Side::Black => square::is_square_on_rank(from_square, Rank::R7 as u8),
                     Side::Both => panic!("Both side not allowed"),
                 };
 
@@ -917,7 +917,7 @@ impl MoveGenerator {
             let is_double_move = piece == Piece::Pawn
                 && (to_square as i8 - from.to_square_index() as i8).abs() == 16;
             let is_promotion =
-                piece == Piece::Pawn && Board::is_square_on_rank(to_square, promotion_rank as u8);
+                piece == Piece::Pawn && square::is_square_on_rank(to_square, promotion_rank as u8);
 
             if is_double_move && en_passant {
                 panic!("Double move and en passant should not happen");

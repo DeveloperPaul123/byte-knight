@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Nov 20 2024
+ * Last Modified: Tue Nov 26 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -20,7 +20,7 @@ use crate::{
     pieces::{Piece, SQUARE_NAME},
     rank::Rank,
     side::Side,
-    square::Square,
+    square::{self, Square},
 };
 use anyhow::{bail, Result};
 
@@ -67,7 +67,7 @@ impl Board {
         // now just figure out the move descriptor
         // need to check if the move is a castle, en passant, promotion or a pawn two up move
         let can_double_push = piece == Piece::Pawn
-            && Board::is_square_on_rank(
+            && square::is_square_on_rank(
                 from.to_square_index(),
                 Rank::pawn_start_rank(side).as_number(),
             );

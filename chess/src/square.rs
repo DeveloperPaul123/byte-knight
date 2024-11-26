@@ -4,7 +4,7 @@
  * Created Date: Friday, August 16th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Nov 21 2024
+ * Last Modified: Tue Nov 26 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -144,9 +144,22 @@ pub const fn from_square(square: u8) -> (u8, u8) {
     (file, rank)
 }
 
+/// Checks if a given square is on a given rank.
+pub const fn is_square_on_rank(square: u8, rank: u8) -> bool {
+    let (_, rnk) = from_square(square);
+    rnk == rank
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{file::File, rank::Rank, square::Square};
+    use crate::{definitions::Squares, file::File, rank::Rank, square::{is_square_on_rank, Square}};
+
+    #[test]
+    fn check_square_on_rank() {
+        assert!(is_square_on_rank(Squares::A1, Rank::R1 as u8));
+        assert!(!is_square_on_rank(Squares::A1, Rank::R2 as u8));
+        assert!(is_square_on_rank(Squares::C5, Rank::R5 as u8));
+    }
 
     #[test]
     fn parse_square_from_uci_str() {

@@ -352,8 +352,8 @@ impl MoveGenerator {
         let is_unobstructed = pushes & !occupancy == Bitboard::default();
 
         let can_double_push = match us {
-            Side::White => Board::is_square_on_rank(from_square, Rank::R2 as u8),
-            Side::Black => Board::is_square_on_rank(from_square, Rank::R7 as u8),
+            Side::White => square::is_square_on_rank(from_square, Rank::R2 as u8),
+            Side::Black => square::is_square_on_rank(from_square, Rank::R7 as u8),
             Side::Both => panic!("Both side not allowed"),
         };
 
