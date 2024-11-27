@@ -236,7 +236,7 @@ impl Board {
     /// # Returns
     ///
     /// - a Result containing a [`Board`] if parsing was successful or
-    /// [`FenError`] if the FEN string is invalid or cannot be parsed.
+    ///   [`FenError`] if the FEN string is invalid or cannot be parsed.
     pub fn from_fen(fen: &str) -> Result<Board, FenError> {
         let mut board = Board::new();
 
@@ -615,6 +615,7 @@ mod tests {
         moves::{MoveDescriptor, MoveType},
         rank::Rank,
         side::Side,
+        square,
     };
 
     use super::*;
