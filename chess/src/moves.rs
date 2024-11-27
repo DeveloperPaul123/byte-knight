@@ -150,10 +150,13 @@ impl Move {
             | descriptor as u32;
         Self { move_info }
     }
+
+    /// Checks if the underlying move information is valid (i.e. non-zero).
     pub fn is_valid(&self) -> bool {
-        self.move_info != 0
+        !self.is_null_move()
     }
 
+    /// Create a new castle move
     pub fn new_castle(king_from: &Square, king_to: &Square) -> Self {
         Self::new(
             king_from,
@@ -165,6 +168,7 @@ impl Move {
         )
     }
 
+    /// Create a new king move.
     pub fn new_king_move(
         king_from: &Square,
         king_to: &Square,
@@ -180,10 +184,6 @@ impl Move {
         )
     }
 
-    pub fn new_short_move(from: &Square, to: &Square, promotion: Option<Piece>) -> Self {
-        Self::new(from, to, MoveDescriptor::None, Piece::None, None, promotion)
-    }
-
     /// Returns the from [`Square`] of the move.
     pub fn from(&self) -> u8 {
         ((self.move_info & MOVE_INFO_FROM_MASK) >> MOVE_INFO_FROM_SHIFT) as u8
@@ -194,6 +194,7 @@ impl Move {
         ((self.move_info & MOVE_INFO_TO_MASK) >> MOVE_INFO_TO_SHIFT) as u8
     }
 
+    /// Returns the [`MoveDescriptor`] of the move.
     pub fn move_descriptor(&self) -> MoveDescriptor {
         match self.move_info & 0b11 {
             0 => MoveDescriptor::None,
@@ -204,18 +205,22 @@ impl Move {
         }
     }
 
+    /// Checks if the move is an en passant capture.
     pub fn is_en_passant_capture(&self) -> bool {
         self.move_descriptor() == MoveDescriptor::EnPassantCapture
     }
 
+    /// Checks if the move is a castle move.
     pub fn is_castle(&self) -> bool {
         self.move_descriptor() == MoveDescriptor::Castle
     }
 
+    /// Checks if the move is a pawn two up move.
     pub fn is_pawn_two_up(&self) -> bool {
         self.move_descriptor() == MoveDescriptor::PawnTwoUp
     }
 
+    /// Returns the promotion descriptor of the move.
     pub fn promotion_description(&self) -> PromotionDescriptor {
         match (self.move_info & MOVE_PROMOTION_DESCRIPTOR_MASK)
             >> MOVE_INFO_PROMOTION_DESCRIPTOR_SHIFT
@@ -228,26 +233,32 @@ impl Move {
         }
     }
 
+    /// Checks if the move is a promotion move and promotes to a queen.
     pub fn is_promote_to_queen(&self) -> bool {
         self.is_promotion() && self.promotion_description() == PromotionDescriptor::Queen
     }
 
+    /// Checks if the move is a promotion move and promotes to a knight.
     pub fn is_promote_to_knight(&self) -> bool {
         self.is_promotion() && self.promotion_description() == PromotionDescriptor::Knight
     }
 
+    /// Checks if the move is a promotion move and promotes to a rook.
     pub fn is_promote_to_rook(&self) -> bool {
         self.is_promotion() && self.promotion_description() == PromotionDescriptor::Rook
     }
 
+    /// Checks if the move is a promotion move and promotes to a bishop.
     pub fn is_promote_to_bishop(&self) -> bool {
         self.is_promotion() && self.promotion_description() == PromotionDescriptor::Bishop
     }
 
+    /// Checks if the move is a promotion move.
     pub fn is_promotion(&self) -> bool {
         (self.move_info >> MOVE_INFO_IS_PROMOTION_SHIFT) & 0b1 == 1
     }
 
+    /// Returns the [`Piece`] that the move promotes to if any. Can be `None`.
     pub fn promotion_piece(&self) -> Option<Piece> {
         if self.is_promote_to_queen() {
             Some(Piece::Queen)
@@ -262,6 +273,7 @@ impl Move {
         }
     }
 
+    /// Returns the captured [`Piece`] if any. Can be `None`.
     pub fn captured_piece(&self) -> Option<Piece> {
         // shift right and then mask 3 bits
         let piece_value = (self.move_info >> MOVE_INFO_CAPTURED_PIECE_SHIFT) & 0b111_u32;
@@ -272,12 +284,14 @@ impl Move {
         Some(Piece::try_from(piece_value as u8).unwrap())
     }
 
+    /// Returns the [`Piece`] that is moving.
     pub fn piece(&self) -> Piece {
         // shift right and then mask 3 bits
         let piece_value = (self.move_info >> MOVE_INFO_PIECE_SHIFT) & 0b111_u32;
         Piece::try_from(piece_value as u8).unwrap()
     }
 
+    /// Return true if the move is a null move
     pub(crate) fn is_null_move(&self) -> bool {
         // this is the default value, and should be interpreted as a null move
         // the reason for this is that a move at a minimum should always have a to and from square

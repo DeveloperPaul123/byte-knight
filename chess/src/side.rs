@@ -1,3 +1,18 @@
+/*
+ * side.rs
+ * Part of the byte-knight project
+ * Created Date: Monday, November 25th 2024
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified: Tue Nov 26 2024
+ * -----
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ * 
+ */
+
+/// Represents a side to play in chess.
 #[repr(usize)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Side {
@@ -6,9 +21,8 @@ pub enum Side {
     Both = 2,
 }
 
-impl Side {}
-
 impl Side {
+    /// Returns the opposite side.
     pub fn opposite(side: Side) -> Side {
         match side {
             Side::White => Side::Black,
@@ -17,25 +31,25 @@ impl Side {
         }
     }
 
-    /// Returns `true` if the side is [`WHITE`].
+    /// Returns `true` if the side is [`White`].
     ///
-    /// [`WHITE`]: Side::WHITE
+    /// [`White`]: Side::White
     #[must_use]
     pub fn is_white(&self) -> bool {
         matches!(self, Self::White)
     }
 
-    /// Returns `true` if the side is [`BLACK`].
+    /// Returns `true` if the side is [`Black`].
     ///
-    /// [`BLACK`]: Side::BLACK
+    /// [`Black`]: Side::Black
     #[must_use]
     pub fn is_black(&self) -> bool {
         matches!(self, Self::Black)
     }
 
-    /// Returns `true` if the side is [`BOTH`].
+    /// Returns `true` if the side is [`Both`].
     ///
-    /// [`BOTH`]: Side::BOTH
+    /// [`Both`]: Side::Both
     #[must_use]
     pub fn is_both(&self) -> bool {
         matches!(self, Self::Both)

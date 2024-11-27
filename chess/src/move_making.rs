@@ -32,9 +32,11 @@ impl Board {
     ///
     /// # Arguments
     ///
-    /// * `mv` - The move to make in UCI notation.
+    /// - `mv` - The move to make in UCI notation.
     ///
+    /// # Returns
     ///
+    /// Error if the move is invalid or could not be made.
     pub fn make_uci_move(&mut self, mv: &str) -> Result<()> {
         if mv.len() < 4 {
             bail!("Invalid move length");
@@ -105,6 +107,7 @@ impl Board {
         self.make_move_unchecked(&mv)
     }
 
+    /// Helper function to check the preconditions of a move before making it.
     fn check_move_preconditions(&mut self, mv: &Move) -> Result<()> {
         let from = mv.from();
         let to: u8 = mv.to();
@@ -169,6 +172,8 @@ impl Board {
         Ok(())
     }
 
+    /// Make a move on the board without checking if it is legal.
+    /// This should be used with legal move generation.
     pub fn make_move_unchecked(&mut self, mv: &Move) -> Result<()> {
         // validate pre-conditions first before even bothering to go further
         self.check_move_preconditions(mv)?;
@@ -202,7 +207,7 @@ impl Board {
                 let corners = [Squares::A8, Squares::H8, Squares::A1, Squares::H1];
                 if corners.iter().any(|sq| *sq == to) {
                     self.set_castling_rights(
-                        self.castling_rights() & !(get_casting_right_to_remove(them, to)),
+                        self.castling_rights() & !(get_castling_right_to_remove(them, to)),
                     );
                 }
             }
@@ -270,7 +275,7 @@ impl Board {
         if can_castle && (piece == Piece::King || piece == Piece::Rook) {
             // we moved our king or rook, so we need to update the castling rights
             self.set_castling_rights(
-                self.castling_rights() & !(get_casting_right_to_remove(us, from)),
+                self.castling_rights() & !(get_castling_right_to_remove(us, from)),
             );
         }
 
@@ -433,6 +438,9 @@ impl Board {
         Ok(())
     }
 
+    /// Make a null move on the board.
+    ///
+    /// This basically updates the history state and switches the side to move.
     pub fn null_move(&mut self) {
         let mut current_state = *self.board_state();
         current_state.next_move = Move::default();
@@ -442,6 +450,7 @@ impl Board {
         self.switch_side();
     }
 
+    /// Undo a move on the board. Passthrough call to [`Board::remove_piece`] and [`Board::add_piece`].
     fn undo_move(&mut self, side: Side, piece: Piece, from: u8, to: u8, update_zobrist_hash: bool) {
         self.remove_piece(side, piece, to, update_zobrist_hash);
         self.add_piece(side, piece, from, update_zobrist_hash);
@@ -506,7 +515,8 @@ impl Board {
     }
 }
 
-fn get_casting_right_to_remove(us: Side, from: u8) -> u8 {
+/// Helper function to get what castling rights to remove based on the square the piece moved from.
+fn get_castling_right_to_remove(us: Side, from: u8) -> u8 {
     match us {
         Side::White => match from {
             // rook moves

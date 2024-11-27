@@ -1,8 +1,23 @@
+/*
+ * zobrist.rs
+ * Part of the byte-knight project
+ * Created Date: Monday, November 25th 2024
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified: Tue Nov 26 2024
+ * -----
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ * 
+ */
+
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
 use crate::definitions::NumberOf;
 
+/// A Zobrist hash value.
 pub type ZobristHash = u64;
 
 pub struct ZobristRandomValues {
@@ -71,14 +86,17 @@ impl ZobristRandomValues {
         random_values
     }
 
+    /// Returns the Zobrist hash value for the given piece, side, and square.
     pub fn get_piece_value(&self, piece: usize, side: usize, square: usize) -> u64 {
         self.piece_values[side][piece][square]
     }
 
+    /// Returns the Zobrist hash value for the given castling option.
     pub fn get_castling_value(&self, castling: usize) -> u64 {
         self.castling_values[castling]
     }
 
+    /// Returns the Zobrist hash value for the given en passant square.
     pub fn get_en_passant_value(&self, square: Option<u8>) -> u64 {
         match square {
             None => self.en_passant_values[NumberOf::SQUARES],
@@ -86,6 +104,7 @@ impl ZobristRandomValues {
         }
     }
 
+    /// Returns the Zobrist hash value for the given side.
     pub fn get_side_value(&self, side: usize) -> u64 {
         self.side_values[side]
     }
