@@ -1,6 +1,21 @@
+/*
+ * rank.rs
+ * Part of the byte-knight project
+ * Created Date: Monday, November 25th 2024
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified: Tue Nov 26 2024
+ * -----
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ * 
+ */
+
 use crate::side::Side;
 use anyhow::Result;
 
+/// Represents a rank on the chess board.
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Rank {
@@ -15,7 +30,8 @@ pub enum Rank {
 }
 
 impl Rank {
-    pub fn promotion_rank(side: Side) -> Rank {
+    /// Returns the rank of the promotion square for the given side.
+    pub const fn promotion_rank(side: Side) -> Rank {
         match side {
             Side::White => Rank::R8,
             Side::Black => Rank::R1,
@@ -23,7 +39,8 @@ impl Rank {
         }
     }
 
-    pub fn pawn_start_rank(side: Side) -> Rank {
+    /// Returns the starting rank for pawns of a given side.
+    pub const fn pawn_start_rank(side: Side) -> Rank {
         match side {
             Side::White => Rank::R2,
             Side::Black => Rank::R7,
@@ -31,10 +48,26 @@ impl Rank {
         }
     }
 
+    /// Returns the rank as a number.
     pub fn as_number(&self) -> u8 {
         *self as u8
     }
 
+    /// Offset the rank by the given delta.
+    ///
+    /// Returns `None` if the resulting rank is out of bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use chess::rank::Rank;
+    ///
+    /// assert_eq!(Rank::R1.offset(1), Some(Rank::R2));
+    /// assert_eq!(Rank::R1.offset(-1), None);
+    /// assert_eq!(Rank::R8.offset(1), None);
+    /// assert_eq!(Rank::R8.offset(-1), Some(Rank::R7));
+    /// ```
+    ///
     pub fn offset(&self, delta: i8) -> Option<Self> {
         let new_rank = (*self as i8) + delta;
         if (0..=7).contains(&new_rank) {

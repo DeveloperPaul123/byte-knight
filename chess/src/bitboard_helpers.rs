@@ -1,3 +1,17 @@
+/*
+ * bitboard_helpers.rs
+ * Part of the byte-knight project
+ * Created Date: Monday, November 25th 2024
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified: Tue Nov 26 2024
+ * -----
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ * 
+ */
+
 use crate::bitboard::Bitboard;
 
 /// Returns the index of the next bit set to 1 in the bitboard and sets it to 0.

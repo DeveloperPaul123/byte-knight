@@ -19,6 +19,7 @@ use crate::{
 
 use anyhow::Result;
 
+/// Represents a square on the chess board.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Square {
     pub file: File,
@@ -30,21 +31,27 @@ impl Square {
         Self { file, rank }
     }
 
+    /// Creates a new square from a file character and rank number.
     pub fn from_file_rank(file: char, rank: u8) -> Result<Self> {
         let file = File::try_from(file)?;
         let rank = Rank::try_from(rank)?;
         Ok(Self { file, rank })
     }
 
+    /// Creates a new square from a bitboard.
+    ///
+    /// This will get the first square from the bitboard and convert it to a [`Square`].
     pub fn from_bitboard(bitboard: &Bitboard) -> Self {
         let sq = bitboard_helpers::next_bit(&mut bitboard.to_owned());
         Self::from_square_index(sq as u8)
     }
 
+    /// Convert to a raw square index (0-63).
     pub fn to_square_index(&self) -> u8 {
         to_square(self.file as u8, self.rank as u8)
     }
 
+    /// Convert a square index to a [`Square`] object.
     pub fn from_square_index(square: u8) -> Self {
         let (file, rank) = from_square(square);
         Self {
@@ -53,24 +60,48 @@ impl Square {
         }
     }
 
+    /// Offset the square by the given file and rank deltas.
+    ///
+    /// Returns `None` if the resulting square is out of bounds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use chess::square::Square;
+    /// use chess::rank::Rank;
+    /// use chess::file::File;
+    ///
+    /// let square = Square::try_from("e4").unwrap();
+    /// let new_square = square.offset(1, 1).unwrap();
+    /// assert_eq!(new_square.file, File::F);
+    /// assert_eq!(new_square.rank, Rank::R5);
+    ///
+    /// let square = Square::try_from("a1").unwrap();
+    /// let new_square = square.offset(-1, -1);
+    /// assert!(new_square.is_none());
+    /// ```
     pub fn offset(&self, file_delta: i8, rank_delta: i8) -> Option<Self> {
         let new_file = self.file.offset(file_delta)?;
         let new_rank = self.rank.offset(rank_delta)?;
         Some(Self::new(new_file, new_rank))
     }
 
+    /// Get the bitboard representation of the square.
     pub fn bitboard(&self) -> Bitboard {
         Bitboard::from_square(self.to_square_index())
     }
 
+    /// Returns `true` if the square is a dark square.
     pub fn is_dark(&self) -> bool {
         Bitboard::from(DARK_SQUARES) & self.bitboard() != Bitboard::EMPTY
     }
 
+    /// Returns `true` if the square is a light square.
     pub fn is_light(&self) -> bool {
         !self.is_dark()
     }
 
+    /// Returns the color of the square.
     pub fn color(&self) -> Color {
         if self.is_dark() {
             Color::Black
@@ -152,7 +183,12 @@ pub const fn is_square_on_rank(square: u8, rank: u8) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::{definitions::Squares, file::File, rank::Rank, square::{is_square_on_rank, Square}};
+    use crate::{
+        definitions::Squares,
+        file::File,
+        rank::Rank,
+        square::{is_square_on_rank, Square},
+    };
 
     #[test]
     fn check_square_on_rank() {

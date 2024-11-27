@@ -1,3 +1,17 @@
+/*
+ * perft.rs
+ * Part of the byte-knight project
+ * Created Date: Monday, November 25th 2024
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified: Tue Nov 26 2024
+ * -----
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ * 
+ */
+
 use crate::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
 use anyhow::{bail, Result};
 
@@ -6,6 +20,18 @@ pub struct SplitPerftResult {
     pub nodes: u64,
 }
 
+/// Perform split perft on the given board with the given move generator and depth.
+///
+/// # Arguments
+///
+/// - `board` - The board to perform perft on.
+/// - `move_gen` - The move generator to use.
+/// - `depth` - The depth to perform perft to.
+/// - `print_moves` - If true, extra debug information will be printed.
+///
+/// # Returns
+///
+/// A vector of `SplitPerftResult` containing the move and the number of nodes at that move.
 #[cfg_attr(not(debug_assertions), inline(always))]
 #[cfg_attr(debug_assertions, inline(never))]
 pub fn split_perft(
@@ -49,6 +75,7 @@ pub fn split_perft(
     Ok(results)
 }
 
+/// Perform perft on the given board with the given move generator and depth.
 #[cfg_attr(not(debug_assertions), inline(always))]
 #[cfg_attr(debug_assertions, inline(never))]
 pub fn perft(

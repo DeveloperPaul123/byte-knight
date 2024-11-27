@@ -156,6 +156,7 @@ pub(crate) const ROOK_MAGIC_VALUES: [u64; NumberOf::SQUARES] = [
     864972604513985025,
 ];
 
+/// "Magic" number used for fancy bitboard operations.
 #[derive(Serialize, Default, Deserialize, Debug, Clone, Copy)]
 pub struct MagicNumber {
     pub relevant_bits_mask: u64,
@@ -175,8 +176,8 @@ impl MagicNumber {
     }
 
     /// Returns the index of the magic number in the table.
-    /// This is basically the same formula used to calculate magic numbers, but it's just missing the magic value.
-    /// We take into account the shift and offset to calculate the index without the magic value.
+    ///
+    /// Calculated by multiplying the blocker number with the magic number and shifting it to the right by the shift value.
     pub fn index(&self, occupancy: Bitboard) -> usize {
         let blockers = occupancy & self.relevant_bits_mask;
         // need to shift

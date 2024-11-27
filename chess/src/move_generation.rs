@@ -171,6 +171,7 @@ fn initialize_rays_between(rays_between: &mut [[Bitboard; NumberOf::SQUARES]; Nu
     }
 }
 
+/// The MoveGenerator struct is responsible for generating moves for a given board state.
 pub struct MoveGenerator {
     pub(crate) king_attacks: [Bitboard; NumberOf::SQUARES],
     pub(crate) knight_attacks: [Bitboard; NumberOf::SQUARES],
@@ -408,6 +409,18 @@ impl MoveGenerator {
         attacks
     }
 
+    /// Calculate the "relevant" bits for rook attacks at a given square.
+    ///
+    /// The relevant bits are the squares that the rook can attack from a given square.
+    /// The returned bitboard does not include edges.
+    ///
+    /// # Arguments
+    ///
+    /// - square - The square to calculate the relevant bits for.
+    ///
+    /// # Returns
+    ///
+    /// A bitboard representing the relevant bits for the rook attacks at the given square.
     pub fn relevant_rook_bits(square: u8) -> Bitboard {
         let mut bb = Bitboard::default();
         bb.set_square(square);
@@ -421,6 +434,18 @@ impl MoveGenerator {
         rook_rays_bb & !edges & !bb
     }
 
+    /// Calculate the "relevant" bits for bishop attacks at a given square.
+    ///
+    /// The relevant bits are the squares that the bishop can attack from a given square.
+    /// The returned bitboard does not include edges.
+    ///
+    /// # Arguments
+    ///
+    /// - square - The square to calculate the relevant bits for.
+    ///
+    /// # Returns
+    ///
+    /// A bitboard representing the relevant bits for the bishop attacks at the given square.
     pub fn relevant_bishop_bits(square: u8) -> Bitboard {
         let mut bb = Bitboard::default();
         bb.set_square(square);
@@ -434,6 +459,15 @@ impl MoveGenerator {
         bishop_ray_attacks & !edges & !bb
     }
 
+    /// Generate all possible blocker permutations for a given bitboard.
+    ///
+    /// # Arguments
+    ///
+    /// - bb - The bitboard to generate the blocker permutations for.
+    ///
+    /// # Returns
+    ///
+    /// A vector of bitboards representing all possible blocker permutations for the given bitboard.
     pub fn create_blocker_permutations(bb: Bitboard) -> Vec<Bitboard> {
         // use the carry-rippler method to cycle through all possible permutations of the given bitboard
         let mask = bb;
@@ -472,11 +506,31 @@ impl MoveGenerator {
         attacks
     }
 
+    /// Calculates rook attacks from a given square with a given blocker bitboard.
+    ///
+    /// # Arguments
+    ///
+    /// - square - The square to calculate the attacks from
+    /// - blocker - The blocker bitboard
+    ///
+    /// # Returns
+    ///
+    /// A bitboard representing the rook attacks from the given square with the given blocker bitboard.
     pub fn calculate_rook_attack(square: u8, blocker: &Bitboard) -> Bitboard {
         // calculate ray attacks for the rook from its square
         MoveGenerator::orthogonal_ray_attacks(square, blocker.as_number())
     }
 
+    /// Calculates bishop attacks from a given square with a given blocker bitboard.
+    ///
+    /// # Arguments
+    ///
+    /// - square - The square to calculate the attacks from
+    /// - blocker - The blocker bitboard
+    ///
+    /// # Returns
+    ///
+    /// A vector of bitboards representing the bishop attacks from the given square with the given blocker bitboard.
     pub fn bishop_attacks(square: u8, blockers: &Vec<Bitboard>) -> Vec<Bitboard> {
         let mut attacks = Vec::with_capacity(blockers.len());
         for blocker in blockers {
@@ -485,10 +539,21 @@ impl MoveGenerator {
         attacks
     }
 
+    /// Calculates bishop attacks from a given square with a given blocker bitboard.
+    ///
+    /// # Arguments
+    ///
+    /// - square - The square to calculate the attacks from
+    /// - blocker - The blocker bitboard
+    ///
+    /// # Returns
+    ///
+    /// A bitboard representing the bishop attacks from the given square with the given blocker bitboard.
     pub fn calculate_bishop_attack(square: u8, blocker: &Bitboard) -> Bitboard {
         MoveGenerator::diagonal_ray_attacks(square, blocker.as_number())
     }
 
+    /// Calculate the ray between two squares. This is simply a look up as we pre-calculate all rays between all squares.
     pub(crate) fn ray_between(&self, from: Square, to: Square) -> Bitboard {
         self.rays_between[from.to_square_index() as usize][to.to_square_index() as usize]
     }
@@ -544,6 +609,14 @@ impl MoveGenerator {
         attacks
     }
 
+    /// Get attacks for a given piece.
+    ///
+    /// # Arguments
+    ///
+    /// - piece - The piece to get the attacks for
+    /// - square - The square the piece is on
+    /// - attacking_side - The side that is attacking
+    /// - occupancy - The current occupancy of the board
     pub(crate) fn get_piece_attacks(
         &self,
         piece: Piece,
@@ -885,6 +958,15 @@ impl MoveGenerator {
         }
     }
 
+    /// Enumerate all moves in a given bitboard and add them to the given [`MoveList`]
+    ///
+    /// # Arguments
+    ///
+    /// - bitboard - The bitboard to enumerate moves for
+    /// - from - The square the piece is moving from
+    /// - piece - The piece that is moving
+    /// - board - The current board state
+    /// - move_list - The list of moves to append to
     pub(crate) fn enumerate_moves(
         &self,
         bitboard: &Bitboard,

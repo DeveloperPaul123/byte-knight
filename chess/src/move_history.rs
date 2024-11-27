@@ -1,5 +1,20 @@
+/*
+ * move_history.rs
+ * Part of the byte-knight project
+ * Created Date: Monday, November 25th 2024
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified: Tue Nov 26 2024
+ * -----
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ * 
+ */
+
 use crate::{board_state::BoardState, definitions::MAX_MOVES};
 
+/// A struct that holds the history of the board states
 pub(crate) struct BoardHistory {
     board_states: Vec<BoardState>,
 }
@@ -19,14 +34,17 @@ impl BoardHistory {
         }
     }
 
+    /// Push a board state to the history list
     pub fn push(&mut self, board_state: BoardState) {
         self.board_states.push(board_state);
     }
 
+    /// Pop a board state from the history list
     pub fn pop(&mut self) -> Option<BoardState> {
         self.board_states.pop()
     }
 
+    /// Get an iterator to the board history
     pub fn iter(&self) -> std::slice::Iter<BoardState> {
         self.board_states.iter()
     }
