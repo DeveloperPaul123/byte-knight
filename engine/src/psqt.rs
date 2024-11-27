@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Nov 21 2024
+ * Last Modified: Tue Nov 26 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -197,6 +197,7 @@ const EG_PESTO_TABLE: [&[i64; 64]; 6] = [
 /// King, Queen, Rook, Bishop, Knight, Pawn
 const GAMEPHASE_INC: [i64; 6] = [0, 4, 2, 1, 1, 0];
 
+/// Piece-Square Tables (PST) for evaluation
 pub(crate) struct Psqt {
     mg_table: [[i64; 64]; 12],
     eg_table: [[i64; 64]; 12],
@@ -205,6 +206,7 @@ pub(crate) struct Psqt {
 const FLIP: fn(usize) -> usize = |sq| sq ^ 56;
 
 impl Psqt {
+    /// Creates a new [`Psqt`] instance and initializes the piece-square tables.
     pub(crate) fn new() -> Self {
         let mut psqt = Psqt {
             mg_table: [[0; 64]; 12],
@@ -214,6 +216,18 @@ impl Psqt {
         psqt
     }
 
+    /// Evaluates the given [`Board`] position. This uses the piece square tables
+    /// as well as a tapering function to take into account game phase.
+    ///
+    /// See <https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function> for more information.
+    ///
+    /// # Arguments
+    ///
+    /// - `board`: The [`Board`] to evaluate.
+    ///
+    /// # Returns
+    ///
+    /// The score of the position.
     pub(crate) fn evaluate(&self, board: &Board) -> Score {
         let side_to_move = board.side_to_move();
         let mut mg = [0; 2];
@@ -242,6 +256,8 @@ impl Psqt {
         Score::new((mg_score * mg_phase + eg_score * eg_phase) / 24)
     }
 
+    /// Helper to initialize the tables
+    /// See <https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function>
     fn initialize_tables(&mut self) {
         for (p, pc) in (0..6).zip((0..12).step_by(2)) {
             for sq in 0..64 {

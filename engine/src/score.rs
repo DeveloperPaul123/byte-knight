@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 14th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Nov 21 2024
+ * Last Modified: Tue Nov 26 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -19,12 +19,14 @@ use std::{
 
 use uci_parser::UciScore;
 
+/// Represents a score in centipawns.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Score(pub i64);
 
 impl Score {
     pub const DRAW: Score = Score(0);
     pub const MATE: Score = Score(10_000);
+    /// We use i32 so we don't overflow
     pub const INF: Score = Score(i32::MAX as i64);
 
     pub fn new(score: i64) -> Score {

@@ -4,7 +4,7 @@
  * Created Date: Monday, November 18th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Nov 21 2024
+ * Last Modified: Tue Nov 26 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -77,6 +77,7 @@ impl InputHandler {
         }
     }
 
+    /// Stops the worker thread. This method blocks until the worker thread has stopped.
     pub fn stop(&mut self) {
         self.stop_flag.store(true, Ordering::Relaxed);
 
@@ -89,8 +90,7 @@ impl InputHandler {
         &self.receiver
     }
 
-    /// Signal to the worker thread that it should stop. This method does not block the calling
-    /// thread.
+    /// Signal to the worker thread that it should stop.
     pub(crate) fn exit(&mut self) {
         self.stop();
     }
