@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Nov 21 2024
+ * Last Modified: Tue Nov 26 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -33,6 +33,7 @@ use crate::{
 
 const MAX_DEPTH: u8 = 128;
 
+/// Result for a search.
 #[derive(Clone, Copy, Debug)]
 pub struct SearchResult {
     pub score: Score,
@@ -67,6 +68,7 @@ impl Display for SearchResult {
     }
 }
 
+/// Input parameters for the search.
 #[derive(Clone, Debug)]
 pub struct SearchParameters {
     pub max_depth: u8,
@@ -89,6 +91,7 @@ impl Default for SearchParameters {
 }
 
 impl SearchParameters {
+    /// Creates a new set of search parameters from the UCI options and the current board.
     pub fn new(uci_options: &UciSearchOptions, board: &Board) -> Self {
         let mut params = Self::default();
         if let Some(depth) = uci_options.depth {
@@ -159,6 +162,17 @@ impl Search {
         }
     }
 
+    /// Search for the best move in the given board state. This will output
+    /// UCI info lines as it searches.
+    ///
+    /// # Arguments
+    ///
+    /// - `board` - The current board state.
+    /// - `stop_flag` - An optional flag to stop the search.
+    ///
+    /// # Returns
+    ///
+    /// The best move found.
     pub fn search(
         &mut self,
         board: &mut Board,

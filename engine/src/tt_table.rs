@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Nov 21 2024
+ * Last Modified: Tue Nov 26 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -25,6 +25,7 @@ pub enum EntryFlag {
     UpperBound,
 }
 
+/// A transposition table entry.
 #[derive(Clone, Copy)]
 pub(crate) struct TranspositionTableEntry {
     pub zobrist: u64,
@@ -52,6 +53,7 @@ impl TranspositionTableEntry {
     }
 }
 
+/// A transposition table used to store the results of previous searches.
 pub(crate) struct TranspositionTable {
     table: Vec<Option<TranspositionTableEntry>>,
 }

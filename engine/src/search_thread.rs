@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Nov 21 2024
+ * Last Modified: Tue Nov 26 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -55,6 +55,8 @@ pub(crate) enum SearchThreadValue {
     Exit,
 }
 
+/// A thread worker that manages the search. It receives search parameters and a board state and
+/// sends the best move to the UCI output.
 pub(crate) struct SearchThread {
     sender: Sender<SearchThreadValue>,
     handle: Option<JoinHandle<()>>,
@@ -62,6 +64,8 @@ pub(crate) struct SearchThread {
 }
 
 impl SearchThread {
+    /// Creates a new [`SearchThread`]. The search thread is responsible for managing the search.
+    /// When the search thread is created, the thread loop starts and begins to wait for search parameters.
     pub(crate) fn new() -> SearchThread {
         let (sender, receiver) = mpsc::channel();
         let stop_flag = Arc::new(AtomicBool::new(false));
@@ -102,15 +106,19 @@ impl SearchThread {
         }
     }
 
+    /// Exits the search thread. This will stop the search thread and join it.
     pub(crate) fn exit(&mut self) {
         self.stop_search();
         self.sender.send(SearchThreadValue::Exit).unwrap();
         self.handle.take().unwrap().join().unwrap();
     }
+
+    /// Stops the current search if any is in progress.
     pub(crate) fn stop_search(&self) {
         self.stop_search_flag.store(true, Ordering::Relaxed);
     }
 
+    /// Starts a new search with the given parameters and board state.
     pub(crate) fn start_search(&self, board: &Board, params: SearchParameters) {
         self.stop_search_flag.store(false, Ordering::Relaxed);
         self.sender

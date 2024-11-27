@@ -4,7 +4,7 @@
  * Created Date: Friday, November 15th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Nov 21 2024
+ * Last Modified: Tue Nov 26 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -34,6 +34,7 @@ impl ByteKnight {
         }
     }
 
+    /// Run the engine loop. This will block until the engine is told to quit by the input handler.
     pub fn run(&mut self) -> anyhow::Result<()> {
         println!("{}", About::BANNER);
         println!(
