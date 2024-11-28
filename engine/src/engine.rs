@@ -4,7 +4,7 @@
  * Created Date: Friday, November 15th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 26 2024
+ * Last Modified: Thu Nov 28 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -12,13 +12,17 @@
  *
  */
 
-use std::io::{self, Write};
+use std::{
+    io::{self, Write},
+    sync::{Arc, Mutex},
+};
 
 use chess::board::Board;
 use uci_parser::{UciCommand, UciInfo, UciOption, UciResponse};
 
 use crate::{
-    defs::About, input_handler::InputHandler, search::SearchParameters, search_thread::SearchThread,
+    defs::About, input_handler::InputHandler, search::SearchParameters,
+    search_thread::SearchThread, tt_table::TranspositionTable,
 };
 
 pub struct ByteKnight {
@@ -46,6 +50,7 @@ impl ByteKnight {
         );
         let stdout: io::Stdout = io::stdout();
         let mut board = Board::default_board();
+        let tt: Arc<Mutex<TranspositionTable>> = Arc::default();
         'engine_loop: while let Ok(command) = &self.input_handler.receiver().recv() {
             let mut stdout = stdout.lock();
             match command {
@@ -77,6 +82,9 @@ impl ByteKnight {
                 }
                 UciCommand::UciNewGame => {
                     board = Board::default_board();
+                    if let Ok(tt) = tt.lock().as_mut() {
+                        tt.clear();
+                    }
                 }
                 UciCommand::Position { fen, moves } => {
                     match fen {
@@ -93,13 +101,19 @@ impl ByteKnight {
                     }
                 }
                 UciCommand::Go(search_options) => {
+                    if self.search_thread.is_searching() {
+                        eprintln!("Attempting to start a search while already searching");
+                        self.search_thread.stop_search();
+                    }
+
                     let info = UciInfo::default().string(format!("searching {}", board.to_fen()));
                     writeln!(stdout, "{}", UciResponse::info(info)).unwrap();
 
                     // create the search parameters
                     let search_params = SearchParameters::new(search_options, &board);
                     // send them and the current board to the search thread
-                    self.search_thread.start_search(&board, search_params);
+                    self.search_thread
+                        .start_search(&board, search_params, tt.clone());
                 }
                 UciCommand::Stop => {
                     self.search_thread.stop_search();

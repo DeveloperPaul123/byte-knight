@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 26 2024
+ * Last Modified: Thu Nov 28 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -54,8 +54,16 @@ impl TranspositionTableEntry {
 }
 
 /// A transposition table used to store the results of previous searches.
-pub(crate) struct TranspositionTable {
+pub struct TranspositionTable {
     table: Vec<Option<TranspositionTableEntry>>,
+}
+
+const DEFAULT_TABLE_SIZE_MB: usize = 16;
+
+impl Default for TranspositionTable {
+    fn default() -> Self {
+        Self::from_size_in_mb(DEFAULT_TABLE_SIZE_MB)
+    }
 }
 
 impl TranspositionTable {
@@ -82,5 +90,9 @@ impl TranspositionTable {
     pub(crate) fn store_entry(&mut self, entry: TranspositionTableEntry) {
         let index = self.get_index(entry.zobrist);
         self.table[index] = Some(entry);
+    }
+
+    pub(crate) fn clear(&mut self) {
+        self.table.clear();
     }
 }
