@@ -93,6 +93,8 @@ impl TranspositionTable {
     }
 
     pub(crate) fn clear(&mut self) {
-        self.table.clear();
+        self.table.iter_mut().for_each(|element| {
+            *element = None;
+        });
     }
 }
