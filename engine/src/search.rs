@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 26 2024
+ * Last Modified: Thu Nov 28 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -135,8 +135,8 @@ impl Display for SearchParameters {
     }
 }
 
-pub struct Search {
-    transposition_table: TranspositionTable,
+pub struct Search<'search_lifetime> {
+    transposition_table: &'search_lifetime mut TranspositionTable,
     move_gen: MoveGenerator,
     nodes: u64,
     parameters: SearchParameters,
@@ -144,16 +144,10 @@ pub struct Search {
     stop_flag: Option<Arc<AtomicBool>>,
 }
 
-impl Default for Search {
-    fn default() -> Self {
-        Search::new(&SearchParameters::default())
-    }
-}
-
-impl Search {
-    pub fn new(parameters: &SearchParameters) -> Self {
+impl<'a> Search<'a> {
+    pub fn new(parameters: &SearchParameters, tt_table: &'a mut TranspositionTable) -> Self {
         Search {
-            transposition_table: TranspositionTable::from_size_in_mb(16),
+            transposition_table: tt_table,
             move_gen: MoveGenerator::new(),
             nodes: 0,
             parameters: parameters.clone(),
@@ -493,7 +487,9 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(&config);
+        let mut tt = Default::default();
+
+        let mut search = Search::new(&config, &mut tt);
         let res = search.search(&mut board.clone(), None);
         // b6a7
         assert_eq!(
@@ -511,7 +507,9 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(&config);
+        let mut tt = Default::default();
+
+        let mut search = Search::new(&config, &mut tt);
         let res = search.search(&mut board, None);
 
         assert_eq!(res.best_move.unwrap().to_long_algebraic(), "b8a8")
@@ -523,7 +521,9 @@ mod tests {
         let mut board = Board::from_fen(fen).unwrap();
         let config = SearchParameters::default();
 
-        let mut search = Search::new(&config);
+        let mut tt = Default::default();
+
+        let mut search = Search::new(&config, &mut tt);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_none());
         assert_eq!(res.score, Score::DRAW);
@@ -538,7 +538,9 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(&config);
+        let mut tt = Default::default();
+
+        let mut search = Search::new(&config, &mut tt);
         let res = search.search(&mut board, None);
 
         assert!(res.best_move.is_some());
@@ -553,7 +555,9 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(&config);
+        let mut tt = Default::default();
+
+        let mut search = Search::new(&config, &mut tt);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -567,7 +571,9 @@ mod tests {
             hard_timeout: Duration::from_millis(0),
             ..Default::default()
         };
-        let mut search = Search::new(&config);
+
+        let mut tt = Default::default();
+        let mut search = Search::new(&config, &mut tt);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
