@@ -24,7 +24,6 @@ New features are tested via my [OpenBench](https://github.com/AndyGrant/OpenBenc
 - [Iterative deepening](https://www.chessprogramming.org/Iterative_Deepening)
 - Negamax with alpha/beta pruning
 - Quiescence search
-- Transposition table
 - [Time control](https://www.chessprogramming.org/Time_Management)
   - Basic hard/soft limits
 - Move ordering
