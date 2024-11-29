@@ -25,11 +25,7 @@ use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, m
 use itertools::Itertools;
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
-use crate::{
-    evaluation::Evaluation,
-    score::Score,
-    tt_table::{EntryFlag, TranspositionTable, TranspositionTableEntry},
-};
+use crate::{evaluation::Evaluation, score::Score, tt_table::TranspositionTable};
 
 const MAX_DEPTH: u8 = 128;
 
@@ -142,6 +138,7 @@ pub struct Search<'search_lifetime> {
     parameters: SearchParameters,
     eval: Evaluation,
     stop_flag: Option<Arc<AtomicBool>>,
+    best_move: Option<Move>,
 }
 
 impl<'a> Search<'a> {
@@ -153,6 +150,7 @@ impl<'a> Search<'a> {
             parameters: parameters.clone(),
             eval: Evaluation::new(),
             stop_flag: None,
+            best_move: None,
         }
     }
 
@@ -236,10 +234,11 @@ impl<'a> Search<'a> {
             // update the best result
             best_result.score = score;
             // pull best move from the transposition table
-            best_result.best_move = self
-                .transposition_table
-                .get_entry(board.zobrist_hash())
-                .map(|e| e.board_move);
+            // best_result.best_move = self
+            //     .transposition_table
+            //     .get_entry(board.zobrist_hash())
+            //     .map(|e| e.board_move);
+            best_result.best_move = self.best_move;
 
             // send UCI info
             self.send_info(
@@ -283,35 +282,10 @@ impl<'a> Search<'a> {
         // increment node count
         self.nodes += 1;
         let mut alpha_use = alpha;
-        let mut beta_use = beta;
-        let alpha_original = alpha;
-
-        // get the tt entry
-        let tt_entry = self.transposition_table.get_entry(board.zobrist_hash());
-        // don't do tt cutoffs at the root
-        if ply > 0 {
-            if let Some(tt) = tt_entry {
-                if tt.depth >= depth as u8 {
-                    match tt.flag {
-                        EntryFlag::Exact => {
-                            return tt.score;
-                        }
-                        EntryFlag::LowerBound => {
-                            alpha_use = alpha.max(tt.score);
-                        }
-                        EntryFlag::UpperBound => {
-                            beta_use = beta.min(tt.score);
-                        }
-                    }
-                    if alpha_use >= beta_use {
-                        return tt.score;
-                    }
-                }
-            }
-        }
 
         if depth == 0 {
-            return self.quiescence(board, ply, alpha, beta);
+            // return self.quiescence(board, ply, alpha, beta);
+            return self.eval.evaluate_position(board);
         }
 
         // get all legal moves
@@ -330,12 +304,12 @@ impl<'a> Search<'a> {
         // sort moves by MVV/LVA
         let sorted_moves = move_list
             .iter()
-            .sorted_by_cached_key(|mv| Evaluation::score_move_for_ordering(mv, &tt_entry))
+            .sorted_by_cached_key(|mv| Evaluation::score_move_for_ordering(mv, &None))
             .collect_vec();
 
         // initialize best move and best score
         // we ensured we have moves earlier
-        let mut best_move = sorted_moves[0];
+        self.best_move = Some(*sorted_moves[0]);
         // really "bad" initial score
         let mut best_score = -Score::INF;
 
@@ -345,7 +319,7 @@ impl<'a> Search<'a> {
             board.make_move_unchecked(mv).unwrap();
             // is it a draw?
             let score = // recursive call and lower depth, higher ply and negated alpha and beta (swapped)
-            -self.negamax(board, depth - 1, ply + 1, -beta_use, -alpha_use);
+            -self.negamax(board, depth - 1, ply + 1, -beta, -alpha_use);
 
             // undo the move
             board.unmake_move().unwrap();
@@ -354,11 +328,11 @@ impl<'a> Search<'a> {
             if score > best_score {
                 // we improved, so update the score and best move
                 best_score = score;
-                best_move = mv;
+                self.best_move = Some(*mv);
 
                 // update alpha
                 alpha_use = alpha.max(best_score);
-                if alpha_use >= beta_use {
+                if alpha_use >= beta {
                     break;
                 }
             }
@@ -370,23 +344,24 @@ impl<'a> Search<'a> {
         }
 
         // did we fail high or low or did we find the exact score?
-        let flag = if best_score <= alpha_original {
-            EntryFlag::UpperBound
-        } else if best_score >= beta {
-            EntryFlag::LowerBound
-        } else {
-            EntryFlag::Exact
-        };
+        // let flag = if best_score <= alpha_original {
+        //     EntryFlag::UpperBound
+        // } else if best_score >= beta {
+        //     EntryFlag::LowerBound
+        // } else {
+        //     EntryFlag::Exact
+        // };
 
-        // save move to transposition table
-        self.transposition_table
-            .store_entry(TranspositionTableEntry::new(
-                board,
-                depth as u8,
-                best_score,
-                flag,
-                *best_move,
-            ));
+        // // save move to transposition table
+        // self.transposition_table
+        //     .store_entry(TranspositionTableEntry::new(
+        //         board,
+        //         depth as u8,
+        //         best_score,
+        //         flag,
+        //         *best_move,
+        //     ));
+
         best_score
     }
 
@@ -404,6 +379,7 @@ impl<'a> Search<'a> {
     ///
     /// The score of the position.
     ///
+    #[allow(dead_code)]
     fn quiescence(&mut self, board: &mut Board, _ply: i64, alpha: Score, beta: Score) -> Score {
         let standing_eval = self.eval.evaluate_position(board);
         if standing_eval >= beta {
