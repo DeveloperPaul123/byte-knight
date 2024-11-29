@@ -270,7 +270,7 @@ impl Search {
         let mut alpha_use = alpha;
 
         if depth == 0 {
-            return self.eval.evaluate_position(board);
+            return self.quiescence(board, alpha, beta);
         }
 
         // get all legal moves
@@ -332,6 +332,76 @@ impl Search {
         }
 
         best_score
+    }
+
+    /// Implements [quiescence search](https://www.chessprogramming.org/Quiescence_Search).
+    /// We use this to avoid the horizon effect. The idea is to evaluate quiet moves where there are no tactical moves to make.
+    ///
+    /// # Arguments
+    ///
+    /// - `board` - The current board state.
+    /// - `ply` - The current ply.
+    /// - `alpha` - The current alpha value.
+    /// - `beta` - The current beta value.
+    ///
+    /// # Returns
+    ///
+    /// The score of the position.
+    ///
+    fn quiescence(&mut self, board: &mut Board, alpha: Score, beta: Score) -> Score {
+        let standing_eval = self.eval.evaluate_position(board);
+        if standing_eval >= beta {
+            return beta;
+        }
+        let mut alpha_use = alpha.max(standing_eval);
+
+        let mut move_list = MoveList::new();
+        self.move_gen.generate_legal_moves(board, &mut move_list);
+
+        // we only want captures here
+        let captures = move_list
+            .iter()
+            .filter(|mv: &&Move| mv.captured_piece().is_some())
+            .collect_vec();
+
+        // no captures
+        if captures.is_empty() {
+            return standing_eval;
+        }
+
+        let sorted_moves = captures
+            .into_iter()
+            .sorted_by_cached_key(|mv| Evaluation::score_move_for_ordering(mv, &None));
+        let mut best = standing_eval;
+
+        for mv in sorted_moves {
+            board.make_move_unchecked(mv).unwrap();
+            let score = if board.is_draw() {
+                Score::DRAW
+            } else {
+                let eval = -self.quiescence(board, -beta, -alpha_use);
+                self.nodes += 1;
+                eval
+            };
+            board.unmake_move().unwrap();
+
+            if score > best {
+                best = score;
+
+                if score >= beta {
+                    break;
+                }
+                if score > alpha_use {
+                    alpha_use = score;
+                }
+            }
+
+            if self.should_stop_searching() {
+                break;
+            }
+        }
+
+        best
     }
 }
 
