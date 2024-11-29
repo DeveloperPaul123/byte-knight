@@ -32,6 +32,7 @@ pub struct ByteKnight {
     input_handler: InputHandler,
     search_thread: SearchThread,
     transposition_table: Arc<Mutex<TranspositionTable<true>>>,
+    debug: bool,
 }
 
 impl ByteKnight {
@@ -40,6 +41,7 @@ impl ByteKnight {
             input_handler: InputHandler::new(),
             search_thread: SearchThread::new(),
             transposition_table: Default::default(),
+            debug: false,
         }
     }
 
@@ -66,6 +68,9 @@ impl ByteKnight {
 
             match command {
                 CommandProxy::Uci(uci_command) => match uci_command {
+                    UciCommand::Debug(debug) => {
+                        self.debug = *debug;
+                    }
                     UciCommand::Quit => {
                         // clean up
                         self.search_thread.exit();
