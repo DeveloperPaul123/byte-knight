@@ -91,6 +91,7 @@ impl<const TRACK_STATS: bool> TranspositionTable<TRACK_STATS> {
         zobrist as usize % self.table.len()
     }
 
+    #[allow(dead_code)]
     pub(crate) fn get_entry(&mut self, zobrist: u64) -> Option<TranspositionTableEntry> {
         if TRACK_STATS {
             self.accesses += 1;

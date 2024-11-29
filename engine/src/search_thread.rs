@@ -18,7 +18,7 @@ use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::{self, Sender},
-        Arc, Mutex,
+        Arc,
     },
     thread::JoinHandle,
 };
@@ -26,10 +26,7 @@ use std::{
 use chess::{board::Board, moves::Move, pieces::SQUARE_NAME};
 use uci_parser::{UciMove, UciResponse};
 
-use crate::{
-    search::{Search, SearchParameters},
-    tt_table::TranspositionTable,
-};
+use crate::search::{Search, SearchParameters};
 
 fn square_index_to_uci_square(square: u8) -> uci_parser::Square {
     uci_parser::Square::from_str(SQUARE_NAME[square as usize]).unwrap()
@@ -54,11 +51,7 @@ fn move_to_uci_move(mv: &Move) -> UciMove {
 
 #[allow(clippy::large_enum_variant)]
 pub(crate) enum SearchThreadValue {
-    Params(
-        Board,
-        SearchParameters,
-        Arc<Mutex<TranspositionTable<true>>>,
-    ),
+    Params(Board, SearchParameters),
     Exit,
 }
 
@@ -87,11 +80,10 @@ impl SearchThread {
             'search_loop: loop {
                 let value = receiver.recv().unwrap();
                 match value {
-                    SearchThreadValue::Params(mut board, params, tt_table) => {
+                    SearchThreadValue::Params(mut board, params) => {
                         let flag = stop_flag.clone();
-                        let mut tt = tt_table.lock().unwrap();
                         is_searching.store(true, Ordering::Relaxed);
-                        let result = Search::new(&params, &mut tt).search(&mut board, Some(flag));
+                        let result = Search::new(&params).search(&mut board, Some(flag));
                         is_searching.store(false, Ordering::Relaxed);
                         let best_move = result.best_move;
                         let move_output = UciResponse::BestMove {
@@ -136,15 +128,10 @@ impl SearchThread {
     }
 
     /// Starts a new search with the given parameters and board state.
-    pub(crate) fn start_search(
-        &self,
-        board: &Board,
-        params: SearchParameters,
-        tt: Arc<Mutex<TranspositionTable<true>>>,
-    ) {
+    pub(crate) fn start_search(&self, board: &Board, params: SearchParameters) {
         self.stop_search_flag.store(false, Ordering::Relaxed);
         self.sender
-            .send(SearchThreadValue::Params(board.clone(), params, tt))
+            .send(SearchThreadValue::Params(board.clone(), params))
             .unwrap();
     }
 

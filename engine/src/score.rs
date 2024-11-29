@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 14th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 26 2024
+ * Last Modified: Fri Nov 29 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -25,7 +25,7 @@ pub struct Score(pub i64);
 
 impl Score {
     pub const DRAW: Score = Score(0);
-    pub const MATE: Score = Score(10_000);
+    pub const MATE: Score = Score(i32::MAX as i64);
     /// We use i32 so we don't overflow
     pub const INF: Score = Score(i32::MAX as i64);
 

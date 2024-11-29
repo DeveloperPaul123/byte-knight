@@ -128,11 +128,7 @@ impl ByteKnight {
                         // create the search parameters
                         let search_params = SearchParameters::new(search_options, &board);
                         // send them and the current board to the search thread
-                        self.search_thread.start_search(
-                            &board,
-                            search_params,
-                            self.transposition_table.clone(),
-                        );
+                        self.search_thread.start_search(&board, search_params);
                     }
                     UciCommand::SetOption { name, value } => {
                         if name.to_lowercase() == "hash" {

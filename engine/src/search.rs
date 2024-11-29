@@ -25,7 +25,7 @@ use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, m
 use itertools::Itertools;
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
-use crate::{evaluation::Evaluation, score::Score, tt_table::TranspositionTable};
+use crate::{evaluation::Evaluation, score::Score};
 
 const MAX_DEPTH: u8 = 128;
 
@@ -131,8 +131,8 @@ impl Display for SearchParameters {
     }
 }
 
-pub struct Search<'search_lifetime> {
-    transposition_table: &'search_lifetime mut TranspositionTable<true>,
+pub struct Search {
+    // transposition_table: &'search_lifetime mut TranspositionTable<true>,
     move_gen: MoveGenerator,
     nodes: u64,
     parameters: SearchParameters,
@@ -141,10 +141,10 @@ pub struct Search<'search_lifetime> {
     best_move: Option<Move>,
 }
 
-impl<'a> Search<'a> {
-    pub fn new(parameters: &SearchParameters, tt_table: &'a mut TranspositionTable<true>) -> Self {
+impl Search {
+    pub fn new(parameters: &SearchParameters) -> Self {
         Search {
-            transposition_table: tt_table,
+            // transposition_table: tt_table,
             move_gen: MoveGenerator::new(),
             nodes: 0,
             parameters: parameters.clone(),
@@ -171,6 +171,7 @@ impl<'a> Search<'a> {
         stop_flag: Option<Arc<AtomicBool>>,
     ) -> SearchResult {
         self.stop_flag = stop_flag;
+        self.best_move = None;
 
         let info = UciInfo::default().string(format!("searching {}", self.parameters));
         let message = UciResponse::info(info);
@@ -233,11 +234,6 @@ impl<'a> Search<'a> {
 
             // update the best result
             best_result.score = score;
-            // pull best move from the transposition table
-            // best_result.best_move = self
-            //     .transposition_table
-            //     .get_entry(board.zobrist_hash())
-            //     .map(|e| e.board_move);
             best_result.best_move = self.best_move;
 
             // send UCI info
@@ -257,16 +253,6 @@ impl<'a> Search<'a> {
         // update total nodes for the current search
         best_result.nodes = self.nodes;
 
-        // send final info line
-        self.send_info(
-            best_result.depth,
-            self.nodes,
-            best_result.score,
-            (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32()).trunc(),
-            self.parameters.start_time.elapsed().as_millis() as u64,
-            best_result.best_move,
-        );
-
         // return our best result so far
         best_result
     }
@@ -284,7 +270,6 @@ impl<'a> Search<'a> {
         let mut alpha_use = alpha;
 
         if depth == 0 {
-            // return self.quiescence(board, ply, alpha, beta);
             return self.eval.evaluate_position(board);
         }
 
@@ -309,7 +294,8 @@ impl<'a> Search<'a> {
 
         // initialize best move and best score
         // we ensured we have moves earlier
-        self.best_move = Some(*sorted_moves[0]);
+        // let mut best_move = Some(*sorted_moves[0]);
+
         // really "bad" initial score
         let mut best_score = -Score::INF;
 
@@ -328,7 +314,9 @@ impl<'a> Search<'a> {
             if score > best_score {
                 // we improved, so update the score and best move
                 best_score = score;
-                self.best_move = Some(*mv);
+                if ply == 0 {
+                    self.best_move = Some(*mv);
+                }
 
                 // update alpha
                 alpha_use = alpha.max(best_score);
@@ -343,99 +331,7 @@ impl<'a> Search<'a> {
             }
         }
 
-        // did we fail high or low or did we find the exact score?
-        // let flag = if best_score <= alpha_original {
-        //     EntryFlag::UpperBound
-        // } else if best_score >= beta {
-        //     EntryFlag::LowerBound
-        // } else {
-        //     EntryFlag::Exact
-        // };
-
-        // // save move to transposition table
-        // self.transposition_table
-        //     .store_entry(TranspositionTableEntry::new(
-        //         board,
-        //         depth as u8,
-        //         best_score,
-        //         flag,
-        //         *best_move,
-        //     ));
-
         best_score
-    }
-
-    /// Implements [quiescence search](https://www.chessprogramming.org/Quiescence_Search).
-    /// We use this to avoid the horizon effect. The idea is to evaluate quiet moves where there are no tactical moves to make.
-    ///
-    /// # Arguments
-    ///
-    /// - `board` - The current board state.
-    /// - `ply` - The current ply.
-    /// - `alpha` - The current alpha value.
-    /// - `beta` - The current beta value.
-    ///
-    /// # Returns
-    ///
-    /// The score of the position.
-    ///
-    #[allow(dead_code)]
-    fn quiescence(&mut self, board: &mut Board, _ply: i64, alpha: Score, beta: Score) -> Score {
-        let standing_eval = self.eval.evaluate_position(board);
-        if standing_eval >= beta {
-            return beta;
-        }
-        let mut alpha_use = alpha.max(standing_eval);
-
-        let mut move_list = MoveList::new();
-        self.move_gen.generate_legal_moves(board, &mut move_list);
-
-        // we only want captures here
-        let captures = move_list
-            .iter()
-            .filter(|mv: &&Move| mv.captured_piece().is_some())
-            .collect_vec();
-
-        // no captures
-        if captures.is_empty() {
-            return standing_eval;
-        }
-
-        let tt_move = self.transposition_table.get_entry(board.zobrist_hash());
-        let sorted_moves = captures
-            .into_iter()
-            .sorted_by_cached_key(|mv| Evaluation::score_move_for_ordering(mv, &tt_move));
-        let mut best = standing_eval;
-
-        for mv in sorted_moves {
-            board.make_move_unchecked(mv).unwrap();
-            let score = if board.is_draw() {
-                Score::DRAW
-            } else {
-                let eval = -self.quiescence(board, _ply + 1, -beta, -alpha_use);
-                self.nodes += 1;
-                eval
-            };
-            board.unmake_move().unwrap();
-
-            if score > best {
-                best = score;
-
-                if score > alpha_use {
-                    alpha_use = score;
-                }
-
-                if score >= beta {
-                    break;
-                }
-            }
-
-            if self.should_stop_searching() {
-                break;
-            }
-        }
-
-        best
     }
 }
 
@@ -459,9 +355,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut tt = Default::default();
-
-        let mut search = Search::new(&config, &mut tt);
+        let mut search = Search::new(&config);
         let res = search.search(&mut board.clone(), None);
         // b6a7
         assert_eq!(
@@ -479,9 +373,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut tt = Default::default();
-
-        let mut search = Search::new(&config, &mut tt);
+        let mut search = Search::new(&config);
         let res = search.search(&mut board, None);
 
         assert_eq!(res.best_move.unwrap().to_long_algebraic(), "b8a8")
@@ -493,9 +385,7 @@ mod tests {
         let mut board = Board::from_fen(fen).unwrap();
         let config = SearchParameters::default();
 
-        let mut tt = Default::default();
-
-        let mut search = Search::new(&config, &mut tt);
+        let mut search = Search::new(&config);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_none());
         assert_eq!(res.score, Score::DRAW);
@@ -510,9 +400,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut tt = Default::default();
-
-        let mut search = Search::new(&config, &mut tt);
+        let mut search = Search::new(&config);
         let res = search.search(&mut board, None);
 
         assert!(res.best_move.is_some());
@@ -527,9 +415,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut tt = Default::default();
-
-        let mut search = Search::new(&config, &mut tt);
+        let mut search = Search::new(&config);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -544,8 +430,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut tt = Default::default();
-        let mut search = Search::new(&config, &mut tt);
+        let mut search = Search::new(&config);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
