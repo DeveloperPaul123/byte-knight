@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Nov 28 2024
+ * Last Modified: Fri Nov 29 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -136,7 +136,7 @@ impl Display for SearchParameters {
 }
 
 pub struct Search<'search_lifetime> {
-    transposition_table: &'search_lifetime mut TranspositionTable,
+    transposition_table: &'search_lifetime mut TranspositionTable<true>,
     move_gen: MoveGenerator,
     nodes: u64,
     parameters: SearchParameters,
@@ -145,7 +145,7 @@ pub struct Search<'search_lifetime> {
 }
 
 impl<'a> Search<'a> {
-    pub fn new(parameters: &SearchParameters, tt_table: &'a mut TranspositionTable) -> Self {
+    pub fn new(parameters: &SearchParameters, tt_table: &'a mut TranspositionTable<true>) -> Self {
         Search {
             transposition_table: tt_table,
             move_gen: MoveGenerator::new(),
@@ -224,14 +224,7 @@ impl<'a> Search<'a> {
             && best_result.depth <= self.parameters.max_depth
         {
             // search the tree, starting at the current depth (starts at 1)
-            let score = self.negamax(
-                board,
-                best_result.depth as i64,
-                0,
-                -Score::INF,
-                Score::INF,
-                self.parameters.max_depth as i64,
-            );
+            let score = self.negamax(board, best_result.depth as i64, 0, -Score::INF, Score::INF);
 
             // check stop conditions
             if self.should_stop_searching() {
@@ -284,35 +277,39 @@ impl<'a> Search<'a> {
         board: &mut Board,
         depth: i64,
         ply: i64,
-        mut alpha: Score,
-        mut beta: Score,
-        _max_depth: i64,
+        alpha: Score,
+        beta: Score,
     ) -> Score {
         // increment node count
         self.nodes += 1;
+        let mut alpha_use = alpha;
+        let mut beta_use = beta;
+        let alpha_original = alpha;
 
         // get the tt entry
         let tt_entry = self.transposition_table.get_entry(board.zobrist_hash());
-        if let Some(tt) = tt_entry {
-            if tt.depth >= depth as u8 {
-                match tt.flag {
-                    EntryFlag::Exact => {
+        // don't do tt cutoffs at the root
+        if ply > 0 {
+            if let Some(tt) = tt_entry {
+                if tt.depth >= depth as u8 {
+                    match tt.flag {
+                        EntryFlag::Exact => {
+                            return tt.score;
+                        }
+                        EntryFlag::LowerBound => {
+                            alpha_use = alpha.max(tt.score);
+                        }
+                        EntryFlag::UpperBound => {
+                            beta_use = beta.min(tt.score);
+                        }
+                    }
+                    if alpha_use >= beta_use {
                         return tt.score;
                     }
-                    EntryFlag::LowerBound => {
-                        alpha = alpha.max(tt.score);
-                    }
-                    EntryFlag::UpperBound => {
-                        beta = beta.min(tt.score);
-                    }
-                }
-                if alpha >= beta {
-                    return tt.score;
                 }
             }
         }
 
-        let alpha_original = alpha;
         if depth == 0 {
             return self.quiescence(board, ply, alpha, beta);
         }
@@ -348,7 +345,7 @@ impl<'a> Search<'a> {
             board.make_move_unchecked(mv).unwrap();
             // is it a draw?
             let score = // recursive call and lower depth, higher ply and negated alpha and beta (swapped)
-            -self.negamax(board, depth - 1, ply + 1, -beta, -alpha, _max_depth);
+            -self.negamax(board, depth - 1, ply + 1, -beta_use, -alpha_use);
 
             // undo the move
             board.unmake_move().unwrap();
@@ -360,8 +357,8 @@ impl<'a> Search<'a> {
                 best_move = mv;
 
                 // update alpha
-                alpha = alpha.max(best_score);
-                if alpha >= beta {
+                alpha_use = alpha.max(best_score);
+                if alpha_use >= beta_use {
                     break;
                 }
             }
@@ -407,13 +404,12 @@ impl<'a> Search<'a> {
     ///
     /// The score of the position.
     ///
-    fn quiescence(&mut self, board: &mut Board, _ply: i64, mut alpha: Score, beta: Score) -> Score {
+    fn quiescence(&mut self, board: &mut Board, _ply: i64, alpha: Score, beta: Score) -> Score {
         let standing_eval = self.eval.evaluate_position(board);
         if standing_eval >= beta {
             return beta;
         }
-
-        alpha = alpha.max(standing_eval);
+        let mut alpha_use = alpha.max(standing_eval);
 
         let mut move_list = MoveList::new();
         self.move_gen.generate_legal_moves(board, &mut move_list);
@@ -440,7 +436,7 @@ impl<'a> Search<'a> {
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
-                let eval = -self.quiescence(board, _ply + 1, -beta, -alpha);
+                let eval = -self.quiescence(board, _ply + 1, -beta, -alpha_use);
                 self.nodes += 1;
                 eval
             };
@@ -449,8 +445,8 @@ impl<'a> Search<'a> {
             if score > best {
                 best = score;
 
-                if score > alpha {
-                    alpha = score;
+                if score > alpha_use {
+                    alpha_use = score;
                 }
 
                 if score >= beta {

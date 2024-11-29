@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Nov 28 2024
+ * Last Modified: Fri Nov 29 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -54,7 +54,11 @@ fn move_to_uci_move(mv: &Move) -> UciMove {
 
 #[allow(clippy::large_enum_variant)]
 pub(crate) enum SearchThreadValue {
-    Params(Board, SearchParameters, Arc<Mutex<TranspositionTable>>),
+    Params(
+        Board,
+        SearchParameters,
+        Arc<Mutex<TranspositionTable<true>>>,
+    ),
     Exit,
 }
 
@@ -136,7 +140,7 @@ impl SearchThread {
         &self,
         board: &Board,
         params: SearchParameters,
-        tt: Arc<Mutex<TranspositionTable>>,
+        tt: Arc<Mutex<TranspositionTable<true>>>,
     ) {
         self.stop_search_flag.store(false, Ordering::Relaxed);
         self.sender
