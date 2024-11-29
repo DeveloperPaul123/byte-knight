@@ -12,8 +12,6 @@
  *
  */
 
-use std::i64;
-
 use chess::{board::Board, definitions::NumberOf, moves::Move, pieces::Piece};
 
 use crate::{psqt::Psqt, score::Score, tt_table::TranspositionTableEntry};

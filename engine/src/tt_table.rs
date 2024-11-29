@@ -29,13 +29,14 @@ pub enum EntryFlag {
 #[derive(Clone, Copy)]
 pub(crate) struct TranspositionTableEntry {
     pub zobrist: u64,
-    pub depth: u8,
-    pub score: Score,
-    pub flag: EntryFlag,
+    pub _depth: u8,
+    pub _score: Score,
+    pub _flag: EntryFlag,
     pub board_move: Move,
 }
 
 impl TranspositionTableEntry {
+    #[allow(dead_code)]
     pub fn new(
         board: &Board,
         depth: u8,
@@ -45,9 +46,9 @@ impl TranspositionTableEntry {
     ) -> TranspositionTableEntry {
         TranspositionTableEntry {
             zobrist: board.zobrist_hash(),
-            depth,
-            score,
-            flag,
+            _depth: depth,
+            _score: score,
+            _flag: flag,
             board_move: mv,
         }
     }
@@ -98,14 +99,14 @@ impl<const TRACK_STATS: bool> TranspositionTable<TRACK_STATS> {
         let index = self.get_index(zobrist);
         let entry = self.table[index];
 
-        if TRACK_STATS {
-            if entry.is_some() {
-                self.hits += 1;
-            }
+        if TRACK_STATS && entry.is_some() {
+            self.hits += 1;
         }
         entry
     }
 
+    // TODO(PT) - Remove this when TT is fully implemented
+    #[allow(dead_code)]
     pub(crate) fn store_entry(&mut self, entry: TranspositionTableEntry) {
         let index = self.get_index(entry.zobrist);
         if TRACK_STATS {
