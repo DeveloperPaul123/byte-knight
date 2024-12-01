@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Nov 29 2024
+ * Last Modified: Sat Nov 30 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -161,7 +161,8 @@ pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
     };
 
     let mut nodes = 0u64;
-    let mut search = Search::new(&config);
+    let mut tt = Default::default();
+    let mut search = Search::new(&config, &mut tt);
 
     for bench in benchmark_strings {
         let fen: &str = bench.split(";").next().unwrap();
