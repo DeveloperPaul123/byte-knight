@@ -275,16 +275,22 @@ impl<'a> Search<'a> {
         let alpha_original = alpha;
         let mut alpha_use = alpha;
         let mut beta_use = beta;
+        let not_root = ply > 0;
+        let zobrist = board.zobrist_hash();
 
         if depth == 0 {
             return self.quiescence(board, alpha, beta);
         }
 
         let tt_entry = self.transposition_table.get_entry(board.zobrist_hash());
-        if ply > 0 {
+        if not_root {
             // transposition table cutoff only on non-root nodes
+            // TODO(PT): Consolidate this if when if let chains are stabalized
             if let Some(tt_entry) = tt_entry {
-                if tt_entry.depth as i64 >= depth {
+                // depth must be greater or equal to the current depth and the board
+                // must be the same position. Without this checks, we could be looking up the wrong entry
+                // due to collisions since we use a modulo as the hash function
+                if tt_entry.depth as i64 >= depth && tt_entry.zobrist == zobrist {
                     match tt_entry.flag {
                         ttable::EntryFlag::Exact => {
                             return tt_entry.score;
