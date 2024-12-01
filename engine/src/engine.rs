@@ -25,7 +25,7 @@ use crate::{
     input_handler::{CommandProxy, EngineCommand, InputHandler},
     search::SearchParameters,
     search_thread::SearchThread,
-    tt_table::{self, TranspositionTable},
+    ttable::{self, TranspositionTable},
 };
 
 pub struct ByteKnight {
@@ -139,16 +139,16 @@ impl ByteKnight {
                             if let Some(val) = value {
                                 // set the hash size, making sure it is within the bounds we have set.
                                 if let Ok(hash_size) = val.parse::<usize>() {
-                                    if hash_size < tt_table::MIN_TABLE_SIZE_MB {
+                                    if hash_size < ttable::MIN_TABLE_SIZE_MB {
                                         eprintln!(
                                             "Hash size too small. Must be at least {} MB",
-                                            tt_table::MIN_TABLE_SIZE_MB
+                                            ttable::MIN_TABLE_SIZE_MB
                                         );
                                         continue;
-                                    } else if hash_size > tt_table::MAX_TABLE_SIZE_MB {
+                                    } else if hash_size > ttable::MAX_TABLE_SIZE_MB {
                                         eprintln!(
                                             "Hash size too large. Must be at most {} MB",
-                                            tt_table::MAX_TABLE_SIZE_MB
+                                            ttable::MAX_TABLE_SIZE_MB
                                         );
                                         continue;
                                     }

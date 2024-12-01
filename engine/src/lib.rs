@@ -6,4 +6,4 @@ pub mod psqt;
 pub mod score;
 pub mod search;
 pub mod search_thread;
-pub mod tt_table;
+pub mod ttable;

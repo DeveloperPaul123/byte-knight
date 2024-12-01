@@ -28,9 +28,9 @@ use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 use crate::{
     evaluation::Evaluation,
     score::Score,
-    tt_table::{self, TranspositionTableEntry},
+    ttable::{self, TranspositionTableEntry},
 };
-use tt_table::TranspositionTable;
+use ttable::TranspositionTable;
 
 const MAX_DEPTH: u8 = 128;
 
@@ -286,13 +286,13 @@ impl<'a> Search<'a> {
             if let Some(tt_entry) = tt_entry {
                 if tt_entry.depth as i64 >= depth {
                     match tt_entry.flag {
-                        tt_table::EntryFlag::Exact => {
+                        ttable::EntryFlag::Exact => {
                             return tt_entry.score;
                         }
-                        tt_table::EntryFlag::LowerBound => {
+                        ttable::EntryFlag::LowerBound => {
                             alpha_use = alpha_use.max(tt_entry.score);
                         }
-                        tt_table::EntryFlag::UpperBound => {
+                        ttable::EntryFlag::UpperBound => {
                             if tt_entry.score < beta {
                                 beta_use = beta_use.min(tt_entry.score);
                             }
@@ -364,11 +364,11 @@ impl<'a> Search<'a> {
 
         // store the best move in the transposition table
         let flag = if best_score <= alpha_original {
-            tt_table::EntryFlag::UpperBound
+            ttable::EntryFlag::UpperBound
         } else if best_score >= beta {
-            tt_table::EntryFlag::LowerBound
+            ttable::EntryFlag::LowerBound
         } else {
-            tt_table::EntryFlag::Exact
+            ttable::EntryFlag::Exact
         };
 
         self.transposition_table
@@ -463,7 +463,7 @@ mod tests {
     use crate::{
         score::Score,
         search::{Search, SearchParameters},
-        tt_table::TranspositionTable,
+        ttable::TranspositionTable,
     };
 
     #[test]
