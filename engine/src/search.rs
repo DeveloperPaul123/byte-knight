@@ -442,9 +442,10 @@ impl<'a> Search<'a> {
             return standing_eval;
         }
 
+        let tt_entry = self.transposition_table.get_entry(board.zobrist_hash());
         let sorted_moves = captures
             .into_iter()
-            .sorted_by_cached_key(|mv| Evaluation::score_move_for_ordering(mv, &None));
+            .sorted_by_cached_key(|mv| Evaluation::score_move_for_ordering(mv, &tt_entry));
         let mut best = standing_eval;
 
         for mv in sorted_moves {
