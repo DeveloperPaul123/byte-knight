@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Nov 29 2024
+ * Last Modified: Sat Nov 30 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -14,7 +14,7 @@
 
 use chess::{board::Board, definitions::NumberOf, moves::Move, pieces::Piece};
 
-use crate::{psqt::Psqt, score::Score, tt_table::TranspositionTableEntry};
+use crate::{psqt::Psqt, score::Score, ttable::TranspositionTableEntry};
 
 // similar setup to Rustic https://rustic-chess.org/search/ordering/mvv_lva.html
 // MVV-LVA (Most Valuable Victim - Least Valuable Attacker) is a heuristic used to order captures.

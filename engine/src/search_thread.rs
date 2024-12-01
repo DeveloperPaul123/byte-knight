@@ -28,7 +28,7 @@ use uci_parser::{UciMove, UciResponse};
 
 use crate::{
     search::{Search, SearchParameters},
-    tt_table::TranspositionTable,
+    ttable::TranspositionTable,
 };
 
 fn square_index_to_uci_square(square: u8) -> uci_parser::Square {
