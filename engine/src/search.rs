@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Nov 29 2024
+ * Last Modified: Sat Nov 30 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -25,7 +25,12 @@ use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, m
 use itertools::Itertools;
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
-use crate::{evaluation::Evaluation, score::Score};
+use crate::{
+    evaluation::Evaluation,
+    score::Score,
+    tt_table::{self, TranspositionTableEntry},
+};
+use tt_table::TranspositionTable;
 
 const MAX_DEPTH: u8 = 128;
 
@@ -131,26 +136,24 @@ impl Display for SearchParameters {
     }
 }
 
-pub struct Search {
-    // transposition_table: &'search_lifetime mut TranspositionTable<true>,
+pub struct Search<'search_lifetime> {
+    transposition_table: &'search_lifetime mut TranspositionTable,
     move_gen: MoveGenerator,
     nodes: u64,
     parameters: SearchParameters,
     eval: Evaluation,
     stop_flag: Option<Arc<AtomicBool>>,
-    best_move: Option<Move>,
 }
 
-impl Search {
-    pub fn new(parameters: &SearchParameters) -> Self {
+impl<'a> Search<'a> {
+    pub fn new(parameters: &SearchParameters, ttable: &'a mut TranspositionTable) -> Self {
         Search {
-            // transposition_table: tt_table,
+            transposition_table: ttable,
             move_gen: MoveGenerator::new(),
             nodes: 0,
             parameters: parameters.clone(),
             eval: Evaluation::new(),
             stop_flag: None,
-            best_move: None,
         }
     }
 
@@ -171,7 +174,6 @@ impl Search {
         stop_flag: Option<Arc<AtomicBool>>,
     ) -> SearchResult {
         self.stop_flag = stop_flag;
-        self.best_move = None;
 
         let info = UciInfo::default().string(format!("searching {}", self.parameters));
         let message = UciResponse::info(info);
@@ -234,7 +236,10 @@ impl Search {
 
             // update the best result
             best_result.score = score;
-            best_result.best_move = self.best_move;
+            best_result.best_move = self
+                .transposition_table
+                .get_entry(board.zobrist_hash())
+                .map(|e| e.board_move);
 
             // send UCI info
             self.send_info(
@@ -267,10 +272,37 @@ impl Search {
     ) -> Score {
         // increment node count
         self.nodes += 1;
+        let alpha_original = alpha;
         let mut alpha_use = alpha;
+        let mut beta_use = beta;
 
         if depth == 0 {
             return self.quiescence(board, alpha, beta);
+        }
+
+        let tt_entry = self.transposition_table.get_entry(board.zobrist_hash());
+        if ply > 0 {
+            // transposition table cutoff only on non-root nodes
+            if let Some(tt_entry) = tt_entry {
+                if tt_entry.depth as i64 >= depth {
+                    match tt_entry.flag {
+                        tt_table::EntryFlag::Exact => {
+                            return tt_entry.score;
+                        }
+                        tt_table::EntryFlag::LowerBound => {
+                            alpha_use = alpha_use.max(tt_entry.score);
+                        }
+                        tt_table::EntryFlag::UpperBound => {
+                            if tt_entry.score < beta {
+                                beta_use = beta_use.min(tt_entry.score);
+                            }
+                        }
+                    }
+                    if alpha_use >= beta_use {
+                        return tt_entry.score;
+                    }
+                }
+            }
         }
 
         // get all legal moves
@@ -289,7 +321,7 @@ impl Search {
         // sort moves by MVV/LVA
         let sorted_moves = move_list
             .iter()
-            .sorted_by_cached_key(|mv| Evaluation::score_move_for_ordering(mv, &None))
+            .sorted_by_cached_key(|mv| Evaluation::score_move_for_ordering(mv, &tt_entry))
             .collect_vec();
 
         // initialize best move and best score
@@ -298,6 +330,7 @@ impl Search {
 
         // really "bad" initial score
         let mut best_score = -Score::INF;
+        let mut best_move = None;
 
         // loop through all moves
         for mv in sorted_moves {
@@ -314,13 +347,11 @@ impl Search {
             if score > best_score {
                 // we improved, so update the score and best move
                 best_score = score;
-                if ply == 0 {
-                    self.best_move = Some(*mv);
-                }
+                best_move = Some(*mv);
 
                 // update alpha
                 alpha_use = alpha.max(best_score);
-                if alpha_use >= beta {
+                if alpha_use >= beta_use {
                     break;
                 }
             }
@@ -330,6 +361,24 @@ impl Search {
                 break;
             }
         }
+
+        // store the best move in the transposition table
+        let flag = if best_score <= alpha_original {
+            tt_table::EntryFlag::UpperBound
+        } else if best_score >= beta {
+            tt_table::EntryFlag::LowerBound
+        } else {
+            tt_table::EntryFlag::Exact
+        };
+
+        self.transposition_table
+            .store_entry(TranspositionTableEntry::new(
+                board,
+                depth as u8,
+                best_score,
+                flag,
+                best_move.unwrap(),
+            ));
 
         best_score
     }
@@ -414,6 +463,7 @@ mod tests {
     use crate::{
         score::Score,
         search::{Search, SearchParameters},
+        tt_table::TranspositionTable,
     };
 
     #[test]
@@ -425,7 +475,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(&config);
+        let mut ttable = TranspositionTable::default();
+        let mut search = Search::new(&config, &mut ttable);
         let res = search.search(&mut board.clone(), None);
         // b6a7
         assert_eq!(
@@ -443,7 +494,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(&config);
+        let mut ttable = TranspositionTable::default();
+        let mut search = Search::new(&config, &mut ttable);
         let res = search.search(&mut board, None);
 
         assert_eq!(res.best_move.unwrap().to_long_algebraic(), "b8a8")
@@ -455,7 +507,8 @@ mod tests {
         let mut board = Board::from_fen(fen).unwrap();
         let config = SearchParameters::default();
 
-        let mut search = Search::new(&config);
+        let mut ttable = TranspositionTable::default();
+        let mut search = Search::new(&config, &mut ttable);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_none());
         assert_eq!(res.score, Score::DRAW);
@@ -470,7 +523,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(&config);
+        let mut ttable = TranspositionTable::default();
+        let mut search = Search::new(&config, &mut ttable);
         let res = search.search(&mut board, None);
 
         assert!(res.best_move.is_some());
@@ -485,7 +539,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(&config);
+        let mut ttable = TranspositionTable::default();
+        let mut search = Search::new(&config, &mut ttable);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -500,7 +555,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut search = Search::new(&config);
+        let mut ttable = TranspositionTable::default();
+        let mut search = Search::new(&config, &mut ttable);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());

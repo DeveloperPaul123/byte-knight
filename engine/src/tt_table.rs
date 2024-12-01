@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Nov 29 2024
+ * Last Modified: Sat Nov 30 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -29,9 +29,9 @@ pub enum EntryFlag {
 #[derive(Clone, Copy)]
 pub(crate) struct TranspositionTableEntry {
     pub zobrist: u64,
-    pub _depth: u8,
-    pub _score: Score,
-    pub _flag: EntryFlag,
+    pub depth: u8,
+    pub score: Score,
+    pub flag: EntryFlag,
     pub board_move: Move,
 }
 
@@ -46,16 +46,16 @@ impl TranspositionTableEntry {
     ) -> TranspositionTableEntry {
         TranspositionTableEntry {
             zobrist: board.zobrist_hash(),
-            _depth: depth,
-            _score: score,
-            _flag: flag,
+            depth,
+            score,
+            flag,
             board_move: mv,
         }
     }
 }
 
 /// A transposition table used to store the results of previous searches.
-pub struct TranspositionTable<const TRACK_STATS: bool> {
+pub struct TranspositionTable {
     table: Vec<Option<TranspositionTableEntry>>,
     pub(crate) collisions: usize,
     pub(crate) accesses: usize,
@@ -66,13 +66,13 @@ pub const MAX_TABLE_SIZE_MB: usize = 1024;
 pub const MIN_TABLE_SIZE_MB: usize = 16;
 const DEFAULT_TABLE_SIZE_MB: usize = MIN_TABLE_SIZE_MB;
 
-impl<const TRACK_STATS: bool> Default for TranspositionTable<TRACK_STATS> {
+impl Default for TranspositionTable {
     fn default() -> Self {
         Self::from_size_in_mb(DEFAULT_TABLE_SIZE_MB)
     }
 }
 
-impl<const TRACK_STATS: bool> TranspositionTable<TRACK_STATS> {
+impl TranspositionTable {
     pub(crate) fn from_capacity(capacity: usize) -> Self {
         Self {
             table: vec![None; capacity],
@@ -91,33 +91,13 @@ impl<const TRACK_STATS: bool> TranspositionTable<TRACK_STATS> {
         zobrist as usize % self.table.len()
     }
 
-    #[allow(dead_code)]
     pub(crate) fn get_entry(&mut self, zobrist: u64) -> Option<TranspositionTableEntry> {
-        if TRACK_STATS {
-            self.accesses += 1;
-        }
-
         let index = self.get_index(zobrist);
-        let entry = self.table[index];
-
-        if TRACK_STATS && entry.is_some() {
-            self.hits += 1;
-        }
-        entry
+        self.table[index]
     }
 
-    // TODO(PT) - Remove this when TT is fully implemented
-    #[allow(dead_code)]
     pub(crate) fn store_entry(&mut self, entry: TranspositionTableEntry) {
         let index = self.get_index(entry.zobrist);
-        if TRACK_STATS {
-            let old = self.table[index];
-            if let Some(old) = old {
-                if old.zobrist == entry.zobrist {
-                    self.collisions += 1;
-                }
-            }
-        }
         self.table[index] = Some(entry);
     }
 

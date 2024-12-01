@@ -4,7 +4,7 @@
  * Created Date: Friday, November 15th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Nov 29 2024
+ * Last Modified: Sat Nov 30 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -31,7 +31,7 @@ use crate::{
 pub struct ByteKnight {
     input_handler: InputHandler,
     search_thread: SearchThread,
-    transposition_table: Arc<Mutex<TranspositionTable<true>>>,
+    transposition_table: Arc<Mutex<TranspositionTable>>,
     debug: bool,
 }
 
@@ -128,7 +128,11 @@ impl ByteKnight {
                         // create the search parameters
                         let search_params = SearchParameters::new(search_options, &board);
                         // send them and the current board to the search thread
-                        self.search_thread.start_search(&board, search_params);
+                        self.search_thread.start_search(
+                            &board,
+                            search_params,
+                            self.transposition_table.clone(),
+                        );
                     }
                     UciCommand::SetOption { name, value } => {
                         if name.to_lowercase() == "hash" {
