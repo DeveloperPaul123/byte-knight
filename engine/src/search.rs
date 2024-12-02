@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Sat Nov 30 2024
+ * Last Modified: Sun Dec 01 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -379,7 +379,7 @@ impl<'a> Search<'a> {
 
         self.transposition_table
             .store_entry(TranspositionTableEntry::new(
-                board,
+                board.zobrist_hash(),
                 depth as u8,
                 best_score,
                 flag,

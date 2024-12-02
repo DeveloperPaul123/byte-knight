@@ -29,23 +29,23 @@ pub enum EntryFlag {
 #[derive(Clone, Copy)]
 pub(crate) struct TranspositionTableEntry {
     pub zobrist: u64,
-    pub depth: u8,
     pub score: Score,
-    pub flag: EntryFlag,
     pub board_move: Move,
+    pub depth: u8,
+    pub flag: EntryFlag,
 }
 
 impl TranspositionTableEntry {
     #[allow(dead_code)]
     pub fn new(
-        board: &Board,
+        zobrist: u64,
         depth: u8,
         score: Score,
         flag: EntryFlag,
         mv: Move,
     ) -> TranspositionTableEntry {
         TranspositionTableEntry {
-            zobrist: board.zobrist_hash(),
+            zobrist,
             depth,
             score,
             flag,
