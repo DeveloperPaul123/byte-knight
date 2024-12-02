@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Sun Dec 01 2024
+ * Last Modified: Mon Dec 02 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -27,7 +27,7 @@ use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
 use crate::{
     evaluation::Evaluation,
-    score::Score,
+    score::{Score, ScoreType},
     ttable::{self, TranspositionTableEntry},
 };
 use ttable::TranspositionTable;
@@ -225,7 +225,7 @@ impl<'a> Search<'a> {
             && best_result.depth <= self.parameters.max_depth
         {
             // search the tree, starting at the current depth (starts at 1)
-            let score = self.negamax(board, best_result.depth as i64, 0, -Score::INF, Score::INF);
+            let score = self.negamax(board, best_result.depth as ScoreType, 0, -Score::INF, Score::INF);
 
             // check stop conditions
             if self.should_stop_searching() {
@@ -265,8 +265,8 @@ impl<'a> Search<'a> {
     fn negamax(
         &mut self,
         board: &mut Board,
-        depth: i64,
-        ply: i64,
+        depth: ScoreType,
+        ply: ScoreType,
         alpha: Score,
         beta: Score,
     ) -> Score {
@@ -290,7 +290,7 @@ impl<'a> Search<'a> {
                 // depth must be greater or equal to the current depth and the board
                 // must be the same position. Without this checks, we could be looking up the wrong entry
                 // due to collisions since we use a modulo as the hash function
-                if tt_entry.depth as i64 >= depth && tt_entry.zobrist == zobrist {
+                if tt_entry.depth as ScoreType >= depth && tt_entry.zobrist == zobrist {
                     match tt_entry.flag {
                         ttable::EntryFlag::Exact => {
                             return tt_entry.score;
