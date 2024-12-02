@@ -121,3 +121,60 @@ impl TranspositionTable {
         self.table.len()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use chess::{
+        moves::{self, Move, MoveDescriptor},
+        pieces::Piece,
+        square::Square,
+    };
+
+    use crate::score::Score;
+
+    use super::{EntryFlag, TranspositionTable, TranspositionTableEntry};
+
+    #[test]
+    fn store_and_retrieve() {
+        let mut tt = TranspositionTable::from_capacity(1000);
+        let hash1 = 123452341999_u64;
+        let hash2 = 2423498723999_u64;
+        let mv1 = Move::new(
+            &Square::from_square_index(3),
+            &Square::from_square_index(4),
+            MoveDescriptor::Castle,
+            Piece::Knight,
+            None,
+            None,
+        );
+        let mv2 = Move::new(
+            &Square::from_square_index(7),
+            &Square::from_square_index(10),
+            MoveDescriptor::Castle,
+            Piece::Knight,
+            None,
+            None,
+        );
+        tt.store_entry(TranspositionTableEntry::new(
+            hash1,
+            3,
+            Score::new(-123),
+            EntryFlag::Exact,
+            mv1,
+        ));
+        tt.store_entry(TranspositionTableEntry::new(
+            hash2,
+            3,
+            Score::new(123),
+            EntryFlag::Exact,
+            mv2,
+        ));
+
+        let stored_entry1 = tt.get_entry(hash1);
+        assert!(stored_entry1.is_some());
+        assert_eq!(stored_entry1.unwrap().board_move, mv1);
+        let stored_entry2 = tt.get_entry(hash2);
+        assert!(stored_entry2.is_some());
+        assert_eq!(stored_entry2.unwrap().board_move, mv2);
+    }
+}
