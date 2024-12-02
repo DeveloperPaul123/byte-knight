@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 14th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Nov 29 2024
+ * Last Modified: Mon Dec 02 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -19,24 +19,25 @@ use std::{
 
 use uci_parser::UciScore;
 
+pub(crate) type ScoreType = i16;
 /// Represents a score in centipawns.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Score(pub i64);
+pub struct Score(pub ScoreType);
 
 impl Score {
     pub const DRAW: Score = Score(0);
-    pub const MATE: Score = Score(i32::MAX as i64);
+    pub const MATE: Score = Score(i16::MAX as ScoreType);
     /// We use i32 so we don't overflow
-    pub const INF: Score = Score(i32::MAX as i64);
+    pub const INF: Score = Score(i16::MAX as ScoreType);
 
-    pub fn new(score: i64) -> Score {
+    pub fn new(score: ScoreType) -> Score {
         Score(score)
     }
 }
 
 impl From<Score> for UciScore {
     fn from(value: Score) -> Self {
-        UciScore::cp(value.0 as i32)
+        UciScore::cp(value.0.into())
     }
 }
 
@@ -64,8 +65,8 @@ impl AddAssign for Score {
     }
 }
 
-impl AddAssign<i64> for Score {
-    fn add_assign(&mut self, other: i64) {
+impl AddAssign<ScoreType> for Score {
+    fn add_assign(&mut self, other: ScoreType) {
         self.0 += other;
     }
 }
@@ -78,10 +79,10 @@ impl Add for Score {
     }
 }
 
-impl Add<i64> for Score {
+impl Add<ScoreType> for Score {
     type Output = Score;
 
-    fn add(self, other: i64) -> Score {
+    fn add(self, other: ScoreType) -> Score {
         Score(self.0 + other)
     }
 }

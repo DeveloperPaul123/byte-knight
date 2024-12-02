@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Sat Nov 30 2024
+ * Last Modified: Mon Dec 02 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -14,12 +14,16 @@
 
 use chess::{board::Board, definitions::NumberOf, moves::Move, pieces::Piece};
 
-use crate::{psqt::Psqt, score::Score, ttable::TranspositionTableEntry};
+use crate::{
+    psqt::Psqt,
+    score::{Score, ScoreType},
+    ttable::TranspositionTableEntry,
+};
 
 // similar setup to Rustic https://rustic-chess.org/search/ordering/mvv_lva.html
 // MVV-LVA (Most Valuable Victim - Least Valuable Attacker) is a heuristic used to order captures.
 // MVV_LVA[victim][attacker] = victim_value - attacker_value
-const MVV_LVA: [[i64; NumberOf::PIECE_TYPES + 1]; NumberOf::PIECE_TYPES + 1] = [
+const MVV_LVA: [[ScoreType; NumberOf::PIECE_TYPES + 1]; NumberOf::PIECE_TYPES + 1] = [
     [0, 0, 0, 0, 0, 0, 0],             // victim K, attacker K, Q, R, B, N, P, None
     [500, 510, 520, 530, 540, 550, 0], // victim Q, attacker K, Q, R, B, N, P, None
     [400, 410, 420, 430, 440, 450, 0], // victim R, attacker K, Q, R, B, N, P, None
@@ -71,7 +75,7 @@ impl Evaluation {
         tt_entry: &Option<TranspositionTableEntry>,
     ) -> Score {
         if tt_entry.is_some_and(|tt| *mv == tt.board_move) {
-            return Score::new(i64::MIN);
+            return Score::new(ScoreType::MIN);
         }
         let mut score = Score::new(0);
 

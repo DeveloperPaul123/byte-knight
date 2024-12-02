@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 26 2024
+ * Last Modified: Mon Dec 02 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -14,20 +14,20 @@
 
 use chess::{bitboard_helpers, board::Board, side::Side};
 
-use crate::score::Score;
+use crate::score::{Score, ScoreType};
 
 /// Mid-game piece values
 /// Ordered to match the indexing of [`Piece`]
 /// King, Queen, Rook, Bishop, Knight, Pawn
-const MG_VALUE: [i64; 6] = [0, 1025, 477, 365, 337, 82];
+const MG_VALUE: [ScoreType; 6] = [0, 1025, 477, 365, 337, 82];
 
 /// End-game piece values
 /// Ordered to match the indexing of [`Piece`]
 /// King, Queen, Rook, Bishop, Knight, Pawn
-const EG_VALUE: [i64; 6] = [0, 936, 512, 297, 281, 94];
+const EG_VALUE: [ScoreType; 6] = [0, 936, 512, 297, 281, 94];
 
 #[rustfmt::skip]
-const MG_PAWN_TABLE: [i64; 64] = [
+const MG_PAWN_TABLE: [ScoreType; 64] = [
     0, 0, 0, 0, 0, 0, 0, 0,
     98, 134, 61, 95, 68, 126, 34, -11,
     -6, 7, 26, 31, 65, 56, 25, -20,
@@ -39,7 +39,7 @@ const MG_PAWN_TABLE: [i64; 64] = [
 ];
 
 #[rustfmt::skip]
-const EG_PAWN_TABLE: [i64; 64] = [
+const EG_PAWN_TABLE: [ScoreType; 64] = [
     0, 0, 0, 0, 0, 0, 0, 0,
     178, 173, 158, 134, 147, 132, 165, 187,
     94, 100, 85, 67, 56, 53, 82, 84,
@@ -51,7 +51,7 @@ const EG_PAWN_TABLE: [i64; 64] = [
 ];
 
 #[rustfmt::skip]
-const MG_KNIGHT_TABLE: [i64; 64] = [
+const MG_KNIGHT_TABLE: [ScoreType; 64] = [
     -167, -89, -34, -49, 61, -97, -15, -107,
     -73, -41, 72, 36, 23, 62, 7, -17,
     -47, 60, 37, 65, 84, 129, 73, 44,
@@ -63,7 +63,7 @@ const MG_KNIGHT_TABLE: [i64; 64] = [
 ];
 
 #[rustfmt::skip]
-const EG_KNIGHT_TABLE: [i64; 64] = [
+const EG_KNIGHT_TABLE: [ScoreType; 64] = [
     -58, -38, -13, -28, -31, -27, -63, -99,
     -25, -8, -25, -2, -9, -25, -24, -52,
     -24, -20, 10, 9, -1, -9, -19, -41,
@@ -75,7 +75,7 @@ const EG_KNIGHT_TABLE: [i64; 64] = [
 ];
 
 #[rustfmt::skip]
-const MG_BISHOP_TABLE: [i64; 64] = [
+const MG_BISHOP_TABLE: [ScoreType; 64] = [
     -29, 4, -82, -37, -25, -42, 7, -8,
     -26, 16, -18, -13, 30, 59, 18, -47,
     -16, 37, 43, 40, 35, 50, 37, -2,
@@ -87,7 +87,7 @@ const MG_BISHOP_TABLE: [i64; 64] = [
 ];
 
 #[rustfmt::skip]
-const EG_BISHOP_TABLE: [i64; 64] = [
+const EG_BISHOP_TABLE: [ScoreType; 64] = [
     -14, -21, -11, -8, -7, -9, -17, -24,
     -8, -4, 7, -12, -3, -13, -4, -14,
     2, -8, 0, -1, -2, 6, 0, 4,
@@ -99,7 +99,7 @@ const EG_BISHOP_TABLE: [i64; 64] = [
 ];
 
 #[rustfmt::skip]
-const MG_ROOK_TABLE: [i64; 64] = [
+const MG_ROOK_TABLE: [ScoreType; 64] = [
     32, 42, 32, 51, 63, 9, 31, 43,
     27, 32, 58, 62, 80, 67, 26, 44,
     -5, 19, 26, 36, 17, 45, 61, 16,
@@ -111,7 +111,7 @@ const MG_ROOK_TABLE: [i64; 64] = [
 ];
 
 #[rustfmt::skip]
-const EG_ROOK_TABLE: [i64; 64] = [
+const EG_ROOK_TABLE: [ScoreType; 64] = [
     13, 10, 18, 15, 12, 12, 8, 5,
     11, 13, 13, 11, -3, 3, 8, 3,
     7, 7, 7, 5, 4, -3, -5, -3,
@@ -123,7 +123,7 @@ const EG_ROOK_TABLE: [i64; 64] = [
 ];
 
 #[rustfmt::skip]
-const MG_QUEEN_TABLE: [i64; 64] = [
+const MG_QUEEN_TABLE: [ScoreType; 64] = [
     -28, 0, 29, 12, 59, 44, 43, 45,
     -24, -39, -5, 1, -16, 57, 28, 54,
     -13, -17, 7, 8, 29, 56, 47, 57,
@@ -135,7 +135,7 @@ const MG_QUEEN_TABLE: [i64; 64] = [
 ];
 
 #[rustfmt::skip]
-const EG_QUEEN_TABLE: [i64; 64] = [
+const EG_QUEEN_TABLE: [ScoreType; 64] = [
     -9, 22, 22, 27, 27, 19, 10, 20,
     -17, 20, 32, 41, 58, 25, 30, 0,
     -20, 6, 9, 49, 47, 35, 19, 9,
@@ -147,7 +147,7 @@ const EG_QUEEN_TABLE: [i64; 64] = [
 ];
 
 #[rustfmt::skip]
-const MG_KING_TABLE: [i64; 64] = [
+const MG_KING_TABLE: [ScoreType; 64] = [
     -65, 23, 16, -15, -56, -34, 2, 13,
     29, -1, -20, -7, -8, -4, -38, -29,
     -9, 24, 2, -16, -20, 6, 22, -22,
@@ -159,7 +159,7 @@ const MG_KING_TABLE: [i64; 64] = [
 ];
 
 #[rustfmt::skip]
-const EG_KING_TABLE: [i64; 64] = [
+const EG_KING_TABLE: [ScoreType; 64] = [
     -74, -35, -18, -18, -11, 15, 4, -17,
     -12, 17, 14, 17, 17, 38, 23, 11,
     10, 17, 23, 15, 20, 45, 44, 13,
@@ -172,7 +172,7 @@ const EG_KING_TABLE: [i64; 64] = [
 
 /// Opening/mid-game piece-square tables
 /// Ordered to match the indexing of [`Piece`]
-const MG_PESTO_TABLE: [&[i64; 64]; 6] = [
+const MG_PESTO_TABLE: [&[ScoreType; 64]; 6] = [
     &MG_KING_TABLE,
     &MG_QUEEN_TABLE,
     &MG_ROOK_TABLE,
@@ -183,7 +183,7 @@ const MG_PESTO_TABLE: [&[i64; 64]; 6] = [
 
 /// Endgame piece-square tables
 /// Ordered to match the indexing of [`Piece`]
-const EG_PESTO_TABLE: [&[i64; 64]; 6] = [
+const EG_PESTO_TABLE: [&[ScoreType; 64]; 6] = [
     &EG_KING_TABLE,
     &EG_QUEEN_TABLE,
     &EG_ROOK_TABLE,
@@ -195,12 +195,12 @@ const EG_PESTO_TABLE: [&[i64; 64]; 6] = [
 /// Game phase increment for each piece
 /// Ordered to match the indexing of [`Piece`]
 /// King, Queen, Rook, Bishop, Knight, Pawn
-const GAMEPHASE_INC: [i64; 6] = [0, 4, 2, 1, 1, 0];
+const GAMEPHASE_INC: [ScoreType; 6] = [0, 4, 2, 1, 1, 0];
 
 /// Piece-Square Tables (PST) for evaluation
 pub(crate) struct Psqt {
-    mg_table: [[i64; 64]; 12],
-    eg_table: [[i64; 64]; 12],
+    mg_table: [[ScoreType; 64]; 12],
+    eg_table: [[ScoreType; 64]; 12],
 }
 
 const FLIP: fn(usize) -> usize = |sq| sq ^ 56;
