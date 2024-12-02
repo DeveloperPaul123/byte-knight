@@ -12,7 +12,7 @@
  *
  */
 
-use chess::{bitboard_helpers, board::Board, side::Side};
+use chess::{bitboard_helpers, board::Board, pieces::PIECE_NAMES, side::Side};
 
 use crate::score::{Score, ScoreType};
 
@@ -230,9 +230,9 @@ impl Psqt {
     /// The score of the position.
     pub(crate) fn evaluate(&self, board: &Board) -> Score {
         let side_to_move = board.side_to_move();
-        let mut mg = [0; 2];
-        let mut eg = [0; 2];
-        let mut game_phase = 0;
+        let mut mg: [i32; 2] = [0; 2];
+        let mut eg: [i32; 2] = [0; 2];
+        let mut game_phase = 0_i32;
 
         let mut occupancy = board.all_pieces();
         // loop through occupied squares
@@ -242,10 +242,10 @@ impl Psqt {
             if let Some((piece, side)) = maybe_piece {
                 let pc_idx = piece as usize * 2 + side as usize;
 
-                mg[side as usize] += self.mg_table[pc_idx][sq];
-                eg[side as usize] += self.eg_table[pc_idx][sq];
+                mg[side as usize] += self.mg_table[pc_idx][sq] as i32;
+                eg[side as usize] += self.eg_table[pc_idx][sq] as i32;
 
-                game_phase += GAMEPHASE_INC[piece as usize];
+                game_phase += GAMEPHASE_INC[piece as usize] as i32;
             }
         }
 
@@ -253,7 +253,8 @@ impl Psqt {
         let eg_score = eg[side_to_move as usize] - eg[Side::opposite(side_to_move) as usize];
         let mg_phase = game_phase.min(24);
         let eg_phase = 24 - mg_phase;
-        Score::new((mg_score * mg_phase + eg_score * eg_phase) / 24)
+        let score = (mg_score * mg_phase + eg_score * eg_phase) / 24;
+        Score::new(score as i16)
     }
 
     /// Helper to initialize the tables
@@ -265,6 +266,31 @@ impl Psqt {
                 self.eg_table[pc][sq] = EG_VALUE[p] + EG_PESTO_TABLE[p][sq];
                 self.mg_table[pc + 1][sq] = MG_VALUE[p] + MG_PESTO_TABLE[p][FLIP(sq)];
                 self.eg_table[pc + 1][sq] = EG_VALUE[p] + EG_PESTO_TABLE[p][FLIP(sq)];
+            }
+        }
+    }
+
+    /// Helper to print the mid-game and end-game tables
+    /// Output is formatted as a 8x8 board with (mg, eg) values for each square, per piece
+    #[allow(dead_code)]
+    fn print_tables(&self) {
+        for (p, pc) in (0..6).zip((0..12).step_by(2)) {
+            println!("Piece: {}", PIECE_NAMES[p]);
+            for row in 0..8 {
+                for col in 0..8 {
+                    let sq = row * 8 + col;
+                    if col == 0 {
+                        print!("| ");
+                    }
+
+                    print!(
+                        "({:4}, {:4}), ",
+                        self.mg_table[pc][sq], self.eg_table[pc][sq]
+                    );
+                    if col == 7 {
+                        println!(" |");
+                    }
+                }
             }
         }
     }
