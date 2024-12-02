@@ -225,7 +225,13 @@ impl<'a> Search<'a> {
             && best_result.depth <= self.parameters.max_depth
         {
             // search the tree, starting at the current depth (starts at 1)
-            let score = self.negamax(board, best_result.depth as ScoreType, 0, -Score::INF, Score::INF);
+            let score = self.negamax(
+                board,
+                best_result.depth as ScoreType,
+                0,
+                -Score::INF,
+                Score::INF,
+            );
 
             // check stop conditions
             if self.should_stop_searching() {
