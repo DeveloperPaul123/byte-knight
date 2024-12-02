@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Sat Nov 30 2024
+ * Last Modified: Mon Dec 02 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -12,7 +12,7 @@
  *
  */
 
-use chess::{board::Board, moves::Move};
+use chess::moves::Move;
 
 use crate::score::Score;
 
@@ -125,7 +125,7 @@ impl TranspositionTable {
 #[cfg(test)]
 mod tests {
     use chess::{
-        moves::{self, Move, MoveDescriptor},
+        moves::{Move, MoveDescriptor},
         pieces::Piece,
         square::Square,
     };
@@ -170,9 +170,10 @@ mod tests {
             mv2,
         ));
 
-        let stored_entry1 = tt.get_entry(hash1);
-        assert!(stored_entry1.is_some());
-        assert_eq!(stored_entry1.unwrap().board_move, mv1);
+        // TODO(PT) - If we every implement buckets in our ttable, this should be used to check for store/retrieve working correctly at the same index
+        // let stored_entry1 = tt.get_entry(hash1);
+        // assert!(stored_entry1.is_some());
+        // assert_eq!(stored_entry1.unwrap().board_move, mv1);
         let stored_entry2 = tt.get_entry(hash2);
         assert!(stored_entry2.is_some());
         assert_eq!(stored_entry2.unwrap().board_move, mv2);
