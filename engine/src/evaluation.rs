@@ -85,3 +85,62 @@ impl Evaluation {
         -score
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use chess::{
+        moves::{self, Move},
+        pieces::Piece,
+        square::Square,
+    };
+
+    use crate::{evaluation::Evaluation, score::Score};
+
+    #[test]
+    fn score_moves() {
+        let from = Square::from_square_index(0);
+        let to = Square::from_square_index(1);
+        let mut mv = Move::new(
+            &from,
+            &to,
+            moves::MoveDescriptor::None,
+            Piece::Pawn,
+            Some(Piece::Queen),
+            None,
+        );
+
+        // note that these scores are for ordering, so they are negated
+        assert_eq!(
+            -Evaluation::score_move_for_ordering(&mv, &None),
+            Score::new(550)
+        );
+
+        mv = Move::new(
+            &from,
+            &to,
+            moves::MoveDescriptor::None,
+            Piece::Bishop,
+            Some(Piece::Rook),
+            None,
+        );
+
+        assert_eq!(
+            -Evaluation::score_move_for_ordering(&mv, &None),
+            Score::new(430)
+        );
+
+        mv = Move::new(
+            &from,
+            &to,
+            moves::MoveDescriptor::None,
+            Piece::Knight,
+            Some(Piece::Pawn),
+            None,
+        );
+
+        assert_eq!(
+            -Evaluation::score_move_for_ordering(&mv, &None),
+            Score::new(140)
+        );
+    }
+}
