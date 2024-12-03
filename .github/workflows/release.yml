@@ -33,23 +33,27 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Rust
+      - name: Install rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
           target: ${{ matrix.target }}
           override: true
 
-      - name: Build Release
+      - name: Build release
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Upload Artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: byte-knight-${{ matrix.target }}${{ matrix.extension }}
           path: ./target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
           retention-days: 1
+
+      - name: Copy artifact
+        run: cp ./target/${{ matrix.target }}/release/${{ matrix.artifact_name }} ./target/${{ matrix.artifact_name }}-${{matrix.target}}${{ matrix.extension }}
+
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
-          files: ./target/${{ matrix.target }}/release/${{ matrix.artifact_name }}${{ matrix.extension }}
+          files: ./target/${{ matrix.artifact_name }}-${{matrix.target}}${{ matrix.extension }}
