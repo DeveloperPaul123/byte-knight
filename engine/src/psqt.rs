@@ -301,10 +301,7 @@ impl Psqt {
 
 #[cfg(test)]
 mod tests {
-    use chess::{
-        board::Board,
-        pieces::{Piece, ALL_PIECES},
-    };
+    use chess::board::Board;
 
     use crate::{psqt::Psqt, score::Score};
 
