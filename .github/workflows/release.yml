@@ -48,3 +48,7 @@ jobs:
           name: byte-knight-${{ matrix.target }}${{ matrix.extension }}
           path: ./target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
           retention-days: 1
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./target/${{ matrix.target }}/release/${{ matrix.artifact_name }}${{ matrix.extension }}
