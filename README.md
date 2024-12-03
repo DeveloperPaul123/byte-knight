@@ -24,6 +24,7 @@ New features are tested via my [OpenBench](https://github.com/AndyGrant/OpenBenc
 - [Iterative deepening](https://www.chessprogramming.org/Iterative_Deepening)
 - Negamax with alpha/beta pruning
 - Quiescence search
+- Transposition Table
 - [Time control](https://www.chessprogramming.org/Time_Management)
   - Basic hard/soft limits
 - Move ordering
@@ -64,12 +65,12 @@ To see all options for a given command, type `byte-knight <cmd> --help`.
 
 | Name | Value Range | Default | Description |
 | ---- | ----------- | ------- | ----------- |
-| Hash | [16 - 1024] | 16      | Set the TT table size in MB |
+| Hash | [1 - 1024] | 16      | Set the TT table size in MB |
 | Threads | [1]      | 1       | How many threads to use in search |
 
 # Build and Run
 
-Clone the repo and simply run:
+Clone the repo and run:
 
 ```bash
 cargo run --release
@@ -81,7 +82,7 @@ The project is licensed under the GPL license. See [LICENSE](LICENSE) for more d
 
 # Credits
 
-Just a simple thanks/acknowledgement for those who have inspired and helped with this project.
+Thanks/acknowledgement for those who have inspired and helped with this project:
 
 - Sebastian Lague for his chess YouTube vidoes and for hosting a fun coding challenge.
 - The [Chess Programming Wiki](https://www.chessprogramming.org/Main_Page) for all the free information. Thank you to all the various authors.
