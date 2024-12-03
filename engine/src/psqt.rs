@@ -259,8 +259,8 @@ impl Psqt {
 
     /// Helper to initialize the tables
     /// See <https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function>
-    /// 
-    /// Here white is 0 and black is 1, see [`Side`]. The PSQT tables are from white's perspective, so we need to flip 
+    ///
+    /// Here white is 0 and black is 1, see [`Side`]. The PSQT tables are from white's perspective, so we need to flip
     /// the board for white and not for black.
     fn initialize_tables(&mut self) {
         for (p, pc) in (0..6).zip((0..12).step_by(2)) {
@@ -301,9 +301,12 @@ impl Psqt {
 
 #[cfg(test)]
 mod tests {
-    use chess::board::Board;
+    use chess::{
+        board::Board,
+        pieces::{Piece, ALL_PIECES},
+    };
 
-    use crate::psqt::Psqt;
+    use crate::{psqt::Psqt, score::Score};
 
     #[test]
     fn default_position_is_equal() {
@@ -311,5 +314,23 @@ mod tests {
         let psqt = Psqt::new();
         let score = psqt.evaluate(&board);
         assert_eq!(score, super::Score::new(0));
+    }
+
+    #[test]
+    fn white_ahead() {
+        let fens = [
+            "4k3/8/8/8/8/8/PPPPPPPP/4K3 w - - 0 1",
+            "4k3/8/8/8/8/8/NNNNNNNN/4K3 w - - 0 1",
+            "4k3/8/8/8/8/8/BBBBBBBB/4K3 w - - 0 1",
+            "4k3/8/8/8/8/8/RRRR1RRR/4K3 w - - 0 1",
+            "4k3/8/8/8/8/8/QQQQ1QQQ/4K3 w - - 0 1",
+            "4k3/1QQR1RQQ/1QQQKQQ1/1BBNN3/8/8/8/8 w - - 0 1",
+        ];
+
+        for fen in fens {
+            let pos = Board::from_fen(fen).unwrap();
+            let eval = Psqt::new().evaluate(&pos);
+            assert!(eval > Score::new(0));
+        }
     }
 }
