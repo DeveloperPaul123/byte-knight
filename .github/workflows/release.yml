@@ -27,7 +27,8 @@ jobs:
             target: x86_64-pc-windows-msvc
             artifact_name: byte-knight.exe
             extension: ".exe"
-
+    permissions:
+      contents: write
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
