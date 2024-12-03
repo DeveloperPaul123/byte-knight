@@ -37,3 +37,7 @@ magics:
 verify-zobrist:
     echo "Verifying Zobrist hash..."
     cargo run --release --bin verify_zobrist
+
+release target:
+    echo "Building release binaries..."
+    cargo rustc --release --bin byte-knight --target={{ target }}
