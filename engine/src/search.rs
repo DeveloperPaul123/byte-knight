@@ -327,7 +327,7 @@ impl<'a> Search<'a> {
                 -Score::MATE + ply
             } else {
                 Score::DRAW
-            }
+            };
         }
 
         // sort moves by MVV/LVA
