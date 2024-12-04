@@ -291,10 +291,10 @@ impl<'a> Search<'a> {
         let tt_entry = self.transposition_table.get_entry(board.zobrist_hash());
         if not_root {
             // transposition table cutoff only on non-root nodes
-            // TODO(PT): Consolidate this if when if let chains are stabalized
+            // TODO(PT): Consolidate this if when if let chains are stabilized
             if let Some(tt_entry) = tt_entry {
                 // depth must be greater or equal to the current depth and the board
-                // must be the same position. Without this checks, we could be looking up the wrong entry
+                // must be the same position. Without these checks, we could be looking up the wrong entry
                 // due to collisions since we use a modulo as the hash function
                 if tt_entry.depth as ScoreType >= depth && tt_entry.zobrist == zobrist {
                     match tt_entry.flag {
@@ -323,11 +323,11 @@ impl<'a> Search<'a> {
 
         // do we have moves?
         if move_list.is_empty() {
-            if board.is_in_check(&self.move_gen) {
-                return -Score::MATE + ply;
+            return if board.is_in_check(&self.move_gen) {
+                -Score::MATE + ply
             } else {
-                return Score::DRAW;
-            }
+                Score::DRAW
+            };
         }
 
         // sort moves by MVV/LVA
