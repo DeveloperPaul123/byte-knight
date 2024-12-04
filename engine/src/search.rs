@@ -291,7 +291,7 @@ impl<'a> Search<'a> {
         let tt_entry = self.transposition_table.get_entry(board.zobrist_hash());
         if not_root {
             // transposition table cutoff only on non-root nodes
-            // TODO(PT): Consolidate this if when if let chains are stabalized
+            // TODO(PT): Consolidate this if when if let chains are stabilized
             if let Some(tt_entry) = tt_entry {
                 // depth must be greater or equal to the current depth and the board
                 // must be the same position. Without these checks, we could be looking up the wrong entry
