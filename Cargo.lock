@@ -264,7 +264,8 @@ dependencies = [
  "anyhow",
  "chess",
  "itertools",
- "thiserror 2.0.3",
+ "rand 0.8.5",
+ "rand_chacha",
  "uci-parser",
 ]
 
