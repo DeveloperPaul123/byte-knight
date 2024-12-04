@@ -323,10 +323,10 @@ impl<'a> Search<'a> {
 
         // do we have moves?
         if move_list.is_empty() {
-            if board.is_in_check(&self.move_gen) {
-                return -Score::MATE + ply;
+            return if board.is_in_check(&self.move_gen) {
+                -Score::MATE + ply
             } else {
-                return Score::DRAW;
+                Score::DRAW
             }
         }
 
