@@ -294,7 +294,7 @@ impl<'a> Search<'a> {
             // TODO(PT): Consolidate this if when if let chains are stabalized
             if let Some(tt_entry) = tt_entry {
                 // depth must be greater or equal to the current depth and the board
-                // must be the same position. Without this checks, we could be looking up the wrong entry
+                // must be the same position. Without these checks, we could be looking up the wrong entry
                 // due to collisions since we use a modulo as the hash function
                 if tt_entry.depth as ScoreType >= depth && tt_entry.zobrist == zobrist {
                     match tt_entry.flag {
