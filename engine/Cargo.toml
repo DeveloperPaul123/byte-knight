@@ -13,4 +13,5 @@ uci-parser = { version = "0.2.0", features = [
     "parse-position-kiwipete",
     "types",
 ] }
-thiserror = "2.0.3"
+rand = { version = "0.8.5", features = ["small_rng"] }
+rand_chacha = "0.3.1"

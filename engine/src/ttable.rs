@@ -76,7 +76,7 @@ impl Default for TranspositionTable {
 /// Alternative to modulo operation.
 /// See <https://github.com/ozgrakkurt/fastrange-rs/blob/master/src/lib.rs>
 const fn fast_range_64(word: u64, p: u64) -> u64 {
-    (word as u128 * p as u128 >> 64) as u64
+    ((word as u128 * p as u128) >> 64) as u64
 }
 
 impl TranspositionTable {
@@ -131,19 +131,49 @@ impl TranspositionTable {
 
 #[cfg(test)]
 mod tests {
+    use super::{EntryFlag, TranspositionTable, TranspositionTableEntry};
+    use crate::score::Score;
     use chess::{
         moves::{Move, MoveDescriptor},
         pieces::Piece,
         square::Square,
     };
+    use itertools::Itertools;
+    use rand::Rng;
+    use std::collections::HashMap;
 
-    use crate::score::Score;
+    #[test]
+    fn get_index() {
+        let tt = TranspositionTable::from_size_in_mb(32);
+        let mut rng = rand::thread_rng();
+        let random_numbers: Vec<u64> = (0..tt.size()).map(|_| rng.gen::<u64>()).collect();
+        let min = random_numbers.iter().min().unwrap();
+        let max = random_numbers.iter().max().unwrap();
+        println!("min/max random number: {}/{}", min, max);
+        println!("Table size: {}", tt.size());
+        let mut index_histogram: HashMap<usize, usize> = HashMap::new();
+        random_numbers.iter().for_each(|&num| {
+            let index = tt.get_index(num);
+            assert!(index < tt.size());
+            *index_histogram.entry(index).or_insert(0) += 1;
+        });
 
-    use super::{EntryFlag, TranspositionTable, TranspositionTableEntry};
+        // make sure that the distribution is roughly uniform
+        let min = index_histogram.values().min().unwrap();
+        let max = index_histogram.values().max().unwrap();
+        let mean = index_histogram.values().sum::<usize>() as f64 / index_histogram.len() as f64;
+        let count = index_histogram.len();
+
+        println!("Min: {}, Max: {}, Mean: {}, Len: {}", min, max, mean, count);
+        let unique_keys = random_numbers.iter().unique().count();
+        println!("Unique keys: {}", unique_keys);
+        let collision_rate = (1.0 - (count as f64 / unique_keys as f64)) * 100.0;
+        println!("Collision rate: {}", collision_rate);
+    }
 
     #[test]
     fn store_and_retrieve() {
-        let mut tt = TranspositionTable::from_capacity(1000);
+        let mut tt = TranspositionTable::from_size_in_mb(16);
         let hash1 = 1234512341999_u64;
         let hash2 = 2423498723999_u64;
         let hash3 = 2423623733999_u64;
