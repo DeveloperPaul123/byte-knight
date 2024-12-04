@@ -12,11 +12,12 @@
  *
  */
 
+use crate::score::Score;
 use chess::moves::Move;
 
-use crate::score::Score;
-
 const BYTES_PER_MB: usize = 1024 * 1024;
+/// How many positions do we store per index in the TT
+const POSITIONS_PER_INDEX: usize = 2;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum EntryFlag {
@@ -100,12 +101,74 @@ impl TranspositionTable {
 
     pub(crate) fn get_entry(&mut self, zobrist: u64) -> Option<TranspositionTableEntry> {
         let index = self.get_index(zobrist);
-        self.table[index]
+        let max_index = index + POSITIONS_PER_INDEX;
+
+        let slice = if max_index > self.table.len() {
+            // wrap around to beginning
+            &self.table[index..]
+                .iter()
+                .chain(&self.table[..max_index % self.table.len()])
+                .collect::<Vec<_>>()
+        } else {
+            &self.table[index..max_index].iter().collect()
+        };
+
+        // find the first entry that matches the zobrist key
+        slice.iter().find_map(|entry| {
+            if let Some(entry) = entry {
+                if entry.zobrist == zobrist {
+                    Some(*entry)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
     }
 
+    /// Store an entry into the hash table.
     pub(crate) fn store_entry(&mut self, entry: TranspositionTableEntry) {
         let index = self.get_index(entry.zobrist);
-        self.table[index] = Some(entry);
+        let old = self.table[index];
+        if let Some(old) = old {
+            if old.zobrist != entry.zobrist {
+                // index is already occupied by a different position whose index collides with the current position
+                // find the next index that we can use
+                let mut stored = false;
+                let mut delta = 1;
+                while !stored && delta < POSITIONS_PER_INDEX {
+                    let idx = (index + delta) % self.table.len();
+                    let stored_value = self.table[idx];
+
+                    match stored_value {
+                        Some(e) => {
+                            if e.zobrist == entry.zobrist {
+                                self.table[idx] = Some(entry);
+                                stored = true;
+                                break;
+                            }
+                        }
+                        None => {
+                            self.table[idx] = Some(entry);
+                            stored = true;
+                            break;
+                        }
+                    }
+
+                    delta += 1;
+                }
+
+                if !stored {
+                    // What do we do here? All positions are full, and we don't have a matching position
+                    // For now when in doubt, just overwrite
+                    self.table[index] = Some(entry);
+                }
+            }
+        } else {
+            // the index is not occupied
+            self.table[index] = Some(entry);
+        }
     }
 
     pub(crate) fn clear(&mut self) {
@@ -173,10 +236,11 @@ mod tests {
 
     #[test]
     fn store_and_retrieve() {
-        let mut tt = TranspositionTable::from_size_in_mb(16);
-        let hash1 = 1234512341999_u64;
+        let mut tt = TranspositionTable::from_capacity(1000);
+        // these 2 hashes will collide at index 999
+        let hash1 = 1234523413999_u64;
         let hash2 = 2423498723999_u64;
-        let hash3 = 2423623733999_u64;
+        let hash3 = 1466267341999_u64;
         let mv1 = Move::new(
             &Square::from_square_index(3),
             &Square::from_square_index(4),
@@ -193,16 +257,16 @@ mod tests {
             None,
             None,
         );
+
         let mv3 = Move::new(
-            &Square::from_square_index(7),
-            &Square::from_square_index(11),
+            &Square::from_square_index(4),
+            &Square::from_square_index(10),
             MoveDescriptor::None,
             Piece::Bishop,
             Some(Piece::Pawn),
             None,
         );
 
-        // our tt implementation always overwrites, so let's make sure that's the case.
         tt.store_entry(TranspositionTableEntry::new(
             hash1,
             3,
@@ -223,7 +287,27 @@ mod tests {
             mv2,
         ));
 
-        let stored_entry2 = tt.get_entry(hash2);
+        let stored_entry1 = tt.get_entry(hash1);
+        assert!(stored_entry1.is_some());
+        assert_eq!(stored_entry1.unwrap().board_move, mv1);
+        let mut stored_entry2 = tt.get_entry(hash2);
+        assert!(stored_entry2.is_some());
+        assert_eq!(stored_entry2.unwrap().board_move, mv2);
+
+        tt.store_entry(TranspositionTableEntry::new(
+            hash3,
+            3,
+            Score::new(123),
+            EntryFlag::Exact,
+            mv3,
+        ));
+
+        // this should have overridden entry 1
+        let stored_entry3 = tt.get_entry(hash3);
+        assert!(stored_entry3.is_some());
+        assert_eq!(stored_entry3.unwrap().board_move, mv3);
+
+        stored_entry2 = tt.get_entry(hash2);
         assert!(stored_entry2.is_some());
         assert_eq!(stored_entry2.unwrap().board_move, mv2);
 
