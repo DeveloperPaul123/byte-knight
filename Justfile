@@ -45,3 +45,7 @@ release target:
 cache-main: build
     echo "Caching binary for testing..."
     cp target/release/byte-knight ./bk-main
+
+compare-to-main engine1: build
+    echo "Comparing {{ engine1 }} to bk-main"
+    fastchess -engine cmd="{{ engine1 }}" name="dev" -engine cmd="./bk-main" name="bk-main" -openings file="./data/Pohl.epd" format=epd order=random -each tc=10+0.1 -rounds 200 -repeat -concurrency 8 -sprt elo0=0 elo1=5 alpha=0.05 beta=0.1 model=normalized -output format=cutechess
