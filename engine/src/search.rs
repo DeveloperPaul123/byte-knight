@@ -187,8 +187,9 @@ impl<'a> Search<'a> {
 
     fn should_stop_searching(&self) -> bool {
         self.parameters.start_time.elapsed() >= self.parameters.hard_timeout // hard timeout
-        || self.nodes >= self.parameters.max_nodes // node limit reached
-        || self.stop_flag.as_ref().is_some_and(|f| f.load(Ordering::Relaxed)) // stop flag set
+            || self.nodes >= self.parameters.max_nodes // node limit reached
+            || self.stop_flag.as_ref().is_some_and(|f| f.load(Ordering::Relaxed))
+        // stop flag set
     }
 
     fn send_info(
@@ -333,8 +334,7 @@ impl<'a> Search<'a> {
         // sort moves by MVV/LVA
         let sorted_moves = move_list
             .iter()
-            .sorted_by_cached_key(|mv| Evaluation::score_move_for_ordering(mv, &tt_entry))
-            .collect_vec();
+            .sorted_by_cached_key(|mv| Evaluation::score_move_for_ordering(mv, &tt_entry));
 
         // initialize best move and best score
         // we ensured we have moves earlier
@@ -345,12 +345,24 @@ impl<'a> Search<'a> {
         let mut best_move = None;
 
         // loop through all moves
-        for mv in sorted_moves {
+        for (i, mv) in sorted_moves.enumerate() {
             // make the move
             board.make_move_unchecked(mv).unwrap();
-            // is it a draw?
-            let score = // recursive call and lower depth, higher ply and negated alpha and beta (swapped)
-            -self.negamax(board, depth - 1, ply + 1, -beta, -alpha_use);
+            let score : Score =
+                // Principal Variation Search (PVS)
+                if i == 0 {
+                    -self.negamax(board, depth - 1, ply + 1, -beta_use, -alpha_use)
+                } else {
+                    // search with a null window
+                    let temp_score = -self.negamax(board, depth - 1, ply + 1, -alpha_use - 1, -alpha_use);
+                    // if it fails, we need to do a full re-search
+                    if temp_score > alpha_use && temp_score < beta_use {
+                        -self.negamax(board, depth - 1, ply + 1, -beta_use, -alpha_use)
+                    }
+                    else {
+                        temp_score
+                    }
+                };
 
             // undo the move
             board.unmake_move().unwrap();

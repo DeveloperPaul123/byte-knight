@@ -12,11 +12,11 @@
  *
  */
 
+use std::ops::{Sub, SubAssign};
 use std::{
     fmt::{self, Display, Formatter},
     ops::{Add, AddAssign, Neg},
 };
-
 use uci_parser::UciScore;
 
 pub(crate) type ScoreType = i16;
@@ -84,5 +84,31 @@ impl Add<ScoreType> for Score {
 
     fn add(self, other: ScoreType) -> Score {
         Score(self.0 + other)
+    }
+}
+
+impl Sub for Score {
+    type Output = Score;
+    fn sub(self, other: Score) -> Score {
+        Score(self.0 - other.0)
+    }
+}
+
+impl Sub<ScoreType> for Score {
+    type Output = Score;
+    fn sub(self, other: ScoreType) -> Score {
+        Score(self.0 - other)
+    }
+}
+
+impl SubAssign for Score {
+    fn sub_assign(&mut self, other: Score) {
+        self.0 -= other.0;
+    }
+}
+
+impl SubAssign<ScoreType> for Score {
+    fn sub_assign(&mut self, rhs: ScoreType) {
+        self.0 -= rhs;
     }
 }
