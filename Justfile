@@ -41,3 +41,7 @@ verify-zobrist:
 release target:
     echo "Building release binaries..."
     cargo rustc --release --bin byte-knight --target={{ target }}
+
+cache-main: build
+    echo "Caching binary for testing..."
+    cp target/release/byte-knight ./bk-main
