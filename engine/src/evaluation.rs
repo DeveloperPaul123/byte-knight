@@ -24,17 +24,16 @@ use crate::{
 // similar setup to Rustic https://rustic-chess.org/search/ordering/mvv_lva.html
 // MVV-LVA (Most Valuable Victim - Least Valuable Attacker) is a heuristic used to order captures.
 // MVV_LVA[victim][attacker] = victim_value - attacker_value
+#[rustfmt::skip]
 const MVV_LVA: [[ScoreType; NumberOf::PIECE_TYPES + 1]; NumberOf::PIECE_TYPES + 1] = [
-    [0, 0, 0, 0, 0, 0, 0],             // victim K, attacker K, Q, R, B, N, P, None
+    [0,     0,     0,     0,     0,     0,     0], // victim K, attacker K, Q, R, B, N, P, None
     [30000, 30100, 30200, 30300, 30400, 30500, 0], // victim Q, attacker K, Q, R, B, N, P, None
     [28000, 28100, 28200, 28300, 28400, 28500, 0], // victim R, attacker K, Q, R, B, N, P, None
     [26000, 26100, 26200, 26300, 26400, 26500, 0], // victim B, attacker K, Q, R, B, N, P, None
     [23000, 23100, 23200, 23300, 23400, 23500, 0], // victim N, attacker K, Q, R, B, N, P, None
     [15000, 16000, 17000, 18000, 19000, 20000, 0], // victim P, attacker K, Q, R, B, N, P, None
-    [0, 0, 0, 0, 0, 0, 0],             // victim None, attacker K, Q, R, B, N, P, None
+    [0,     0,     0,     0,     0,     0,     0], // victim None, attacker K, Q, R, B, N, P, None
 ];
-
-
 
 /// Provides static evaluation of a given chess position.
 pub struct Evaluation {
