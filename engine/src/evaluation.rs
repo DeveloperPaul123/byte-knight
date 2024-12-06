@@ -12,9 +12,10 @@
  *
  */
 
-use chess::{board::Board, definitions::NumberOf, moves::Move, pieces::Piece};
+use chess::{board::Board, definitions::NumberOf, moves::Move, pieces::Piece, side::Side};
 
 use crate::{
+    history_table,
     psqt::Psqt,
     score::{Score, ScoreType},
     ttable::TranspositionTableEntry,
@@ -25,13 +26,15 @@ use crate::{
 // MVV_LVA[victim][attacker] = victim_value - attacker_value
 const MVV_LVA: [[ScoreType; NumberOf::PIECE_TYPES + 1]; NumberOf::PIECE_TYPES + 1] = [
     [0, 0, 0, 0, 0, 0, 0],             // victim K, attacker K, Q, R, B, N, P, None
-    [500, 510, 520, 530, 540, 550, 0], // victim Q, attacker K, Q, R, B, N, P, None
-    [400, 410, 420, 430, 440, 450, 0], // victim R, attacker K, Q, R, B, N, P, None
-    [300, 310, 320, 330, 340, 350, 0], // victim B, attacker K, Q, R, B, N, P, None
-    [200, 210, 220, 230, 240, 250, 0], // victim N, attacker K, Q, R, B, N, P, None
-    [100, 110, 120, 130, 140, 150, 0], // victim P, attacker K, Q, R, B, N, P, None
+    [30000, 30100, 30200, 30300, 30400, 30500, 0], // victim Q, attacker K, Q, R, B, N, P, None
+    [28000, 28100, 28200, 28300, 28400, 28500, 0], // victim R, attacker K, Q, R, B, N, P, None
+    [26000, 26100, 26200, 26300, 26400, 26500, 0], // victim B, attacker K, Q, R, B, N, P, None
+    [23000, 23100, 23200, 23300, 23400, 23500, 0], // victim N, attacker K, Q, R, B, N, P, None
+    [15000, 16000, 17000, 18000, 19000, 20000, 0], // victim P, attacker K, Q, R, B, N, P, None
     [0, 0, 0, 0, 0, 0, 0],             // victim None, attacker K, Q, R, B, N, P, None
 ];
+
+
 
 /// Provides static evaluation of a given chess position.
 pub struct Evaluation {
@@ -71,15 +74,24 @@ impl Evaluation {
     ///
     /// The score of the move.
     pub(crate) fn score_move_for_ordering(
+        stm: Side,
         mv: &Move,
         tt_entry: &Option<TranspositionTableEntry>,
+        history_table: &history_table::HistoryTable,
     ) -> Score {
         if tt_entry.is_some_and(|tt| *mv == tt.board_move) {
             return Score::new(ScoreType::MIN);
         }
         let mut score = Score::new(0);
 
-        score += MVV_LVA[mv.captured_piece().unwrap_or(Piece::None) as usize][mv.piece() as usize];
+        if mv.is_quiet() {
+            // add the score from the history table
+            score += history_table.get(stm, mv.piece(), mv.to());
+        } else if mv.captured_piece().is_some() {
+            // score by MVV-LVA
+            score +=
+                MVV_LVA[mv.captured_piece().unwrap_or(Piece::None) as usize][mv.piece() as usize];
+        }
 
         // negate the score to get the best move first
         -score
@@ -91,10 +103,11 @@ mod tests {
     use chess::{
         moves::{self, Move},
         pieces::Piece,
+        side::Side,
         square::Square,
     };
 
-    use crate::{evaluation::Evaluation, score::Score};
+    use crate::{evaluation::Evaluation, history_table, score::Score};
 
     #[test]
     fn score_moves() {
@@ -108,10 +121,11 @@ mod tests {
             Some(Piece::Queen),
             None,
         );
-
+        let side = Side::Black;
+        let history_table = Default::default();
         // note that these scores are for ordering, so they are negated
         assert_eq!(
-            -Evaluation::score_move_for_ordering(&mv, &None),
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
             Score::new(550)
         );
 
@@ -125,7 +139,7 @@ mod tests {
         );
 
         assert_eq!(
-            -Evaluation::score_move_for_ordering(&mv, &None),
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
             Score::new(430)
         );
 
@@ -139,7 +153,7 @@ mod tests {
         );
 
         assert_eq!(
-            -Evaluation::score_move_for_ordering(&mv, &None),
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
             Score::new(140)
         );
     }

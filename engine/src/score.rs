@@ -27,11 +27,19 @@ pub struct Score(pub ScoreType);
 impl Score {
     pub const DRAW: Score = Score(0);
     pub const MATE: Score = Score(i16::MAX as ScoreType);
-    /// We use i32 so we don't overflow
+    /// We use i16 so we don't overflow
     pub const INF: Score = Score(i16::MAX as ScoreType);
+
+    // Max/min score for history heuristic
+    // Must be lower then the minimum score for captures in MVV_LVA
+    pub const MAX_HISTORY: Score = Score(14999);
 
     pub fn new(score: ScoreType) -> Score {
         Score(score)
+    }
+
+    pub fn clamp(&self, min: ScoreType, max: ScoreType) -> Score {
+        Score(self.0.clamp(min, max))
     }
 }
 

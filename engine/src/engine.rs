@@ -22,6 +22,7 @@ use uci_parser::{UciCommand, UciInfo, UciOption, UciResponse};
 
 use crate::{
     defs::About,
+    history_table::HistoryTable,
     input_handler::{CommandProxy, EngineCommand, InputHandler},
     search::SearchParameters,
     search_thread::SearchThread,
@@ -32,6 +33,7 @@ pub struct ByteKnight {
     input_handler: InputHandler,
     search_thread: SearchThread,
     transposition_table: Arc<Mutex<TranspositionTable>>,
+    history_table: Arc<Mutex<HistoryTable>>,
     debug: bool,
 }
 
@@ -41,6 +43,7 @@ impl ByteKnight {
             input_handler: InputHandler::new(),
             search_thread: SearchThread::new(),
             transposition_table: Default::default(),
+            history_table: Default::default(),
             debug: false,
         }
     }
@@ -48,6 +51,10 @@ impl ByteKnight {
     fn clear_hash_tables(&mut self) {
         if let Ok(tt) = self.transposition_table.lock().as_mut() {
             tt.clear();
+        }
+
+        if let Ok(ht) = self.history_table.lock().as_mut() {
+            ht.clear();
         }
     }
 
@@ -132,6 +139,7 @@ impl ByteKnight {
                             &board,
                             search_params,
                             self.transposition_table.clone(),
+                            self.history_table.clone(),
                         );
                     }
                     UciCommand::SetOption { name, value } => {
