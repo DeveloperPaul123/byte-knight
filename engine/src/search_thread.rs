@@ -27,6 +27,7 @@ use chess::{board::Board, moves::Move, pieces::SQUARE_NAME};
 use uci_parser::{UciMove, UciResponse};
 
 use crate::{
+    history_table::HistoryTable,
     search::{Search, SearchParameters},
     ttable::TranspositionTable,
 };
@@ -54,7 +55,12 @@ fn move_to_uci_move(mv: &Move) -> UciMove {
 
 #[allow(clippy::large_enum_variant)]
 pub(crate) enum SearchThreadValue {
-    Params(Board, SearchParameters, Arc<Mutex<TranspositionTable>>),
+    Params(
+        Board,
+        SearchParameters,
+        Arc<Mutex<TranspositionTable>>,
+        Arc<Mutex<HistoryTable>>,
+    ),
     Exit,
 }
 
@@ -83,11 +89,13 @@ impl SearchThread {
             'search_loop: loop {
                 let value = receiver.recv().unwrap();
                 match value {
-                    SearchThreadValue::Params(mut board, params, ttable) => {
+                    SearchThreadValue::Params(mut board, params, ttable, history) => {
                         let mut tt = ttable.lock().unwrap();
+                        let mut hist_table = history.lock().unwrap();
                         let flag = stop_flag.clone();
                         is_searching.store(true, Ordering::Relaxed);
-                        let result = Search::new(&params, &mut tt).search(&mut board, Some(flag));
+                        let result = Search::new(&params, &mut tt, &mut hist_table)
+                            .search(&mut board, Some(flag));
                         is_searching.store(false, Ordering::Relaxed);
                         let best_move = result.best_move;
                         let move_output = UciResponse::BestMove {
@@ -137,10 +145,16 @@ impl SearchThread {
         board: &Board,
         params: SearchParameters,
         ttable: Arc<Mutex<TranspositionTable>>,
+        history_table: Arc<Mutex<HistoryTable>>,
     ) {
         self.stop_search_flag.store(false, Ordering::Relaxed);
         self.sender
-            .send(SearchThreadValue::Params(board.clone(), params, ttable))
+            .send(SearchThreadValue::Params(
+                board.clone(),
+                params,
+                ttable,
+                history_table,
+            ))
             .unwrap();
     }
 
