@@ -30,8 +30,16 @@ impl Score {
     pub const MATE: Score = Score(ScoreType::MAX as ScoreType);
     pub const INF: Score = Score(ScoreType::MAX as ScoreType);
 
+    // Max/min score for history heuristic
+    // Must be lower then the minimum score for captures in MVV_LVA
+    pub const MAX_HISTORY: Score = Score(14999);
+
     pub fn new(score: ScoreType) -> Score {
         Score(score)
+    }
+
+    pub fn clamp(&self, min: ScoreType, max: ScoreType) -> Score {
+        Score(self.0.clamp(min, max))
     }
 }
 

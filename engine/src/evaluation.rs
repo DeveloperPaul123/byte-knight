@@ -12,9 +12,10 @@
  *
  */
 
-use chess::{board::Board, moves::Move, pieces::Piece};
+use chess::{board::Board, definitions::NumberOf, moves::Move, pieces::Piece, side::Side};
 
 use crate::{
+    history_table,
     psqt::Psqt,
     score::{MoveOrderScoreType, Score},
     ttable::TranspositionTableEntry,
@@ -58,8 +59,10 @@ impl Evaluation {
     ///
     /// The score of the move.
     pub(crate) fn score_move_for_ordering(
+        stm: Side,
         mv: &Move,
         tt_entry: &Option<TranspositionTableEntry>,
+        history_table: &history_table::HistoryTable,
     ) -> MoveOrderScoreType {
         if tt_entry.is_some_and(|tt| *mv == tt.board_move) {
             return MoveOrderScoreType::MIN;
@@ -134,7 +137,8 @@ mod tests {
             Some(Piece::Queen),
             None,
         );
-
+        let side = Side::Black;
+        let history_table = Default::default();
         // note that these scores are for ordering, so they are negated
         assert_eq!(
             -Evaluation::score_move_for_ordering(&mv, &None),

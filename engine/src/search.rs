@@ -21,12 +21,18 @@ use std::{
     time::{Duration, Instant},
 };
 
-use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
+use chess::{
+    board::Board,
+    move_generation::MoveGenerator,
+    move_list::MoveList,
+    moves::Move,
+};
 use itertools::Itertools;
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
 use crate::{
     evaluation::Evaluation,
+    history_table::HistoryTable,
     score::{Score, ScoreType},
     ttable::{self, TranspositionTableEntry},
 };
@@ -138,6 +144,7 @@ impl Display for SearchParameters {
 
 pub struct Search<'search_lifetime> {
     transposition_table: &'search_lifetime mut TranspositionTable,
+    history_table: &'search_lifetime mut HistoryTable,
     move_gen: MoveGenerator,
     nodes: u64,
     parameters: SearchParameters,
@@ -146,9 +153,14 @@ pub struct Search<'search_lifetime> {
 }
 
 impl<'a> Search<'a> {
-    pub fn new(parameters: &SearchParameters, ttable: &'a mut TranspositionTable) -> Self {
+    pub fn new(
+        parameters: &SearchParameters,
+        ttable: &'a mut TranspositionTable,
+        history_table: &'a mut HistoryTable,
+    ) -> Self {
         Search {
             transposition_table: ttable,
+            history_table: history_table,
             move_gen: MoveGenerator::new(),
             nodes: 0,
             parameters: parameters.clone(),
@@ -332,9 +344,14 @@ impl<'a> Search<'a> {
         }
 
         // sort moves by MVV/LVA
-        let sorted_moves = move_list
-            .iter()
-            .sorted_by_cached_key(|mv| Evaluation::score_move_for_ordering(mv, &tt_entry));
+        let sorted_moves = move_list.iter().sorted_by_cached_key(|mv| {
+            Evaluation::score_move_for_ordering(
+                board.side_to_move(),
+                mv,
+                &None,
+                &self.history_table,
+            )
+        });
 
         // initialize best move and best score
         // we ensured we have moves earlier
@@ -376,6 +393,18 @@ impl<'a> Search<'a> {
                 // update alpha
                 alpha_use = alpha_use.max(best_score);
                 if alpha_use >= beta_use {
+                    // update history table for quiets
+                    if mv.is_quiet() {
+                        // calculate history bonus
+                        let bonus = (depth as ScoreType).pow(2);
+                        self.history_table.update(
+                            board.side_to_move(),
+                            mv.piece(),
+                            mv.to(),
+                            Score::new(bonus),
+                        );
+                    }
+
                     break;
                 }
             }
@@ -442,9 +471,14 @@ impl<'a> Search<'a> {
             return standing_eval;
         }
 
-        let sorted_moves = captures
-            .into_iter()
-            .sorted_by_cached_key(|mv| Evaluation::score_move_for_ordering(mv, &None));
+        let sorted_moves = captures.into_iter().sorted_by_cached_key(|mv| {
+            Evaluation::score_move_for_ordering(
+                board.side_to_move(),
+                mv,
+                &None,
+                &self.history_table,
+            )
+        });
         let mut best = standing_eval;
 
         for mv in sorted_moves {
@@ -485,6 +519,7 @@ mod tests {
     use chess::board::Board;
 
     use crate::{
+        history_table::{self, HistoryTable},
         score::Score,
         search::{Search, SearchParameters},
         ttable::TranspositionTable,
@@ -500,7 +535,8 @@ mod tests {
         };
 
         let mut ttable = TranspositionTable::default();
-        let mut search = Search::new(&config, &mut ttable);
+        let mut history_table = Default::default();
+        let mut search = Search::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board.clone(), None);
         // b6a7
         assert_eq!(
@@ -518,8 +554,9 @@ mod tests {
             ..Default::default()
         };
 
-        let mut ttable = TranspositionTable::default();
-        let mut search = Search::new(&config, &mut ttable);
+        let mut ttable = Default::default();
+        let mut history_table = Default::default();
+        let mut search = Search::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
 
         assert_eq!(res.best_move.unwrap().to_long_algebraic(), "b8a8")
@@ -531,8 +568,9 @@ mod tests {
         let mut board = Board::from_fen(fen).unwrap();
         let config = SearchParameters::default();
 
-        let mut ttable = TranspositionTable::default();
-        let mut search = Search::new(&config, &mut ttable);
+        let mut ttable = Default::default();
+        let mut history_table = Default::default();
+        let mut search = Search::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_none());
         assert_eq!(res.score, Score::DRAW);
@@ -547,8 +585,9 @@ mod tests {
             ..Default::default()
         };
 
-        let mut ttable = TranspositionTable::default();
-        let mut search = Search::new(&config, &mut ttable);
+        let mut ttable = Default::default();
+        let mut history_table = Default::default();
+        let mut search = Search::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
 
         assert!(res.best_move.is_some());
@@ -563,8 +602,9 @@ mod tests {
             ..Default::default()
         };
 
-        let mut ttable = TranspositionTable::default();
-        let mut search = Search::new(&config, &mut ttable);
+        let mut ttable = Default::default();
+        let mut history_table = Default::default();
+        let mut search = Search::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -579,8 +619,9 @@ mod tests {
             ..Default::default()
         };
 
-        let mut ttable = TranspositionTable::default();
-        let mut search = Search::new(&config, &mut ttable);
+        let mut ttable = Default::default();
+        let mut history_table = Default::default();
+        let mut search = Search::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
