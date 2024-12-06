@@ -374,7 +374,7 @@ impl<'a> Search<'a> {
                 best_move = Some(*mv);
 
                 // update alpha
-                alpha_use = alpha.max(best_score);
+                alpha_use = alpha_use.max(best_score);
                 if alpha_use >= beta_use {
                     break;
                 }

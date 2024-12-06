@@ -26,9 +26,8 @@ pub struct Score(pub ScoreType);
 
 impl Score {
     pub const DRAW: Score = Score(0);
-    pub const MATE: Score = Score(i16::MAX as ScoreType);
-    /// We use i32 so we don't overflow
-    pub const INF: Score = Score(i16::MAX as ScoreType);
+    pub const MATE: Score = Score(ScoreType::MAX as ScoreType);
+    pub const INF: Score = Score(ScoreType::MAX as ScoreType);
 
     pub fn new(score: ScoreType) -> Score {
         Score(score)
