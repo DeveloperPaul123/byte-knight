@@ -392,12 +392,8 @@ impl<'a> Search<'a> {
                     if mv.is_quiet() {
                         // calculate history bonus
                         let bonus = (depth as ScoreType).pow(2);
-                        self.history_table.update(
-                            board.side_to_move(),
-                            mv.piece(),
-                            mv.to(),
-                            Score::new(bonus),
-                        );
+                        self.history_table
+                            .update(board.side_to_move(), mv.piece(), mv.to(), bonus);
                     }
 
                     break;
