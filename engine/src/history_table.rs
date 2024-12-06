@@ -1,6 +1,6 @@
 use chess::{definitions::NumberOf, pieces::Piece, side::Side};
 
-use crate::score::Score;
+use crate::score::{Score, ScoreType};
 
 pub struct HistoryTable {
     table: [[[Score; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
@@ -18,12 +18,13 @@ impl HistoryTable {
         self.table[side as usize][piece as usize][square as usize]
     }
 
-    pub(crate) fn update(&mut self, side: Side, piece: Piece, square: u8, bonus: Score) {
+    pub(crate) fn update(&mut self, side: Side, piece: Piece, square: u8, bonus: ScoreType) {
         assert!(side != Side::Both, "Side cannot be Both");
-        let score = self.table[side as usize][piece as usize][square as usize];
-        let mut new_score = score.0 as i32 + bonus.0 as i32;
-        new_score = new_score.clamp(-Score::MAX_HISTORY.0 as i32, Score::MAX_HISTORY.0 as i32);
-        self.table[side as usize][piece as usize][square as usize] = Score::new(new_score as i16);
+        let clamped_bonus = bonus.clamp(-Score::MAX_HISTORY, Score::MAX_HISTORY);
+        let current_score = self.table[side as usize][piece as usize][square as usize];
+        // history gravity formula <https://www.chessprogramming.org/History_Heuristic>
+        let bonus = clamped_bonus - current_score.0 * clamped_bonus.abs() / Score::MAX_HISTORY;
+        self.table[side as usize][piece as usize][square as usize] += bonus;
     }
 
     pub(crate) fn clear(&mut self) {
