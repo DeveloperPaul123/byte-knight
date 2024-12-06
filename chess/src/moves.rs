@@ -273,10 +273,20 @@ impl Move {
         }
     }
 
+    pub fn is_quiet(&self) -> bool {
+        let mv_desc = self.move_descriptor();
+        mv_desc != MoveDescriptor::EnPassantCapture
+            && self.captured_piece_value() == Piece::None as u32
+    }
+
+    fn captured_piece_value(&self) -> u32 {
+        (self.move_info >> MOVE_INFO_CAPTURED_PIECE_SHIFT) & 0b111
+    }
+
     /// Returns the captured [`Piece`] if any. Can be `None`.
     pub fn captured_piece(&self) -> Option<Piece> {
         // shift right and then mask 3 bits
-        let piece_value = (self.move_info >> MOVE_INFO_CAPTURED_PIECE_SHIFT) & 0b111_u32;
+        let piece_value = self.captured_piece_value();
         if piece_value == Piece::None as u32 {
             return None;
         }
@@ -332,6 +342,7 @@ mod tests {
             assert_eq!(m.to(), 10);
             assert!(!m.is_promotion());
             assert_eq!(m.captured_piece(), None);
+            assert!(m.is_quiet());
             assert_eq!(m.piece(), Piece::Pawn);
         }
         {
@@ -349,6 +360,7 @@ mod tests {
             assert_eq!(m.to(), 56);
             assert!(!m.is_promotion());
             assert_eq!(m.captured_piece().unwrap(), Piece::Rook);
+            assert!(!m.is_quiet());
             assert_eq!(m.piece(), Piece::Queen);
         }
         {
