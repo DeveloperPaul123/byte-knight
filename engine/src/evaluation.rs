@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Dec 02 2024
+ * Last Modified: Mon Dec 09 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -79,10 +79,29 @@ impl Evaluation {
         }
         let mut score = Score::new(0);
 
-        score += MVV_LVA[mv.captured_piece().unwrap_or(Piece::None) as usize][mv.piece() as usize];
+        // MVV-LVA for captures
+        if mv.is_en_passant_capture() || mv.captured_piece().is_some() {
+            // safe to unwrap because we know it's a capture
+            // TODO: Tune/adjust the victim multiplier. Roughly we scale so that PxQ is worth the most
+            // We roughly scale the value of the victim by 40 so that the max value is 40 *800 = 32000, which is still less than a TT match
+            score += 40 * Evaluation::piece_value(mv.captured_piece().unwrap())
+                - Evaluation::piece_value(mv.piece());
+        }
 
         // negate the score to get the best move first
         -score
+    }
+
+    pub(crate) fn piece_value(piece: Piece) -> ScoreType {
+        match piece {
+            Piece::King => 0,
+            Piece::Queen => 900,
+            Piece::Rook => 500,
+            Piece::Bishop => 330,
+            Piece::Knight => 320,
+            Piece::Pawn => 100,
+            Piece::None => 0,
+        }
     }
 }
 
