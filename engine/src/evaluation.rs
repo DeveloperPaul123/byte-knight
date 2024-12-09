@@ -83,9 +83,11 @@ impl Evaluation {
         if mv.is_en_passant_capture() || mv.captured_piece().is_some() {
             // safe to unwrap because we know it's a capture
             // TODO: Tune/adjust the victim multiplier. Roughly we scale so that PxQ is worth the most
-            // We roughly scale the value of the victim by 40 so that the max value is 40 *800 = 32000, which is still less than a TT match
-            score += 34 * Evaluation::piece_value(mv.captured_piece().unwrap())
-                - Evaluation::piece_value(mv.piece());
+            // max score is 30 - 1 = 29
+            // min score = PxQ = 6 - 5 = 1
+            score += 6 * Evaluation::piece_value(mv.captured_piece().unwrap())
+                - Evaluation::piece_value(mv.piece())
+                + 32_700;
         }
 
         // negate the score to get the best move first
@@ -93,7 +95,15 @@ impl Evaluation {
     }
 
     pub(crate) fn piece_value(piece: Piece) -> ScoreType {
-        MG_VALUE[piece as usize]
+        match piece {
+            Piece::King => 0,
+            Piece::Queen => 5,
+            Piece::Rook => 4,
+            Piece::Bishop => 3,
+            Piece::Knight => 2,
+            Piece::Pawn => 1,
+            Piece::None => 0,
+        }
     }
 }
 
