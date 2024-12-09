@@ -15,7 +15,7 @@
 use chess::{board::Board, definitions::NumberOf, moves::Move, pieces::Piece};
 
 use crate::{
-    psqt::Psqt,
+    psqt::{Psqt, MG_VALUE},
     score::{Score, ScoreType},
     ttable::TranspositionTableEntry,
 };
@@ -84,7 +84,7 @@ impl Evaluation {
             // safe to unwrap because we know it's a capture
             // TODO: Tune/adjust the victim multiplier. Roughly we scale so that PxQ is worth the most
             // We roughly scale the value of the victim by 40 so that the max value is 40 *800 = 32000, which is still less than a TT match
-            score += 40 * Evaluation::piece_value(mv.captured_piece().unwrap())
+            score += 34 * Evaluation::piece_value(mv.captured_piece().unwrap())
                 - Evaluation::piece_value(mv.piece());
         }
 
@@ -93,15 +93,7 @@ impl Evaluation {
     }
 
     pub(crate) fn piece_value(piece: Piece) -> ScoreType {
-        match piece {
-            Piece::King => 0,
-            Piece::Queen => 900,
-            Piece::Rook => 500,
-            Piece::Bishop => 330,
-            Piece::Knight => 320,
-            Piece::Pawn => 100,
-            Piece::None => 0,
-        }
+        MG_VALUE[piece as usize]
     }
 }
 
