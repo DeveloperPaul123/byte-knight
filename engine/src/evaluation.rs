@@ -194,4 +194,44 @@ mod tests {
             ))
         );
     }
+
+    #[test]
+    fn quiets_score_lower_than_captures() {
+        let from = Square::from_square_index(0);
+        let to = Square::from_square_index(1);
+        let mut mv = Move::new(
+            &from,
+            &to,
+            moves::MoveDescriptor::None,
+            Piece::Queen,
+            Some(Piece::Pawn),
+            None,
+        );
+        let side = Side::Black;
+        let mut history_table = Default::default();
+        // note that these scores are for ordering, so they are negated
+        assert_eq!(
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
+            Score::new(32_701)
+        );
+
+        mv = Move::new(
+            &from,
+            &to,
+            moves::MoveDescriptor::None,
+            Piece::Rook,
+            None,
+            None,
+        );
+
+        history_table.update(
+            Side::Black,
+            mv.piece(),
+            to.to_square_index(),
+            ScoreType::MAX,
+        );
+
+        let score_bonus = history_table.get(Side::Black, mv.piece(), to.to_square_index());
+        assert_eq!(score_bonus, Score::new(32_600));
+    }
 }
