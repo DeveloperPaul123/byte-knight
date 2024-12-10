@@ -17,7 +17,7 @@ use chess::{board::Board, moves::Move, pieces::Piece, side::Side};
 use crate::{
     history_table,
     psqt::Psqt,
-    score::{MoveOrderScoreType, Score, ScoreType},
+    score::{MoveOrderScoreType, Score},
     ttable::TranspositionTableEntry,
 };
 
@@ -70,12 +70,12 @@ impl Evaluation {
         let mut score = 0;
 
         // MVV-LVA for captures
-        if mv.is_en_passant_capture() || mv.captured_piece().is_some() {
-            // safe to unwrap because we know it's a capture
-            score += Self::mvv_lva(mv.captured_piece().unwrap(), mv.piece());
-        } else {
+        if mv.is_quiet() {
             // History heuristic for quiet moves
             score += history_table.get(stm, mv.piece(), mv.to());
+        } else if mv.is_en_passant_capture() || mv.captured_piece().is_some() {
+            // safe to unwrap because we know it's a capture
+            score += Self::mvv_lva(mv.captured_piece().unwrap(), mv.piece());
         }
 
         // negate the score to get the best move first
@@ -83,10 +83,7 @@ impl Evaluation {
     }
 
     pub(crate) fn mvv_lva(captured: Piece, capturing: Piece) -> MoveOrderScoreType {
-        let can_capture = captured != Piece::King && captured != Piece::None;
-        (can_capture as MoveOrderScoreType
-            * (25 * Evaluation::piece_value(captured) - Evaluation::piece_value(capturing)))
-            << 16
+        (25 * Evaluation::piece_value(captured) - Evaluation::piece_value(capturing)) << 16
     }
 
     pub(crate) fn piece_value(piece: Piece) -> MoveOrderScoreType {
@@ -111,7 +108,10 @@ mod tests {
         square::Square,
     };
 
-    use crate::{evaluation::Evaluation, score::MoveOrderScoreType};
+    use crate::{
+        evaluation::Evaluation,
+        score::{MoveOrderScoreType, Score},
+    };
 
     #[test]
     fn mvv_lva_scaling() {
@@ -195,7 +195,7 @@ mod tests {
         // note that these scores are for ordering, so they are negated
         assert_eq!(
             -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
-            32_701
+            Evaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
         );
 
         mv = Move::new(
@@ -215,6 +215,6 @@ mod tests {
         );
 
         let score_bonus = history_table.get(Side::Black, mv.piece(), to.to_square_index());
-        assert_eq!(score_bonus, 32_600);
+        assert_eq!(score_bonus, Score::MAX_HISTORY);
     }
 }
