@@ -77,7 +77,10 @@ impl Evaluation {
     }
 
     fn mvv_lva(captured: Piece, capturing: Piece) -> MoveOrderScoreType {
-        (25 * Evaluation::piece_value(captured) - Evaluation::piece_value(capturing)) << 16
+        let can_capture = captured != Piece::King && captured != Piece::None;
+        ((can_capture as MoveOrderScoreType)
+            * (25 * Evaluation::piece_value(captured) - Evaluation::piece_value(capturing)))
+            << 16
     }
 
     pub(crate) fn piece_value(piece: Piece) -> MoveOrderScoreType {
@@ -97,7 +100,7 @@ impl Evaluation {
 mod tests {
     use chess::{
         moves::{self, Move},
-        pieces::{Piece, PIECE_SHORT_NAMES},
+        pieces::{Piece, ALL_PIECES, PIECE_SHORT_NAMES},
         square::Square,
     };
 
@@ -105,25 +108,13 @@ mod tests {
 
     #[test]
     fn mvv_lva_scaling() {
-        for captured in &[
-            Piece::Pawn,
-            Piece::Knight,
-            Piece::Bishop,
-            Piece::Rook,
-            Piece::Queen,
-        ] {
-            for capturing in &[
-                Piece::Pawn,
-                Piece::Knight,
-                Piece::Bishop,
-                Piece::Rook,
-                Piece::Queen,
-            ] {
-                let score = Evaluation::mvv_lva(*captured, *capturing);
+        for captured in ALL_PIECES {
+            for capturing in ALL_PIECES {
+                let score = Evaluation::mvv_lva(captured, capturing);
                 println!(
                     "{} x {} -> {}",
-                    PIECE_SHORT_NAMES[*capturing as usize],
-                    PIECE_SHORT_NAMES[*captured as usize],
+                    PIECE_SHORT_NAMES[capturing as usize],
+                    PIECE_SHORT_NAMES[captured as usize],
                     score
                 );
                 assert!((score as i64) < (MoveOrderScoreType::MIN as i64).abs());
