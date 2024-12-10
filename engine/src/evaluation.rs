@@ -12,7 +12,7 @@
  *
  */
 
-use chess::{board::Board, moves::Move, pieces::Piece};
+use chess::{board::Board, moves::Move, pieces::Piece, side::Side};
 
 use crate::{
     history_table,
@@ -78,6 +78,9 @@ impl Evaluation {
             score += 6 * Evaluation::piece_value(mv.captured_piece().unwrap())
                 - Evaluation::piece_value(mv.piece())
                 + 32_700;
+        } else {
+            // history table
+            score += history_table.get(stm, mv.piece(), mv.to());
         }
 
         // negate the score to get the best move first
