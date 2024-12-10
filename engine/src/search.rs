@@ -28,7 +28,7 @@ use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 use crate::{
     evaluation::Evaluation,
     history_table::HistoryTable,
-    score::{Score, ScoreType},
+    score::{MoveOrderScoreType, Score, ScoreType},
     ttable::{self, TranspositionTableEntry},
 };
 use ttable::TranspositionTable;
@@ -386,7 +386,7 @@ impl<'a> Search<'a> {
                     // update history table for quiets
                     if mv.is_quiet() {
                         // calculate history bonus
-                        let bonus = 200 * depth - 150;
+                        let bonus = 300 * (depth as MoveOrderScoreType) - 250;
                         self.history_table
                             .update(board.side_to_move(), mv.piece(), mv.to(), bonus);
                     }
@@ -501,7 +501,7 @@ mod tests {
 
     use crate::{
         evaluation::Evaluation,
-        score::{Score, ScoreType},
+        score::{MoveOrderScoreType, Score, ScoreType},
         search::{Search, SearchParameters},
         ttable::TranspositionTable,
     };
@@ -643,8 +643,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut min_mvv_lva = ScoreType::MAX;
-        let mut max_mvv_lva = ScoreType::MIN;
+        let mut min_mvv_lva = MoveOrderScoreType::MAX;
+        let mut max_mvv_lva = MoveOrderScoreType::MIN;
         for capturing in ALL_PIECES {
             for captured in ALL_PIECES.iter().filter(|p| !p.is_king() && !p.is_none()) {
                 let mvv_lva = Evaluation::mvv_lva(*captured, capturing);
@@ -668,7 +668,7 @@ mod tests {
             assert!(res.best_move.is_some());
 
             let side = board.side_to_move();
-            let mut max_history = Score::new(ScoreType::MIN);
+            let mut max_history = MoveOrderScoreType::MIN;
             for piece in ALL_PIECES {
                 for square in 0..64 {
                     let score = history_table.get(side, piece, square);
@@ -678,9 +678,9 @@ mod tests {
                 }
             }
 
-            println!("max history: {:5}", max_history.0);
+            println!("max history: {:5}", max_history);
             println!("min/max mvv-lva: {}, {}", min_mvv_lva, max_mvv_lva);
-            assert!(max_history.0 < min_mvv_lva);
+            assert!(max_history < min_mvv_lva);
         }
     }
 }

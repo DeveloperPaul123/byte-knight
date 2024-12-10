@@ -4,10 +4,10 @@ use chess::{
     side::Side,
 };
 
-use crate::score::{Score, ScoreType};
+use crate::score::{MoveOrderScoreType, Score, ScoreType};
 
 pub struct HistoryTable {
-    table: [[[Score; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
+    table: [[[MoveOrderScoreType; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
 }
 
 impl HistoryTable {
@@ -17,19 +17,25 @@ impl HistoryTable {
         Self { table }
     }
 
-    pub(crate) fn get(&self, side: Side, piece: Piece, square: u8) -> Score {
+    pub(crate) fn get(&self, side: Side, piece: Piece, square: u8) -> MoveOrderScoreType {
         assert!(side != Side::Both, "Side cannot be Both");
         self.table[side as usize][piece as usize][square as usize]
     }
 
-    pub(crate) fn update(&mut self, side: Side, piece: Piece, square: u8, bonus: ScoreType) {
+    pub(crate) fn update(
+        &mut self,
+        side: Side,
+        piece: Piece,
+        square: u8,
+        bonus: MoveOrderScoreType,
+    ) {
         assert!(side != Side::Both, "Side cannot be Both");
         let clamped_bonus = bonus.clamp(-Score::MAX_HISTORY, Score::MAX_HISTORY);
         let current_value = self.table[side as usize][piece as usize][square as usize];
         // history gravity formula
-        let new_value = current_value.0 as i32 + clamped_bonus as i32
-            - current_value.0 as i32 * clamped_bonus.abs() as i32 / Score::MAX_HISTORY as i32;
-        self.table[side as usize][piece as usize][square as usize] = Score(new_value as i16);
+        let new_value = current_value as i64 + clamped_bonus as i64
+            - current_value as i64 * clamped_bonus.abs() as i64 / Score::MAX_HISTORY as i64;
+        self.table[side as usize][piece as usize][square as usize] = new_value as MoveOrderScoreType
     }
 
     pub(crate) fn clear(&mut self) {
@@ -50,7 +56,7 @@ impl HistoryTable {
                 print!("|");
                 for file in 0..NumberOf::FILES {
                     let square = file + rank * NumberOf::FILES;
-                    print!("{:3} ", self.table[side as usize][piece_type][square].0);
+                    print!("{:5} ", self.table[side as usize][piece_type][square]);
                 }
                 println!("|");
             }
@@ -67,8 +73,6 @@ impl Default for HistoryTable {
 #[cfg(test)]
 mod tests {
     use chess::{definitions::Squares, pieces::Piece, side::Side};
-
-    use crate::score::Score;
 
     use super::HistoryTable;
 
@@ -94,10 +98,10 @@ mod tests {
         let side = Side::Black;
         let piece = Piece::Pawn;
         let square = Squares::A1;
-        let score = Score::new(37);
-        history_table.update(side, piece, square, score.0);
+        let score = 37;
+        history_table.update(side, piece, square, score);
         assert_eq!(history_table.get(side, piece, square), score);
-        history_table.update(side, piece, square, score.0);
+        history_table.update(side, piece, square, score);
         assert_eq!(history_table.get(side, piece, square), score + score);
     }
 }

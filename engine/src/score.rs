@@ -20,6 +20,7 @@ use std::{
 use uci_parser::UciScore;
 
 pub(crate) type ScoreType = i16;
+pub(crate) type MoveOrderScoreType = i32;
 /// Represents a score in centipawns.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Score(pub ScoreType);
@@ -31,7 +32,7 @@ impl Score {
 
     // Max/min score for history heuristic
     // Must be lower then the minimum score for captures in MVV_LVA
-    pub const MAX_HISTORY: ScoreType = 5_000;
+    pub const MAX_HISTORY: MoveOrderScoreType = 16_384;
 
     pub fn new(score: ScoreType) -> Score {
         Score(score)
