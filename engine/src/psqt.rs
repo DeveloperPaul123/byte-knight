@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Dec 02 2024
+ * Last Modified: Mon Dec 09 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -19,7 +19,7 @@ use crate::score::{Score, ScoreType};
 /// Mid-game piece values
 /// Ordered to match the indexing of [`Piece`]
 /// King, Queen, Rook, Bishop, Knight, Pawn
-const MG_VALUE: [ScoreType; 6] = [0, 1025, 477, 365, 337, 82];
+pub(crate) const MG_VALUE: [ScoreType; 6] = [0, 1025, 477, 365, 337, 82];
 
 /// End-game piece values
 /// Ordered to match the indexing of [`Piece`]
