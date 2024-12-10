@@ -106,7 +106,7 @@ mod tests {
         square::Square,
     };
 
-    use crate::{evaluation::Evaluation, history_table, score::Score};
+    use crate::{evaluation::Evaluation, score::Score};
 
     #[test]
     fn score_moves() {
@@ -124,7 +124,7 @@ mod tests {
         let history_table = Default::default();
         // note that these scores are for ordering, so they are negated
         assert_eq!(
-            -Evaluation::score_move_for_ordering(&mv, &None),
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
             Score::new(32729)
         );
 
@@ -138,7 +138,7 @@ mod tests {
         );
 
         assert_eq!(
-            -Evaluation::score_move_for_ordering(&mv, &None),
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
             Score::new(32721)
         );
 
@@ -152,7 +152,7 @@ mod tests {
         );
 
         assert_eq!(
-            -Evaluation::score_move_for_ordering(&mv, &None),
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
             Score::new(32704)
         );
     }
