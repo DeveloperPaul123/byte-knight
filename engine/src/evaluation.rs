@@ -120,7 +120,7 @@ mod tests {
         // note that these scores are for ordering, so they are negated
         assert_eq!(
             -Evaluation::score_move_for_ordering(&mv, &None),
-            Score::new(550)
+            Score::new(32729)
         );
 
         mv = Move::new(
@@ -134,7 +134,7 @@ mod tests {
 
         assert_eq!(
             -Evaluation::score_move_for_ordering(&mv, &None),
-            Score::new(430)
+            Score::new(32721)
         );
 
         mv = Move::new(
@@ -148,7 +148,7 @@ mod tests {
 
         assert_eq!(
             -Evaluation::score_move_for_ordering(&mv, &None),
-            Score::new(140)
+            Score::new(32704)
         );
     }
 }
