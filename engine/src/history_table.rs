@@ -35,6 +35,21 @@ impl HistoryTable {
             }
         }
     }
+
+    pub(crate) fn print_for_side(&self, side: Side) {
+        for piece_type in 0..NumberOf::PIECE_TYPES {
+            println!("{} - {}", PIECE_NAMES[piece_type], side);
+            // print from white's perspective
+            for rank in (0..=NumberOf::RANKS - 1).rev() {
+                print!("|");
+                for file in 0..NumberOf::FILES {
+                    let square = file + rank * NumberOf::FILES;
+                    print!("{:3} ", self.table[side as usize][piece_type][square].0);
+                }
+                println!("|");
+            }
+        }
+    }
 }
 
 impl Default for HistoryTable {
