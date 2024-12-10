@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Dec 02 2024
+ * Last Modified: Mon Dec 09 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -12,7 +12,7 @@
  *
  */
 
-use chess::{board::Board, definitions::NumberOf, moves::Move, pieces::Piece, side::Side};
+use chess::{board::Board, moves::Move, pieces::Piece};
 
 use crate::{
     history_table,
@@ -20,20 +20,6 @@ use crate::{
     score::{Score, ScoreType},
     ttable::TranspositionTableEntry,
 };
-
-// similar setup to Rustic https://rustic-chess.org/search/ordering/mvv_lva.html
-// MVV-LVA (Most Valuable Victim - Least Valuable Attacker) is a heuristic used to order captures.
-// MVV_LVA[victim][attacker] = victim_value - attacker_value
-#[rustfmt::skip]
-const MVV_LVA: [[ScoreType; NumberOf::PIECE_TYPES + 1]; NumberOf::PIECE_TYPES + 1] = [
-    [0,     0,     0,     0,     0,     0,     0], // victim K, attacker K, Q, R, B, N, P, None
-    [30000, 30100, 30200, 30300, 30400, 30500, 0], // victim Q, attacker K, Q, R, B, N, P, None
-    [28000, 28100, 28200, 28300, 28400, 28500, 0], // victim R, attacker K, Q, R, B, N, P, None
-    [26000, 26100, 26200, 26300, 26400, 26500, 0], // victim B, attacker K, Q, R, B, N, P, None
-    [23000, 23100, 23200, 23300, 23400, 23500, 0], // victim N, attacker K, Q, R, B, N, P, None
-    [15000, 16000, 17000, 18000, 19000, 20000, 0], // victim P, attacker K, Q, R, B, N, P, None
-    [0,     0,     0,     0,     0,     0,     0], // victim None, attacker K, Q, R, B, N, P, None
-];
 
 /// Provides static evaluation of a given chess position.
 pub struct Evaluation {
@@ -83,17 +69,31 @@ impl Evaluation {
         }
         let mut score = Score::new(0);
 
-        if mv.is_quiet() {
-            // add the score from the history table
-            score += history_table.get(stm, mv.piece(), mv.to());
-        } else if mv.captured_piece().is_some() {
-            // score by MVV-LVA
-            score +=
-                MVV_LVA[mv.captured_piece().unwrap_or(Piece::None) as usize][mv.piece() as usize];
+        // MVV-LVA for captures
+        if mv.is_en_passant_capture() || mv.captured_piece().is_some() {
+            // safe to unwrap because we know it's a capture
+            // TODO: Tune/adjust the victim multiplier. Roughly we scale so that PxQ is worth the most
+            // max score is 30 - 1 = 29
+            // min score = PxQ = 6 - 5 = 1
+            score += 6 * Evaluation::piece_value(mv.captured_piece().unwrap())
+                - Evaluation::piece_value(mv.piece())
+                + 32_700;
         }
 
         // negate the score to get the best move first
         -score
+    }
+
+    pub(crate) fn piece_value(piece: Piece) -> ScoreType {
+        match piece {
+            Piece::King => 0,
+            Piece::Queen => 5,
+            Piece::Rook => 4,
+            Piece::Bishop => 3,
+            Piece::Knight => 2,
+            Piece::Pawn => 1,
+            Piece::None => 0,
+        }
     }
 }
 
@@ -124,8 +124,8 @@ mod tests {
         let history_table = Default::default();
         // note that these scores are for ordering, so they are negated
         assert_eq!(
-            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
-            Score::new(550)
+            -Evaluation::score_move_for_ordering(&mv, &None),
+            Score::new(32729)
         );
 
         mv = Move::new(
@@ -138,8 +138,8 @@ mod tests {
         );
 
         assert_eq!(
-            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
-            Score::new(430)
+            -Evaluation::score_move_for_ordering(&mv, &None),
+            Score::new(32721)
         );
 
         mv = Move::new(
@@ -152,8 +152,8 @@ mod tests {
         );
 
         assert_eq!(
-            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
-            Score::new(140)
+            -Evaluation::score_move_for_ordering(&mv, &None),
+            Score::new(32704)
         );
     }
 }
