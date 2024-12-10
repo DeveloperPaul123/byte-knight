@@ -31,7 +31,7 @@ impl Score {
 
     // Max/min score for history heuristic
     // Must be lower then the minimum score for captures in MVV_LVA
-    pub const MAX_HISTORY: ScoreType = 255;
+    pub const MAX_HISTORY: ScoreType = 5_000;
 
     pub fn new(score: ScoreType) -> Score {
         Score(score)
