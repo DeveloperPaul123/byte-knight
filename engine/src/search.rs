@@ -386,7 +386,8 @@ impl<'a> Search<'a> {
                     // update history table for quiets
                     if mv.is_quiet() {
                         // calculate history bonus
-                        let bonus = 300 * (depth as MoveOrderScoreType) - 250;
+                        // let bonus = 300 * (depth as MoveOrderScoreType) - 250;
+                        let bonus = (depth * depth) as MoveOrderScoreType;
                         self.history_table
                             .update(board.side_to_move(), mv.piece(), mv.to(), bonus);
                     }
@@ -501,7 +502,7 @@ mod tests {
 
     use crate::{
         evaluation::Evaluation,
-        score::{MoveOrderScoreType, Score, ScoreType},
+        score::{MoveOrderScoreType, Score},
         search::{Search, SearchParameters},
         ttable::TranspositionTable,
     };
@@ -682,5 +683,20 @@ mod tests {
             println!("min/max mvv-lva: {}, {}", min_mvv_lva, max_mvv_lva);
             assert!(max_history < min_mvv_lva);
         }
+    }
+
+    #[test]
+    fn deep_search_no_overflow() {
+        let mut board = Board::default_board();
+        let config = SearchParameters {
+            max_depth: 10,
+            ..Default::default()
+        };
+
+        let mut ttable = Default::default();
+        let mut history_table = Default::default();
+
+        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let result = search.search(&mut board, None);
     }
 }
