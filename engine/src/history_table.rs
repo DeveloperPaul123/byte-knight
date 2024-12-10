@@ -43,8 +43,8 @@ impl HistoryTable {
     }
 
     pub(crate) fn print_for_side(&self, side: Side) {
-        for piece_type in 0..NumberOf::PIECE_TYPES {
-            println!("{} - {}", PIECE_NAMES[piece_type], side);
+        for (piece_type, name) in PIECE_NAMES.iter().enumerate().take(NumberOf::PIECE_TYPES) {
+            println!("{} - {}", name, side);
             // print from white's perspective
             for rank in (0..=NumberOf::RANKS - 1).rev() {
                 print!("|");

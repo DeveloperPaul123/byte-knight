@@ -155,7 +155,7 @@ impl<'a> Search<'a> {
     ) -> Self {
         Search {
             transposition_table: ttable,
-            history_table: history_table,
+            history_table,
             move_gen: MoveGenerator::new(),
             nodes: 0,
             parameters: parameters.clone(),
@@ -340,12 +340,7 @@ impl<'a> Search<'a> {
 
         // sort moves by MVV/LVA
         let sorted_moves = move_list.iter().sorted_by_cached_key(|mv| {
-            Evaluation::score_move_for_ordering(
-                board.side_to_move(),
-                mv,
-                &None,
-                &self.history_table,
-            )
+            Evaluation::score_move_for_ordering(board.side_to_move(), mv, &None, self.history_table)
         });
 
         // initialize best move and best score
@@ -463,12 +458,7 @@ impl<'a> Search<'a> {
         }
 
         let sorted_moves = captures.into_iter().sorted_by_cached_key(|mv| {
-            Evaluation::score_move_for_ordering(
-                board.side_to_move(),
-                mv,
-                &None,
-                &self.history_table,
-            )
+            Evaluation::score_move_for_ordering(board.side_to_move(), mv, &None, self.history_table)
         });
         let mut best = standing_eval;
 
@@ -511,7 +501,6 @@ mod tests {
 
     use crate::{
         evaluation::Evaluation,
-        history_table::{self, HistoryTable},
         score::{Score, ScoreType},
         search::{Search, SearchParameters},
         ttable::TranspositionTable,
