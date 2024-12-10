@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Dec 09 2024
+ * Last Modified: Tue Dec 10 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -109,7 +109,10 @@ mod tests {
         square::Square,
     };
 
-    use crate::{evaluation::Evaluation, score::Score};
+    use crate::{
+        evaluation::Evaluation,
+        score::{Score, ScoreType},
+    };
 
     #[test]
     fn score_moves() {
@@ -158,5 +161,45 @@ mod tests {
             -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
             Score::new(32704)
         );
+    }
+
+    #[test]
+    fn quiets_score_lower_than_captures() {
+        let from = Square::from_square_index(0);
+        let to = Square::from_square_index(1);
+        let mut mv = Move::new(
+            &from,
+            &to,
+            moves::MoveDescriptor::None,
+            Piece::Queen,
+            Some(Piece::Pawn),
+            None,
+        );
+        let side = Side::Black;
+        let mut history_table = Default::default();
+        // note that these scores are for ordering, so they are negated
+        assert_eq!(
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
+            Score::new(32_701)
+        );
+
+        mv = Move::new(
+            &from,
+            &to,
+            moves::MoveDescriptor::None,
+            Piece::Rook,
+            None,
+            None,
+        );
+
+        history_table.update(
+            Side::Black,
+            mv.piece(),
+            to.to_square_index(),
+            ScoreType::MAX,
+        );
+
+        let score_bonus = history_table.get(Side::Black, mv.piece(), to.to_square_index());
+        assert_eq!(score_bonus, Score::new(32_600));
     }
 }

@@ -21,10 +21,9 @@ impl HistoryTable {
     pub(crate) fn update(&mut self, side: Side, piece: Piece, square: u8, bonus: ScoreType) {
         assert!(side != Side::Both, "Side cannot be Both");
         let current_score = self.table[side as usize][piece as usize][square as usize];
-        let clamped_bonus = (current_score.0 + bonus).clamp(-Score::MAX_HISTORY, Score::MAX_HISTORY);
-        // history gravity formula <https://www.chessprogramming.org/History_Heuristic>
-        let bonus = clamped_bonus - current_score.0 * clamped_bonus.abs() / Score::MAX_HISTORY;
-        self.table[side as usize][piece as usize][square as usize] += bonus;
+        let clamped_bonus =
+            (current_score.0 + bonus).clamp(-Score::MAX_HISTORY, Score::MAX_HISTORY);
+        self.table[side as usize][piece as usize][square as usize] = Score::new(clamped_bonus);
     }
 
     pub(crate) fn clear(&mut self) {
@@ -75,9 +74,9 @@ mod tests {
         let piece = Piece::Pawn;
         let square = Squares::A1;
         let score = Score::new(37);
-        history_table.update(side, piece, square, score);
+        history_table.update(side, piece, square, score.0);
         assert_eq!(history_table.get(side, piece, square), score);
-        history_table.update(side, piece, square, score);
+        history_table.update(side, piece, square, score.0);
         assert_eq!(history_table.get(side, piece, square), score + score);
     }
 }
