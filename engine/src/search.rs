@@ -391,7 +391,7 @@ impl<'a> Search<'a> {
                     // update history table for quiets
                     if mv.is_quiet() {
                         // calculate history bonus
-                        let bonus = 20 * depth - 15;
+                        let bonus = 8 * depth - 4;
                         self.history_table
                             .update(board.side_to_move(), mv.piece(), mv.to(), bonus);
                     }

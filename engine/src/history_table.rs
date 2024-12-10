@@ -1,4 +1,8 @@
-use chess::{definitions::NumberOf, pieces::Piece, side::Side};
+use chess::{
+    definitions::NumberOf,
+    pieces::{Piece, PIECE_NAMES},
+    side::Side,
+};
 
 use crate::score::{Score, ScoreType};
 
@@ -23,8 +27,9 @@ impl HistoryTable {
         let clamped_bonus = bonus.clamp(-Score::MAX_HISTORY, Score::MAX_HISTORY);
         let current_value = self.table[side as usize][piece as usize][square as usize];
         // history gravity formula
-        self.table[side as usize][piece as usize][square as usize] +=
-            clamped_bonus - current_value.0 * clamped_bonus.abs() / Score::MAX_HISTORY;
+        let new_value = current_value.0 + clamped_bonus
+            - current_value.0 * clamped_bonus.abs() / Score::MAX_HISTORY;
+        self.table[side as usize][piece as usize][square as usize] = Score(new_value);
     }
 
     pub(crate) fn clear(&mut self) {
