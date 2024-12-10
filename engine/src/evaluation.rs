@@ -104,6 +104,7 @@ mod tests {
     use chess::{
         moves::{self, Move},
         pieces::{Piece, ALL_PIECES, PIECE_SHORT_NAMES},
+        side::Side,
         square::Square,
     };
 

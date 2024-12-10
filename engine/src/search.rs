@@ -516,11 +516,12 @@ impl<'a> Search<'a> {
 mod tests {
     use std::time::Duration;
 
-    use chess::board::Board;
+    use chess::{board::Board, pieces::ALL_PIECES};
 
     use crate::{
+        evaluation::Evaluation,
         history_table::{self, HistoryTable},
-        score::Score,
+        score::{Score, ScoreType},
         search::{Search, SearchParameters},
         ttable::TranspositionTable,
     };
@@ -625,5 +626,81 @@ mod tests {
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
+    }
+
+    const TEST_FENS: [&str; 25] = [
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+        "4k3/8/8/8/8/8/8/4K2R w K - 0 1",
+        "4k3/8/8/8/8/8/8/R3K3 w Q - 0 1",
+        "4k2r/8/8/8/8/8/8/4K3 w k - 0 1",
+        "r3k3/8/8/8/8/8/8/4K3 w q - 0 1",
+        "4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
+        "r3k2r/8/8/8/8/8/8/4K3 w kq - 0 1",
+        "8/8/8/8/8/8/6k1/4K2R w K - 0 1",
+        "8/8/8/8/8/8/1k6/R3K3 w Q - 0 1",
+        "4k2r/6K1/8/8/8/8/8/8 w k - 0 1",
+        "r3k3/1K6/8/8/8/8/8/8 w q - 0 1",
+        "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
+        "r3k2r/8/8/8/8/8/8/1R2K2R w Kkq - 0 1",
+        "r3k2r/8/8/8/8/8/8/2R1K2R w Kkq - 0 1",
+        "r3k2r/8/8/8/8/8/8/R3K1R1 w Qkq - 0 1",
+        "1r2k2r/8/8/8/8/8/8/R3K2R w KQk - 0 1",
+        "2r1k2r/8/8/8/8/8/8/R3K2R w KQk - 0 1",
+        "r3k1r1/8/8/8/8/8/8/R3K2R w KQq - 0 1",
+        "4k3/8/8/8/8/8/8/4K2R b K - 0 1",
+        "4k3/8/8/8/8/8/8/R3K3 b Q - 0 1",
+        "4k2r/8/8/8/8/8/8/4K3 b k - 0 1",
+        "r3k3/8/8/8/8/8/8/4K3 b q - 0 1",
+        "4k3/8/8/8/8/8/8/R3K2R b KQ - 0 1",
+        "r3k2r/8/8/8/8/8/8/4K3 b kq - 0 1",
+    ];
+
+    #[test]
+    fn quiets_ordered_after_captures() {
+        let config = SearchParameters {
+            max_depth: 6,
+            ..Default::default()
+        };
+
+        let mut min_mvv_lva = ScoreType::MAX;
+        let mut max_mvv_lva = ScoreType::MIN;
+        for capturing in ALL_PIECES {
+            for captured in ALL_PIECES.iter().filter(|p| !p.is_king() && !p.is_none()) {
+                let mvv_lva = Evaluation::mvv_lva(*captured, capturing);
+                if mvv_lva < min_mvv_lva {
+                    min_mvv_lva = mvv_lva;
+                }
+                if mvv_lva > max_mvv_lva {
+                    max_mvv_lva = mvv_lva;
+                }
+            }
+        }
+
+        for fen in TEST_FENS {
+            let mut board = Board::from_fen(fen).unwrap();
+
+            let mut ttable = Default::default();
+            let mut history_table = Default::default();
+            let mut search = Search::new(&config, &mut ttable, &mut history_table);
+            let res = search.search(&mut board, None);
+
+            assert!(res.best_move.is_some());
+
+            let side = board.side_to_move();
+            let mut max_history = Score::new(ScoreType::MIN);
+            for piece in ALL_PIECES {
+                for square in 0..64 {
+                    let score = history_table.get(side, piece, square);
+                    if score > max_history {
+                        max_history = score;
+                    }
+                }
+            }
+
+            println!("max history: {:5}", max_history.0);
+            println!("min/max mvv-lva: {}, {}", min_mvv_lva, max_mvv_lva);
+            assert!(max_history.0 < min_mvv_lva);
+        }
     }
 }
