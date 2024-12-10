@@ -82,8 +82,11 @@ impl Evaluation {
         -score
     }
 
-    fn mvv_lva(captured: Piece, capturing: Piece) -> ScoreType {
-        (25 * Evaluation::piece_value(captured) - Evaluation::piece_value(capturing)) << 8
+    pub(crate) fn mvv_lva(captured: Piece, capturing: Piece) -> ScoreType {
+        let can_capture = captured != Piece::King && captured != Piece::None;
+        can_capture as ScoreType
+            * (25 * Evaluation::piece_value(captured) - Evaluation::piece_value(capturing))
+            << 8
     }
 
     pub(crate) fn piece_value(piece: Piece) -> ScoreType {
