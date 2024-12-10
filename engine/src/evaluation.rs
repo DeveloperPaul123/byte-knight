@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Dec 09 2024
+ * Last Modified: Tue Dec 10 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -69,16 +69,15 @@ impl Evaluation {
         // MVV-LVA for captures
         if mv.is_en_passant_capture() || mv.captured_piece().is_some() {
             // safe to unwrap because we know it's a capture
-            // TODO: Tune/adjust the victim multiplier. Roughly we scale so that PxQ is worth the most
-            // max score is 30 - 1 = 29
-            // min score = PxQ = 6 - 5 = 1
-            score += 6 * Evaluation::piece_value(mv.captured_piece().unwrap())
-                - Evaluation::piece_value(mv.piece())
-                + 32_700;
+            score += Self::mvv_lva(mv.captured_piece().unwrap(), mv.piece());
         }
 
         // negate the score to get the best move first
         -score
+    }
+
+    fn mvv_lva(captured: Piece, capturing: Piece) -> ScoreType {
+        (25 * Evaluation::piece_value(captured) - Evaluation::piece_value(capturing)) << 8
     }
 
     pub(crate) fn piece_value(piece: Piece) -> ScoreType {
@@ -98,11 +97,42 @@ impl Evaluation {
 mod tests {
     use chess::{
         moves::{self, Move},
-        pieces::Piece,
+        pieces::{Piece, PIECE_SHORT_NAMES},
         square::Square,
     };
 
-    use crate::{evaluation::Evaluation, score::Score};
+    use crate::{
+        evaluation::Evaluation,
+        score::{Score, ScoreType},
+    };
+
+    #[test]
+    fn mvv_lva_scaling() {
+        for captured in &[
+            Piece::Pawn,
+            Piece::Knight,
+            Piece::Bishop,
+            Piece::Rook,
+            Piece::Queen,
+        ] {
+            for capturing in &[
+                Piece::Pawn,
+                Piece::Knight,
+                Piece::Bishop,
+                Piece::Rook,
+                Piece::Queen,
+            ] {
+                let score = Evaluation::mvv_lva(*captured, *capturing);
+                println!(
+                    "{} x {} -> {}",
+                    PIECE_SHORT_NAMES[*capturing as usize],
+                    PIECE_SHORT_NAMES[*captured as usize],
+                    score
+                );
+                assert!((score as i32) < (ScoreType::MIN as i32).abs());
+            }
+        }
+    }
 
     #[test]
     fn score_moves() {
@@ -120,7 +150,10 @@ mod tests {
         // note that these scores are for ordering, so they are negated
         assert_eq!(
             -Evaluation::score_move_for_ordering(&mv, &None),
-            Score::new(32729)
+            Score::new(Evaluation::mvv_lva(
+                mv.captured_piece().unwrap(),
+                mv.piece()
+            ))
         );
 
         mv = Move::new(
@@ -134,7 +167,10 @@ mod tests {
 
         assert_eq!(
             -Evaluation::score_move_for_ordering(&mv, &None),
-            Score::new(32721)
+            Score::new(Evaluation::mvv_lva(
+                mv.captured_piece().unwrap(),
+                mv.piece()
+            ))
         );
 
         mv = Move::new(
@@ -148,7 +184,10 @@ mod tests {
 
         assert_eq!(
             -Evaluation::score_move_for_ordering(&mv, &None),
-            Score::new(32704)
+            Score::new(Evaluation::mvv_lva(
+                mv.captured_piece().unwrap(),
+                mv.piece()
+            ))
         );
     }
 }
