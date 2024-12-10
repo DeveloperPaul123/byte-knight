@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Dec 02 2024
+ * Last Modified: Tue Dec 10 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -391,7 +391,7 @@ impl<'a> Search<'a> {
                     // update history table for quiets
                     if mv.is_quiet() {
                         // calculate history bonus
-                        let bonus = (depth as ScoreType).pow(2);
+                        let bonus = 20 * depth - 15;
                         self.history_table
                             .update(board.side_to_move(), mv.piece(), mv.to(), bonus);
                     }

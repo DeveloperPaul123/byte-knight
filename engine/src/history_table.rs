@@ -20,10 +20,11 @@ impl HistoryTable {
 
     pub(crate) fn update(&mut self, side: Side, piece: Piece, square: u8, bonus: ScoreType) {
         assert!(side != Side::Both, "Side cannot be Both");
-        let current_score = self.table[side as usize][piece as usize][square as usize];
-        let clamped_bonus =
-            (current_score.0 + bonus).clamp(-Score::MAX_HISTORY, Score::MAX_HISTORY);
-        self.table[side as usize][piece as usize][square as usize] = Score::new(clamped_bonus);
+        let clamped_bonus = bonus.clamp(-Score::MAX_HISTORY, Score::MAX_HISTORY);
+        let current_value = self.table[side as usize][piece as usize][square as usize];
+        // history gravity formula
+        self.table[side as usize][piece as usize][square as usize] +=
+            clamped_bonus - current_value.0 * clamped_bonus.abs() / Score::MAX_HISTORY;
     }
 
     pub(crate) fn clear(&mut self) {
