@@ -113,6 +113,7 @@ mod tests {
     use chess::{
         moves::{self, Move},
         pieces::{Piece, PIECE_SHORT_NAMES},
+        side::Side,
         square::Square,
     };
 
@@ -165,7 +166,7 @@ mod tests {
         let history_table = Default::default();
         // note that these scores are for ordering, so they are negated
         assert_eq!(
-            -Evaluation::score_move_for_ordering(&mv, &None),
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
             Score::new(Evaluation::mvv_lva(
                 mv.captured_piece().unwrap(),
                 mv.piece()
@@ -182,7 +183,7 @@ mod tests {
         );
 
         assert_eq!(
-            -Evaluation::score_move_for_ordering(&mv, &None),
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
             Score::new(Evaluation::mvv_lva(
                 mv.captured_piece().unwrap(),
                 mv.piece()
@@ -199,7 +200,7 @@ mod tests {
         );
 
         assert_eq!(
-            -Evaluation::score_move_for_ordering(&mv, &None),
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
             Score::new(Evaluation::mvv_lva(
                 mv.captured_piece().unwrap(),
                 mv.piece()
