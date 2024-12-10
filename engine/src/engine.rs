@@ -4,7 +4,7 @@
  * Created Date: Friday, November 15th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Sat Nov 30 2024
+ * Last Modified: Tue Dec 10 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -186,6 +186,11 @@ impl ByteKnight {
                                 tt.size(),
                             )
                             .unwrap();
+                        }
+                    }
+                    EngineCommand::History => {
+                        if let Ok(ht) = self.history_table.lock() {
+                            ht.print_for_side(board.side_to_move());
                         }
                     }
                 },

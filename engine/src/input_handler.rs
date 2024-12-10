@@ -4,7 +4,7 @@
  * Created Date: Monday, November 18th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Nov 29 2024
+ * Last Modified: Tue Dec 10 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -27,6 +27,7 @@ use uci_parser::UciCommand;
 #[derive(Debug)]
 pub(crate) enum EngineCommand {
     HashInfo,
+    History,
 }
 
 impl FromStr for EngineCommand {
@@ -35,6 +36,7 @@ impl FromStr for EngineCommand {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "hash" => Ok(EngineCommand::HashInfo),
+            "history" => Ok(EngineCommand::History),
             _ => Err(anyhow::anyhow!("Invalid engine command")),
         }
     }
