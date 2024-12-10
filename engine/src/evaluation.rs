@@ -72,7 +72,19 @@ impl Evaluation {
         // MVV-LVA for captures
         if mv.is_en_passant_capture() || mv.captured_piece().is_some() {
             // safe to unwrap because we know it's a capture
-            score += Self::mvv_lva(mv.captured_piece().unwrap(), mv.piece());
+            score += Self::mvv_lva(
+                mv.captured_piece().unwrap_or_else(|| {
+                    if mv.is_en_passant_capture() {
+                        Piece::Pawn
+                    } else {
+                        Piece::None
+                    }
+                }),
+                mv.piece(),
+            );
+        } else {
+            // History heuristic for quiet moves
+            score += history_table.get(stm, mv.piece(), mv.to());
         }
 
         // negate the score to get the best move first
