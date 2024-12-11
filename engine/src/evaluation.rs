@@ -83,7 +83,7 @@ impl Evaluation {
         -score
     }
 
-    fn mvv_lva(captured: Piece, capturing: Piece) -> MoveOrderScoreType {
+    pub(crate) fn mvv_lva(captured: Piece, capturing: Piece) -> MoveOrderScoreType {
         let can_capture = captured != Piece::King && captured != Piece::None;
         ((can_capture as MoveOrderScoreType)
             * (25 * Evaluation::piece_value(captured) - Evaluation::piece_value(capturing)))
@@ -146,7 +146,7 @@ mod tests {
         let history_table = Default::default();
         // note that these scores are for ordering, so they are negated
         assert_eq!(
-            -Evaluation::score_move_for_ordering(&mv, &None),
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
             Evaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
         );
 
@@ -160,7 +160,7 @@ mod tests {
         );
 
         assert_eq!(
-            -Evaluation::score_move_for_ordering(&mv, &None),
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
             Evaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
         );
 
@@ -174,7 +174,7 @@ mod tests {
         );
 
         assert_eq!(
-            -Evaluation::score_move_for_ordering(&mv, &None),
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
             Evaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
         );
     }
