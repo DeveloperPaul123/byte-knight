@@ -357,6 +357,8 @@ impl<'a> Search<'a> {
         let mut best_move = None;
 
         // loop through all moves
+        // TODO(PT): Not a fan of this clone() call, but we needed it (for now) for the history malus update later on.
+        // This will likely be a non-issue once we implement a move picker
         for (i, mv) in sorted_moves.clone().enumerate() {
             // make the move
             board.make_move_unchecked(mv).unwrap();
