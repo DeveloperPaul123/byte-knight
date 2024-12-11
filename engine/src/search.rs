@@ -343,7 +343,7 @@ impl<'a> Search<'a> {
             Evaluation::score_move_for_ordering(
                 board.side_to_move(),
                 mv,
-                &None,
+                &tt_entry,
                 &self.history_table,
             )
         });
