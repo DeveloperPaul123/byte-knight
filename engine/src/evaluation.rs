@@ -12,9 +12,10 @@
  *
  */
 
-use chess::{board::Board, moves::Move, pieces::Piece};
+use chess::{board::Board, moves::Move, pieces::Piece, side::Side};
 
 use crate::{
+    history_table,
     psqt::Psqt,
     score::{MoveOrderScoreType, Score},
     ttable::TranspositionTableEntry,
@@ -58,17 +59,22 @@ impl Evaluation {
     ///
     /// The score of the move.
     pub(crate) fn score_move_for_ordering(
+        stm: Side,
         mv: &Move,
         tt_entry: &Option<TranspositionTableEntry>,
+        history_table: &history_table::HistoryTable,
     ) -> MoveOrderScoreType {
         if tt_entry.is_some_and(|tt| *mv == tt.board_move) {
             return MoveOrderScoreType::MIN;
         }
-        let mut score = 0;
 
-        // MVV-LVA for captures
-        if mv.is_en_passant_capture() || mv.captured_piece().is_some() {
-            // safe to unwrap because we know it's a capture
+        let mut score = 0;
+        if mv.is_quiet() {
+            //history heuristic
+            score += history_table.get(stm, mv.piece(), mv.to());
+        } else if mv.is_capture() {
+            // mvv-lva for captures
+            // safe to unwrap the captured piece because we already checked
             score += Self::mvv_lva(mv.captured_piece().unwrap(), mv.piece());
         }
 
@@ -76,7 +82,7 @@ impl Evaluation {
         -score
     }
 
-    fn mvv_lva(captured: Piece, capturing: Piece) -> MoveOrderScoreType {
+    pub(crate) fn mvv_lva(captured: Piece, capturing: Piece) -> MoveOrderScoreType {
         let can_capture = captured != Piece::King && captured != Piece::None;
         ((can_capture as MoveOrderScoreType)
             * (25 * Evaluation::piece_value(captured) - Evaluation::piece_value(capturing)))
@@ -101,6 +107,7 @@ mod tests {
     use chess::{
         moves::{self, Move},
         pieces::{Piece, ALL_PIECES, PIECE_SHORT_NAMES},
+        side::Side,
         square::Square,
     };
 
@@ -134,10 +141,11 @@ mod tests {
             Some(Piece::Queen),
             None,
         );
-
+        let side = Side::Black;
+        let history_table = Default::default();
         // note that these scores are for ordering, so they are negated
         assert_eq!(
-            -Evaluation::score_move_for_ordering(&mv, &None),
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
             Evaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
         );
 
@@ -151,7 +159,7 @@ mod tests {
         );
 
         assert_eq!(
-            -Evaluation::score_move_for_ordering(&mv, &None),
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
             Evaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
         );
 
@@ -165,7 +173,7 @@ mod tests {
         );
 
         assert_eq!(
-            -Evaluation::score_move_for_ordering(&mv, &None),
+            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
             Evaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
         );
     }
