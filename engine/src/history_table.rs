@@ -4,7 +4,7 @@ use chess::{
     side::Side,
 };
 
-use crate::score::MoveOrderScoreType;
+use crate::score::{MoveOrderScoreType, Score};
 
 pub struct HistoryTable {
     table: [[[MoveOrderScoreType; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
@@ -30,7 +30,11 @@ impl HistoryTable {
         bonus: MoveOrderScoreType,
     ) {
         assert!(side != Side::Both, "Side cannot be Both");
-        self.table[side as usize][piece as usize][square as usize] += bonus;
+        let current_value = self.table[side as usize][piece as usize][square as usize];
+        let clamped_bonus = bonus.clamp(-Score::MAX_HISTORY, Score::MAX_HISTORY);
+        let new_value = current_value + clamped_bonus
+            - current_value * clamped_bonus.abs() / Score::MAX_HISTORY;
+        self.table[side as usize][piece as usize][square as usize] = new_value;
     }
 
     pub(crate) fn clear(&mut self) {

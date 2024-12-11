@@ -51,12 +51,12 @@ fn process_epd_file(path: &str, move_generation: &MoveGenerator) {
     lines
         .par_iter()
         .map(|line| {
-            let parts: Vec<&str> = line.split(";").collect();
+            let parts: Vec<&str> = line.split(';').collect();
             let fen = parts[0];
             let mut failures = Vec::new();
             for part in parts.iter().skip(1) {
                 let parts = part.split_whitespace().collect::<Vec<&str>>();
-                let depth = parts[0].replace("D", "").parse::<usize>().unwrap();
+                let depth = parts[0].replace('D', "").parse::<usize>().unwrap();
                 let expected_nodes = parts[1].parse::<u64>().unwrap();
                 let mut board = Board::from_fen(fen).unwrap();
                 let nodes = perft::perft(&mut board, move_generation, depth, false).unwrap();
