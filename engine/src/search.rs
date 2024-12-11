@@ -398,7 +398,7 @@ impl<'a> Search<'a> {
                             mv.to(),
                             bonus as MoveOrderScoreType,
                         );
-                        
+
                         // apply a penalty to all quiets searched so far
                         for mv in sorted_moves.take(i).filter(|mv| mv.is_quiet()) {
                             self.history_table.update(
