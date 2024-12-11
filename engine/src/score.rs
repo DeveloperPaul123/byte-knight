@@ -20,6 +20,7 @@ use std::{
 use uci_parser::UciScore;
 
 pub(crate) type ScoreType = i16;
+pub(crate) type MoveOrderScoreType = i32;
 /// Represents a score in centipawns.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Score(pub ScoreType);

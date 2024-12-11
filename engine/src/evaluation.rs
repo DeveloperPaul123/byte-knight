@@ -16,7 +16,7 @@ use chess::{board::Board, moves::Move, pieces::Piece};
 
 use crate::{
     psqt::Psqt,
-    score::{Score, ScoreType},
+    score::{MoveOrderScoreType, Score},
     ttable::TranspositionTableEntry,
 };
 
@@ -60,11 +60,11 @@ impl Evaluation {
     pub(crate) fn score_move_for_ordering(
         mv: &Move,
         tt_entry: &Option<TranspositionTableEntry>,
-    ) -> Score {
+    ) -> MoveOrderScoreType {
         if tt_entry.is_some_and(|tt| *mv == tt.board_move) {
-            return Score::new(ScoreType::MIN);
+            return MoveOrderScoreType::MIN;
         }
-        let mut score = Score::new(0);
+        let mut score = 0;
 
         // MVV-LVA for captures
         if mv.is_en_passant_capture() || mv.captured_piece().is_some() {
@@ -76,11 +76,14 @@ impl Evaluation {
         -score
     }
 
-    fn mvv_lva(captured: Piece, capturing: Piece) -> ScoreType {
-        (25 * Evaluation::piece_value(captured) - Evaluation::piece_value(capturing)) << 8
+    fn mvv_lva(captured: Piece, capturing: Piece) -> MoveOrderScoreType {
+        let can_capture = captured != Piece::King && captured != Piece::None;
+        ((can_capture as MoveOrderScoreType)
+            * (25 * Evaluation::piece_value(captured) - Evaluation::piece_value(capturing)))
+            << 16
     }
 
-    pub(crate) fn piece_value(piece: Piece) -> ScoreType {
+    pub(crate) fn piece_value(piece: Piece) -> MoveOrderScoreType {
         match piece {
             Piece::King => 0,
             Piece::Queen => 5,
@@ -97,39 +100,24 @@ impl Evaluation {
 mod tests {
     use chess::{
         moves::{self, Move},
-        pieces::{Piece, PIECE_SHORT_NAMES},
+        pieces::{Piece, ALL_PIECES, PIECE_SHORT_NAMES},
         square::Square,
     };
 
-    use crate::{
-        evaluation::Evaluation,
-        score::{Score, ScoreType},
-    };
+    use crate::{evaluation::Evaluation, score::MoveOrderScoreType};
 
     #[test]
     fn mvv_lva_scaling() {
-        for captured in &[
-            Piece::Pawn,
-            Piece::Knight,
-            Piece::Bishop,
-            Piece::Rook,
-            Piece::Queen,
-        ] {
-            for capturing in &[
-                Piece::Pawn,
-                Piece::Knight,
-                Piece::Bishop,
-                Piece::Rook,
-                Piece::Queen,
-            ] {
-                let score = Evaluation::mvv_lva(*captured, *capturing);
+        for captured in ALL_PIECES {
+            for capturing in ALL_PIECES {
+                let score = Evaluation::mvv_lva(captured, capturing);
                 println!(
                     "{} x {} -> {}",
-                    PIECE_SHORT_NAMES[*capturing as usize],
-                    PIECE_SHORT_NAMES[*captured as usize],
+                    PIECE_SHORT_NAMES[capturing as usize],
+                    PIECE_SHORT_NAMES[captured as usize],
                     score
                 );
-                assert!((score as i32) < (ScoreType::MIN as i32).abs());
+                assert!((score as i64) < (MoveOrderScoreType::MIN as i64).abs());
             }
         }
     }
@@ -150,10 +138,7 @@ mod tests {
         // note that these scores are for ordering, so they are negated
         assert_eq!(
             -Evaluation::score_move_for_ordering(&mv, &None),
-            Score::new(Evaluation::mvv_lva(
-                mv.captured_piece().unwrap(),
-                mv.piece()
-            ))
+            Evaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
         );
 
         mv = Move::new(
@@ -167,10 +152,7 @@ mod tests {
 
         assert_eq!(
             -Evaluation::score_move_for_ordering(&mv, &None),
-            Score::new(Evaluation::mvv_lva(
-                mv.captured_piece().unwrap(),
-                mv.piece()
-            ))
+            Evaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
         );
 
         mv = Move::new(
@@ -184,10 +166,7 @@ mod tests {
 
         assert_eq!(
             -Evaluation::score_move_for_ordering(&mv, &None),
-            Score::new(Evaluation::mvv_lva(
-                mv.captured_piece().unwrap(),
-                mv.piece()
-            ))
+            Evaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
         );
     }
 }
