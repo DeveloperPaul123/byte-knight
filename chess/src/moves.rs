@@ -280,6 +280,10 @@ impl Move {
             && !self.is_promotion()
     }
 
+    pub fn is_capture(&self) -> bool {
+        self.captured_piece_value() != Piece::None as u32 || self.is_en_passant_capture()
+    }
+
     fn captured_piece_value(&self) -> u32 {
         (self.move_info >> MOVE_INFO_CAPTURED_PIECE_SHIFT) & 0b111
     }
