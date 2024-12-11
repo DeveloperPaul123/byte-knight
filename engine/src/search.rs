@@ -391,9 +391,13 @@ impl<'a> Search<'a> {
                     // update history table for quiets
                     if mv.is_quiet() {
                         // calculate history bonus
-                        let bonus = (depth * depth) as MoveOrderScoreType;
-                        self.history_table
-                            .update(board.side_to_move(), mv.piece(), mv.to(), bonus);
+                        let bonus = 300 * depth - 250;
+                        self.history_table.update(
+                            board.side_to_move(),
+                            mv.piece(),
+                            mv.to(),
+                            bonus as MoveOrderScoreType,
+                        );
                     }
 
                     break;
