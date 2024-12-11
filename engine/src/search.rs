@@ -22,7 +22,7 @@ use std::{
 };
 
 use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
-use itertools::{sorted, Itertools};
+use itertools::{Itertools};
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
 use crate::{
