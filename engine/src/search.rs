@@ -21,19 +21,14 @@ use std::{
     time::{Duration, Instant},
 };
 
-use chess::{
-    board::Board,
-    move_generation::MoveGenerator,
-    move_list::MoveList,
-    moves::Move,
-};
+use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
 use itertools::Itertools;
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
 use crate::{
     evaluation::Evaluation,
     history_table::HistoryTable,
-    score::{Score, ScoreType},
+    score::{MoveOrderScoreType, Score, ScoreType},
     ttable::{self, TranspositionTableEntry},
 };
 use ttable::TranspositionTable;
@@ -396,13 +391,9 @@ impl<'a> Search<'a> {
                     // update history table for quiets
                     if mv.is_quiet() {
                         // calculate history bonus
-                        let bonus = (depth as ScoreType).pow(2);
-                        self.history_table.update(
-                            board.side_to_move(),
-                            mv.piece(),
-                            mv.to(),
-                            Score::new(bonus),
-                        );
+                        let bonus = (depth * depth) as MoveOrderScoreType;
+                        self.history_table
+                            .update(board.side_to_move(), mv.piece(), mv.to(), bonus);
                     }
 
                     break;
