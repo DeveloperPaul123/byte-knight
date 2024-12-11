@@ -517,6 +517,8 @@ mod tests {
         ttable::TranspositionTable,
     };
 
+    use super::MoveOrderScoreType;
+
     #[test]
     fn white_mate_in_1() {
         let fen = "k7/8/KQ6/8/8/8/8/8 w - - 0 1";
@@ -654,8 +656,8 @@ mod tests {
             ..Default::default()
         };
 
-        let mut min_mvv_lva = ScoreType::MAX;
-        let mut max_mvv_lva = ScoreType::MIN;
+        let mut min_mvv_lva = MoveOrderScoreType::MAX;
+        let mut max_mvv_lva = MoveOrderScoreType::MIN;
         for capturing in ALL_PIECES {
             for captured in ALL_PIECES.iter().filter(|p| !p.is_king() && !p.is_none()) {
                 let mvv_lva = Evaluation::mvv_lva(*captured, capturing);
@@ -679,7 +681,7 @@ mod tests {
             assert!(res.best_move.is_some());
 
             let side = board.side_to_move();
-            let mut max_history = Score::new(ScoreType::MIN);
+            let mut max_history = MoveOrderScoreType::MIN;
             for piece in ALL_PIECES {
                 for square in 0..64 {
                     let score = history_table.get(side, piece, square);
@@ -689,9 +691,9 @@ mod tests {
                 }
             }
 
-            println!("max history: {:5}", max_history.0);
+            println!("max history: {:5}", max_history);
             println!("min/max mvv-lva: {}, {}", min_mvv_lva, max_mvv_lva);
-            assert!(max_history.0 < min_mvv_lva);
+            assert!(max_history < min_mvv_lva);
         }
     }
 }
