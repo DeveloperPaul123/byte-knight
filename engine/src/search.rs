@@ -22,7 +22,7 @@ use std::{
 };
 
 use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
-use itertools::Itertools;
+use itertools::{sorted, Itertools};
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
 use crate::{
@@ -357,7 +357,7 @@ impl<'a> Search<'a> {
         let mut best_move = None;
 
         // loop through all moves
-        for (i, mv) in sorted_moves.enumerate() {
+        for (i, mv) in sorted_moves.clone().enumerate() {
             // make the move
             board.make_move_unchecked(mv).unwrap();
             let score : Score =
@@ -398,8 +398,17 @@ impl<'a> Search<'a> {
                             mv.to(),
                             bonus as MoveOrderScoreType,
                         );
+                        
+                        // apply a penalty to all quiets searched so far
+                        for mv in sorted_moves.take(i).filter(|mv| mv.is_quiet()) {
+                            self.history_table.update(
+                                board.side_to_move(),
+                                mv.piece(),
+                                mv.to(),
+                                -bonus as MoveOrderScoreType,
+                            );
+                        }
                     }
-
                     break;
                 }
             }
