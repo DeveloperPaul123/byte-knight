@@ -67,13 +67,12 @@ impl Evaluation {
         if tt_entry.is_some_and(|tt| *mv == tt.board_move) {
             return MoveOrderScoreType::MIN;
         }
-        let mut score = 0;
 
-        // MVV-LVA for captures
+        let mut score = 0;
         if mv.is_quiet() {
             //history heuristic
-            score += history_table.get(stm, mv.piece(), mv.from());
-        } else if mv.is_en_passant_capture() || mv.captured_piece().is_some() {
+            score += history_table.get(stm, mv.piece(), mv.to());
+        } else if mv.is_capture() {
             // mvv-lva for captures
             // safe to unwrap the captured piece because we already checked
             score += Self::mvv_lva(mv.captured_piece().unwrap(), mv.piece());
