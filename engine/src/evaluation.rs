@@ -12,7 +12,7 @@
  *
  */
 
-use chess::{board::Board, definitions::NumberOf, moves::Move, pieces::Piece, side::Side};
+use chess::{board::Board, moves::Move, pieces::Piece, side::Side};
 
 use crate::{
     history_table,
@@ -70,8 +70,12 @@ impl Evaluation {
         let mut score = 0;
 
         // MVV-LVA for captures
-        if mv.is_en_passant_capture() || mv.captured_piece().is_some() {
-            // safe to unwrap because we know it's a capture
+        if mv.is_quiet() {
+            //history heuristic
+            score += history_table.get(stm, mv.piece(), mv.from());
+        } else if mv.is_en_passant_capture() || mv.captured_piece().is_some() {
+            // mvv-lva for captures
+            // safe to unwrap the captured piece because we already checked
             score += Self::mvv_lva(mv.captured_piece().unwrap(), mv.piece());
         }
 
