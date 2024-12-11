@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 14th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Dec 02 2024
+ * Last Modified: Tue Dec 10 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -30,8 +30,16 @@ impl Score {
     pub const MATE: Score = Score(ScoreType::MAX as ScoreType);
     pub const INF: Score = Score(ScoreType::MAX as ScoreType);
 
+    // Max/min score for history heuristic
+    // Must be lower then the minimum score for captures in MVV_LVA
+    pub const MAX_HISTORY: MoveOrderScoreType = 16_384;
+
     pub fn new(score: ScoreType) -> Score {
         Score(score)
+    }
+
+    pub fn clamp(&self, min: ScoreType, max: ScoreType) -> Score {
+        Score(self.0.clamp(min, max))
     }
 }
 

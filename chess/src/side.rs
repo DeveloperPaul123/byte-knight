@@ -4,13 +4,15 @@
  * Created Date: Monday, November 25th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 26 2024
+ * Last Modified: Tue Dec 10 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
  *
  */
+
+use std::fmt::Display;
 
 /// Represents a side to play in chess.
 #[repr(usize)]
@@ -59,6 +61,16 @@ impl Side {
 impl Default for Side {
     fn default() -> Self {
         Self::White
+    }
+}
+
+impl Display for Side {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::White => write!(f, "W"),
+            Self::Black => write!(f, "B"),
+            Self::Both => write!(f, "W|B"),
+        }
     }
 }
 

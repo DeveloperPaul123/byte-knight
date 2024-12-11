@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Dec 10 2024
+ * Last Modified: Wed Dec 11 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -27,7 +27,8 @@ use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
 use crate::{
     evaluation::Evaluation,
-    score::{Score, ScoreType},
+    history_table::HistoryTable,
+    score::{MoveOrderScoreType, Score, ScoreType},
     ttable::{self, TranspositionTableEntry},
 };
 use ttable::TranspositionTable;
@@ -138,6 +139,7 @@ impl Display for SearchParameters {
 
 pub struct Search<'search_lifetime> {
     transposition_table: &'search_lifetime mut TranspositionTable,
+    history_table: &'search_lifetime mut HistoryTable,
     move_gen: MoveGenerator,
     nodes: u64,
     parameters: SearchParameters,
@@ -146,9 +148,14 @@ pub struct Search<'search_lifetime> {
 }
 
 impl<'a> Search<'a> {
-    pub fn new(parameters: &SearchParameters, ttable: &'a mut TranspositionTable) -> Self {
+    pub fn new(
+        parameters: &SearchParameters,
+        ttable: &'a mut TranspositionTable,
+        history_table: &'a mut HistoryTable,
+    ) -> Self {
         Search {
             transposition_table: ttable,
+            history_table,
             move_gen: MoveGenerator::new(),
             nodes: 0,
             parameters: parameters.clone(),
@@ -332,9 +339,14 @@ impl<'a> Search<'a> {
         }
 
         // sort moves by MVV/LVA
-        let sorted_moves = move_list
-            .iter()
-            .sorted_by_cached_key(|mv| Evaluation::score_move_for_ordering(mv, &tt_entry));
+        let sorted_moves = move_list.iter().sorted_by_cached_key(|mv| {
+            Evaluation::score_move_for_ordering(
+                board.side_to_move(),
+                mv,
+                &tt_entry,
+                self.history_table,
+            )
+        });
 
         // initialize best move and best score
         // we ensured we have moves earlier
@@ -376,6 +388,14 @@ impl<'a> Search<'a> {
                 // update alpha
                 alpha_use = alpha_use.max(best_score);
                 if alpha_use >= beta_use {
+                    // update history table for quiets
+                    if mv.is_quiet() {
+                        // calculate history bonus
+                        let bonus = (depth * depth) as MoveOrderScoreType;
+                        self.history_table
+                            .update(board.side_to_move(), mv.piece(), mv.to(), bonus);
+                    }
+
                     break;
                 }
             }
@@ -442,9 +462,9 @@ impl<'a> Search<'a> {
             return standing_eval;
         }
 
-        let sorted_moves = captures
-            .into_iter()
-            .sorted_by_cached_key(|mv| Evaluation::score_move_for_ordering(mv, &None));
+        let sorted_moves = captures.into_iter().sorted_by_cached_key(|mv| {
+            Evaluation::score_move_for_ordering(board.side_to_move(), mv, &None, self.history_table)
+        });
         let mut best = standing_eval;
 
         for mv in sorted_moves {
@@ -482,13 +502,16 @@ impl<'a> Search<'a> {
 mod tests {
     use std::time::Duration;
 
-    use chess::board::Board;
+    use chess::{board::Board, pieces::ALL_PIECES};
 
     use crate::{
+        evaluation::Evaluation,
         score::Score,
         search::{Search, SearchParameters},
         ttable::TranspositionTable,
     };
+
+    use super::MoveOrderScoreType;
 
     #[test]
     fn white_mate_in_1() {
@@ -500,7 +523,8 @@ mod tests {
         };
 
         let mut ttable = TranspositionTable::default();
-        let mut search = Search::new(&config, &mut ttable);
+        let mut history_table = Default::default();
+        let mut search = Search::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board.clone(), None);
         // b6a7
         assert_eq!(
@@ -518,8 +542,9 @@ mod tests {
             ..Default::default()
         };
 
-        let mut ttable = TranspositionTable::default();
-        let mut search = Search::new(&config, &mut ttable);
+        let mut ttable = Default::default();
+        let mut history_table = Default::default();
+        let mut search = Search::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
 
         assert_eq!(res.best_move.unwrap().to_long_algebraic(), "b8a8")
@@ -531,8 +556,9 @@ mod tests {
         let mut board = Board::from_fen(fen).unwrap();
         let config = SearchParameters::default();
 
-        let mut ttable = TranspositionTable::default();
-        let mut search = Search::new(&config, &mut ttable);
+        let mut ttable = Default::default();
+        let mut history_table = Default::default();
+        let mut search = Search::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_none());
         assert_eq!(res.score, Score::DRAW);
@@ -547,8 +573,9 @@ mod tests {
             ..Default::default()
         };
 
-        let mut ttable = TranspositionTable::default();
-        let mut search = Search::new(&config, &mut ttable);
+        let mut ttable = Default::default();
+        let mut history_table = Default::default();
+        let mut search = Search::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
 
         assert!(res.best_move.is_some());
@@ -563,8 +590,9 @@ mod tests {
             ..Default::default()
         };
 
-        let mut ttable = TranspositionTable::default();
-        let mut search = Search::new(&config, &mut ttable);
+        let mut ttable = Default::default();
+        let mut history_table = Default::default();
+        let mut search = Search::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -579,10 +607,87 @@ mod tests {
             ..Default::default()
         };
 
-        let mut ttable = TranspositionTable::default();
-        let mut search = Search::new(&config, &mut ttable);
+        let mut ttable = Default::default();
+        let mut history_table = Default::default();
+        let mut search = Search::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
+    }
+
+    const TEST_FENS: [&str; 25] = [
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+        "4k3/8/8/8/8/8/8/4K2R w K - 0 1",
+        "4k3/8/8/8/8/8/8/R3K3 w Q - 0 1",
+        "4k2r/8/8/8/8/8/8/4K3 w k - 0 1",
+        "r3k3/8/8/8/8/8/8/4K3 w q - 0 1",
+        "4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
+        "r3k2r/8/8/8/8/8/8/4K3 w kq - 0 1",
+        "8/8/8/8/8/8/6k1/4K2R w K - 0 1",
+        "8/8/8/8/8/8/1k6/R3K3 w Q - 0 1",
+        "4k2r/6K1/8/8/8/8/8/8 w k - 0 1",
+        "r3k3/1K6/8/8/8/8/8/8 w q - 0 1",
+        "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
+        "r3k2r/8/8/8/8/8/8/1R2K2R w Kkq - 0 1",
+        "r3k2r/8/8/8/8/8/8/2R1K2R w Kkq - 0 1",
+        "r3k2r/8/8/8/8/8/8/R3K1R1 w Qkq - 0 1",
+        "1r2k2r/8/8/8/8/8/8/R3K2R w KQk - 0 1",
+        "2r1k2r/8/8/8/8/8/8/R3K2R w KQk - 0 1",
+        "r3k1r1/8/8/8/8/8/8/R3K2R w KQq - 0 1",
+        "4k3/8/8/8/8/8/8/4K2R b K - 0 1",
+        "4k3/8/8/8/8/8/8/R3K3 b Q - 0 1",
+        "4k2r/8/8/8/8/8/8/4K3 b k - 0 1",
+        "r3k3/8/8/8/8/8/8/4K3 b q - 0 1",
+        "4k3/8/8/8/8/8/8/R3K2R b KQ - 0 1",
+        "r3k2r/8/8/8/8/8/8/4K3 b kq - 0 1",
+    ];
+
+    #[test]
+    fn quiets_ordered_after_captures() {
+        let config = SearchParameters {
+            max_depth: 6,
+            ..Default::default()
+        };
+
+        let mut min_mvv_lva = MoveOrderScoreType::MAX;
+        let mut max_mvv_lva = MoveOrderScoreType::MIN;
+        for capturing in ALL_PIECES {
+            for captured in ALL_PIECES.iter().filter(|p| !p.is_king() && !p.is_none()) {
+                let mvv_lva = Evaluation::mvv_lva(*captured, capturing);
+                if mvv_lva < min_mvv_lva {
+                    min_mvv_lva = mvv_lva;
+                }
+                if mvv_lva > max_mvv_lva {
+                    max_mvv_lva = mvv_lva;
+                }
+            }
+        }
+
+        for fen in TEST_FENS {
+            let mut board = Board::from_fen(fen).unwrap();
+
+            let mut ttable = Default::default();
+            let mut history_table = Default::default();
+            let mut search = Search::new(&config, &mut ttable, &mut history_table);
+            let res = search.search(&mut board, None);
+
+            assert!(res.best_move.is_some());
+
+            let side = board.side_to_move();
+            let mut max_history = MoveOrderScoreType::MIN;
+            for piece in ALL_PIECES {
+                for square in 0..64 {
+                    let score = history_table.get(side, piece, square);
+                    if score > max_history {
+                        max_history = score;
+                    }
+                }
+            }
+
+            println!("max history: {:5}", max_history);
+            println!("min/max mvv-lva: {}, {}", min_mvv_lva, max_mvv_lva);
+            assert!(max_history < min_mvv_lva);
+        }
     }
 }

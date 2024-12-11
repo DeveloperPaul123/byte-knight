@@ -4,7 +4,7 @@
  * Created Date: Monday, August 19th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Nov 20 2024
+ * Last Modified: Tue Dec 10 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -273,10 +273,25 @@ impl Move {
         }
     }
 
+    pub fn is_quiet(&self) -> bool {
+        let mv_desc = self.move_descriptor();
+        mv_desc != MoveDescriptor::EnPassantCapture
+            && self.captured_piece_value() == Piece::None as u32
+            && !self.is_promotion()
+    }
+
+    pub fn is_capture(&self) -> bool {
+        self.captured_piece_value() != Piece::None as u32 || self.is_en_passant_capture()
+    }
+
+    fn captured_piece_value(&self) -> u32 {
+        (self.move_info >> MOVE_INFO_CAPTURED_PIECE_SHIFT) & 0b111
+    }
+
     /// Returns the captured [`Piece`] if any. Can be `None`.
     pub fn captured_piece(&self) -> Option<Piece> {
         // shift right and then mask 3 bits
-        let piece_value = (self.move_info >> MOVE_INFO_CAPTURED_PIECE_SHIFT) & 0b111_u32;
+        let piece_value = self.captured_piece_value();
         if piece_value == Piece::None as u32 {
             return None;
         }
@@ -332,6 +347,7 @@ mod tests {
             assert_eq!(m.to(), 10);
             assert!(!m.is_promotion());
             assert_eq!(m.captured_piece(), None);
+            assert!(m.is_quiet());
             assert_eq!(m.piece(), Piece::Pawn);
         }
         {
@@ -349,6 +365,7 @@ mod tests {
             assert_eq!(m.to(), 56);
             assert!(!m.is_promotion());
             assert_eq!(m.captured_piece().unwrap(), Piece::Rook);
+            assert!(!m.is_quiet());
             assert_eq!(m.piece(), Piece::Queen);
         }
         {
@@ -468,5 +485,49 @@ mod tests {
             assert_eq!(m.captured_piece(), None);
             assert_eq!(m.piece(), Piece::Pawn);
         }
+    }
+
+    #[test]
+    fn move_types() {
+        let from = Square::new(File::A, Rank::R2);
+        let to = Square::new(File::A, Rank::R4);
+
+        let mut mv = Move::new(
+            &from,
+            &to,
+            MoveDescriptor::None,
+            Piece::Pawn,
+            Some(Piece::Pawn),
+            None,
+        );
+
+        assert!(!mv.is_quiet());
+        assert!(!mv.is_en_passant_capture());
+        assert!(!mv.is_pawn_two_up());
+        assert!(!mv.is_castle());
+        assert!(!mv.is_promotion());
+        assert!(!mv.is_null_move());
+        assert!(mv.move_descriptor() == MoveDescriptor::None);
+        assert_eq!(mv.from(), from.to_square_index());
+        assert_eq!(mv.to(), to.to_square_index());
+
+        mv = Move::new(
+            &from,
+            &to,
+            MoveDescriptor::PawnTwoUp,
+            Piece::Pawn,
+            None,
+            None,
+        );
+
+        assert!(mv.is_quiet());
+        assert!(!mv.is_en_passant_capture());
+        assert!(mv.is_pawn_two_up());
+        assert!(!mv.is_castle());
+        assert!(!mv.is_promotion());
+        assert!(!mv.is_null_move());
+        assert!(mv.move_descriptor() == MoveDescriptor::PawnTwoUp);
+        assert_eq!(mv.from(), from.to_square_index());
+        assert_eq!(mv.to(), to.to_square_index());
     }
 }

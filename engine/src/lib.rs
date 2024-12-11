@@ -1,6 +1,7 @@
 pub mod defs;
 pub mod engine;
 pub mod evaluation;
+pub mod history_table;
 pub mod input_handler;
 pub mod psqt;
 pub mod score;
