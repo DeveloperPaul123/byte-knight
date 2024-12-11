@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Dec 10 2024
+ * Last Modified: Wed Dec 11 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -155,7 +155,7 @@ impl<'a> Search<'a> {
     ) -> Self {
         Search {
             transposition_table: ttable,
-            history_table: history_table,
+            history_table,
             move_gen: MoveGenerator::new(),
             nodes: 0,
             parameters: parameters.clone(),
@@ -344,7 +344,7 @@ impl<'a> Search<'a> {
                 board.side_to_move(),
                 mv,
                 &tt_entry,
-                &self.history_table,
+                self.history_table,
             )
         });
 
@@ -463,12 +463,7 @@ impl<'a> Search<'a> {
         }
 
         let sorted_moves = captures.into_iter().sorted_by_cached_key(|mv| {
-            Evaluation::score_move_for_ordering(
-                board.side_to_move(),
-                mv,
-                &None,
-                &self.history_table,
-            )
+            Evaluation::score_move_for_ordering(board.side_to_move(), mv, &None, self.history_table)
         });
         let mut best = standing_eval;
 
@@ -511,8 +506,7 @@ mod tests {
 
     use crate::{
         evaluation::Evaluation,
-        history_table::{self, HistoryTable},
-        score::{Score, ScoreType},
+        score::Score,
         search::{Search, SearchParameters},
         ttable::TranspositionTable,
     };
