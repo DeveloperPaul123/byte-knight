@@ -225,7 +225,7 @@ impl<'a> Search<'a> {
             best_result.best_move = Some(*move_list.at(0).unwrap())
         }
 
-        while self.parameters.start_time.elapsed() <= self.parameters.soft_timeout
+        'deepening: while self.parameters.start_time.elapsed() <= self.parameters.soft_timeout
             && best_result.depth <= self.parameters.max_depth
         {
             // create an aspiration window around the best result so far
@@ -258,7 +258,7 @@ impl<'a> Search<'a> {
                 if self.should_stop_searching() {
                     // we have to stop searching now, use the best result we have
                     // no score update
-                    break 'aspiration_window;
+                    break 'deepening;
                 }
             }
 
