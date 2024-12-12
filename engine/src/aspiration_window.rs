@@ -42,7 +42,7 @@ impl AspirationWindow {
             // If the score is mate, we can't use the window as we would expect search results to fluctuate.
             // Set it to a full window and search again.
             // We also want to do a full search on the first iteration (i.e. depth == 1);
-            return Self::infinite();
+            Self::infinite()
         } else {
             let window = Self::window_size(depth);
             Self {
