@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 14th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Dec 10 2024
+ * Last Modified: Wed Dec 11 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -12,7 +12,7 @@
  *
  */
 
-use std::ops::{Sub, SubAssign};
+use std::ops::{Div, DivAssign, Mul, MulAssign, Shl, Sub, SubAssign};
 use std::{
     fmt::{self, Display, Formatter},
     ops::{Add, AddAssign, Neg},
@@ -118,5 +118,64 @@ impl SubAssign for Score {
 impl SubAssign<ScoreType> for Score {
     fn sub_assign(&mut self, rhs: ScoreType) {
         self.0 -= rhs;
+    }
+}
+
+impl Div<ScoreType> for Score {
+    type Output = Score;
+    fn div(self, rhs: ScoreType) -> Score {
+        Score(self.0 / rhs)
+    }
+}
+
+impl Div<Score> for Score {
+    type Output = Score;
+    fn div(self, rhs: Score) -> Score {
+        Score(self.0 / rhs.0)
+    }
+}
+
+impl DivAssign<ScoreType> for Score {
+    fn div_assign(&mut self, rhs: ScoreType) {
+        self.0 /= rhs;
+    }
+}
+
+impl DivAssign<Score> for Score {
+    fn div_assign(&mut self, rhs: Score) {
+        self.0 /= rhs.0;
+    }
+}
+
+impl Mul<ScoreType> for Score {
+    type Output = Score;
+    fn mul(self, rhs: ScoreType) -> Score {
+        Score(self.0 * rhs)
+    }
+}
+
+impl Mul<Score> for Score {
+    type Output = Score;
+    fn mul(self, rhs: Score) -> Score {
+        Score(self.0 * rhs.0)
+    }
+}
+
+impl MulAssign<ScoreType> for Score {
+    fn mul_assign(&mut self, rhs: ScoreType) {
+        self.0 *= rhs;
+    }
+}
+
+impl MulAssign<Score> for Score {
+    fn mul_assign(&mut self, rhs: Score) {
+        self.0 *= rhs.0;
+    }
+}
+
+impl Shl<u32> for Score {
+    type Output = Score;
+    fn shl(self, rhs: u32) -> Score {
+        Score(self.0 << rhs)
     }
 }
