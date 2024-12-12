@@ -26,7 +26,12 @@ use itertools::Itertools;
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
 use crate::{
-    aspiration_window::AspirationWindow, defs::MAX_DEPTH, evaluation::Evaluation, history_table::HistoryTable, score::{MoveOrderScoreType, Score, ScoreType}, ttable::{self, TranspositionTableEntry}
+    aspiration_window::AspirationWindow,
+    defs::MAX_DEPTH,
+    evaluation::Evaluation,
+    history_table::HistoryTable,
+    score::{MoveOrderScoreType, Score, ScoreType},
+    ttable::{self, TranspositionTableEntry},
 };
 use ttable::TranspositionTable;
 
