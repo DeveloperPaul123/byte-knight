@@ -29,6 +29,8 @@ impl Score {
     pub const DRAW: Score = Score(0);
     pub const MATE: Score = Score(ScoreType::MAX as ScoreType);
     pub const INF: Score = Score(ScoreType::MAX as ScoreType);
+    pub const ALPHA: Score = Score(-Score::INF.0);
+    pub const BETA: Score = Score::INF;
 
     // Max/min score for history heuristic
     // Must be lower then the minimum score for captures in MVV_LVA

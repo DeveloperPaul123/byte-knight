@@ -14,8 +14,8 @@ pub(crate) struct AspirationWindow {
 impl AspirationWindow {
     pub(crate) fn infinite() -> Self {
         Self {
-            alpha: -Score::INF,
-            beta: Score::INF,
+            alpha: Score::ALPHA,
+            beta: Score::BETA,
             value: Score::default(),
             alpha_fails: 0,
             beta_fails: 0,
