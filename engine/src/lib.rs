@@ -1,3 +1,4 @@
+pub mod aspiration_window;
 pub mod defs;
 pub mod engine;
 pub mod evaluation;
@@ -8,3 +9,4 @@ pub mod score;
 pub mod search;
 pub mod search_thread;
 pub mod ttable;
+pub mod tuneable;
