@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 14th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Dec 10 2024
+ * Last Modified: Thu Dec 12 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -12,12 +12,14 @@
  *
  */
 
-use std::ops::{Sub, SubAssign};
+use std::ops::{Div, DivAssign, Mul, MulAssign, Shl, Sub, SubAssign};
 use std::{
     fmt::{self, Display, Formatter},
     ops::{Add, AddAssign, Neg},
 };
 use uci_parser::UciScore;
+
+use crate::defs::MAX_DEPTH;
 
 pub(crate) type ScoreType = i16;
 pub(crate) type MoveOrderScoreType = i32;
@@ -28,6 +30,8 @@ pub struct Score(pub ScoreType);
 impl Score {
     pub const DRAW: Score = Score(0);
     pub const MATE: Score = Score(ScoreType::MAX as ScoreType);
+    /// The minimum mate score. This is the maximum score minus the maximum depth.
+    pub const MINIMUM_MATE: Score = Score(Score::MATE.0 - MAX_DEPTH as ScoreType);
     pub const INF: Score = Score(ScoreType::MAX as ScoreType);
 
     // Max/min score for history heuristic
@@ -40,6 +44,16 @@ impl Score {
 
     pub fn clamp(&self, min: ScoreType, max: ScoreType) -> Score {
         Score(self.0.clamp(min, max))
+    }
+
+    /// Returns true if the score is a mate score.
+    /// This is the case if the absolute value of the score is greater than or equal to `Score::MINIMUM_MATE`.
+    pub fn is_mate(&self) -> bool {
+        self.0.abs() >= Score::MINIMUM_MATE.0.abs()
+    }
+
+    pub fn pow(&self, exp: u32) -> Score {
+        Score(self.0.pow(exp))
     }
 }
 
@@ -118,5 +132,64 @@ impl SubAssign for Score {
 impl SubAssign<ScoreType> for Score {
     fn sub_assign(&mut self, rhs: ScoreType) {
         self.0 -= rhs;
+    }
+}
+
+impl Div<ScoreType> for Score {
+    type Output = Score;
+    fn div(self, rhs: ScoreType) -> Score {
+        Score(self.0 / rhs)
+    }
+}
+
+impl Div<Score> for Score {
+    type Output = Score;
+    fn div(self, rhs: Score) -> Score {
+        Score(self.0 / rhs.0)
+    }
+}
+
+impl DivAssign<ScoreType> for Score {
+    fn div_assign(&mut self, rhs: ScoreType) {
+        self.0 /= rhs;
+    }
+}
+
+impl DivAssign<Score> for Score {
+    fn div_assign(&mut self, rhs: Score) {
+        self.0 /= rhs.0;
+    }
+}
+
+impl Mul<ScoreType> for Score {
+    type Output = Score;
+    fn mul(self, rhs: ScoreType) -> Score {
+        Score(self.0 * rhs)
+    }
+}
+
+impl Mul<Score> for Score {
+    type Output = Score;
+    fn mul(self, rhs: Score) -> Score {
+        Score(self.0 * rhs.0)
+    }
+}
+
+impl MulAssign<ScoreType> for Score {
+    fn mul_assign(&mut self, rhs: ScoreType) {
+        self.0 *= rhs;
+    }
+}
+
+impl MulAssign<Score> for Score {
+    fn mul_assign(&mut self, rhs: Score) {
+        self.0 *= rhs.0;
+    }
+}
+
+impl Shl<u32> for Score {
+    type Output = Score;
+    fn shl(self, rhs: u32) -> Score {
+        Score(self.0 << rhs)
     }
 }

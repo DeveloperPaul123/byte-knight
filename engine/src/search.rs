@@ -26,14 +26,14 @@ use itertools::Itertools;
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
 use crate::{
+    aspiration_window::AspirationWindow,
+    defs::MAX_DEPTH,
     evaluation::Evaluation,
     history_table::HistoryTable,
     score::{MoveOrderScoreType, Score, ScoreType},
     ttable::{self, TranspositionTableEntry},
 };
 use ttable::TranspositionTable;
-
-const MAX_DEPTH: u8 = 128;
 
 /// Result for a search.
 #[derive(Clone, Copy, Debug)]
@@ -224,28 +224,47 @@ impl<'a> Search<'a> {
         // initialize the best result
         let mut best_result = SearchResult::default();
         let mut move_list = MoveList::new();
+
         self.move_gen.generate_legal_moves(board, &mut move_list);
         if !move_list.is_empty() {
             best_result.best_move = Some(*move_list.at(0).unwrap())
         }
 
-        while self.parameters.start_time.elapsed() <= self.parameters.soft_timeout
+        'deepening: while self.parameters.start_time.elapsed() <= self.parameters.soft_timeout
             && best_result.depth <= self.parameters.max_depth
         {
-            // search the tree, starting at the current depth (starts at 1)
-            let score = self.negamax(
-                board,
-                best_result.depth as ScoreType,
-                0,
-                -Score::INF,
-                Score::INF,
-            );
+            // create an aspiration window around the best result so far
+            let mut aspiration_window =
+                AspirationWindow::around(best_result.score, best_result.depth as ScoreType);
 
-            // check stop conditions
-            if self.should_stop_searching() {
-                // we have to stop searching now, use the best result we have
-                // no score update
-                break;
+            let mut score: Score;
+            'aspiration_window: loop {
+                // search the tree, starting at the current depth (starts at 1)
+                score = self.negamax(
+                    board,
+                    best_result.depth as ScoreType,
+                    0,
+                    aspiration_window.alpha(),
+                    aspiration_window.beta(),
+                );
+
+                if aspiration_window.failed_low(score) {
+                    // fail low, widen the window
+                    aspiration_window.widen_down(score, best_result.depth as ScoreType);
+                } else if aspiration_window.failed_high(score) {
+                    // fail high, widen the window
+                    aspiration_window.widen_up(score, best_result.depth as ScoreType);
+                } else {
+                    // we have a valid score, break the loop
+                    break 'aspiration_window;
+                }
+
+                // check stop conditions
+                if self.should_stop_searching() {
+                    // we have to stop searching now, use the best result we have
+                    // no score update
+                    break 'deepening;
+                }
             }
 
             // update the best result

@@ -30,3 +30,5 @@ impl About {
     pub const AUTHORS: &'static str = "Paul T. (DeveloperPaul123)";
     pub const BANNER: &'static str = BANNER;
 }
+
+pub(crate) const MAX_DEPTH: u8 = 128;
