@@ -30,6 +30,7 @@ pub struct Score(pub ScoreType);
 impl Score {
     pub const DRAW: Score = Score(0);
     pub const MATE: Score = Score(ScoreType::MAX as ScoreType);
+    /// The minimum mate score. This is the maximum score minus the maximum depth.
     pub const MINIMUM_MATE: Score = Score(Score::MATE.0 - MAX_DEPTH as ScoreType);
     pub const INF: Score = Score(ScoreType::MAX as ScoreType);
     pub const ALPHA: Score = Score(-Score::INF.0);
@@ -47,6 +48,8 @@ impl Score {
         Score(self.0.clamp(min, max))
     }
 
+    /// Returns true if the score is a mate score.
+    /// This is the case if the absolute value of the score is greater than or equal to `Score::MINIMUM_MATE`.
     pub fn is_mate(&self) -> bool {
         self.0.abs() >= Score::MINIMUM_MATE.0.abs()
     }
