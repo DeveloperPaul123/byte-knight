@@ -26,6 +26,7 @@ use itertools::Itertools;
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
 use crate::{
+    aspiration_window::AspirationWindow,
     evaluation::Evaluation,
     history_table::HistoryTable,
     score::{MoveOrderScoreType, Score, ScoreType},
@@ -229,23 +230,38 @@ impl<'a> Search<'a> {
             best_result.best_move = Some(*move_list.at(0).unwrap())
         }
 
+        let mut aspiration_window = AspirationWindow::infinite();
         while self.parameters.start_time.elapsed() <= self.parameters.soft_timeout
             && best_result.depth <= self.parameters.max_depth
         {
-            // search the tree, starting at the current depth (starts at 1)
-            let score = self.negamax(
-                board,
-                best_result.depth as ScoreType,
-                0,
-                -Score::INF,
-                Score::INF,
-            );
+            let mut score: Score;
+            'aspiration_window: loop {
+                // search the tree, starting at the current depth (starts at 1)
+                score = self.negamax(
+                    board,
+                    best_result.depth as ScoreType,
+                    0,
+                    aspiration_window.alpha(),
+                    aspiration_window.beta(),
+                );
 
-            // check stop conditions
-            if self.should_stop_searching() {
-                // we have to stop searching now, use the best result we have
-                // no score update
-                break;
+                if score <= aspiration_window.alpha() {
+                    // fail low, widen the window
+                    aspiration_window.widen_down(score, best_result.depth as ScoreType);
+                } else if score >= aspiration_window.beta() {
+                    // fail high, widen the window
+                    aspiration_window.widen_up(score, best_result.depth as ScoreType);
+                } else {
+                    // we have a valid score, break the loop
+                    break 'aspiration_window;
+                }
+
+                // check stop conditions
+                if self.should_stop_searching() {
+                    // we have to stop searching now, use the best result we have
+                    // no score update
+                    break 'aspiration_window;
+                }
             }
 
             // update the best result
