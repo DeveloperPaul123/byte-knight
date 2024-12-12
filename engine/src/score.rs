@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 14th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Dec 11 2024
+ * Last Modified: Thu Dec 12 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -42,6 +42,10 @@ impl Score {
 
     pub fn clamp(&self, min: ScoreType, max: ScoreType) -> Score {
         Score(self.0.clamp(min, max))
+    }
+
+    pub fn is_mate(&self) -> bool {
+        self.0.abs() >= Score::MATE.0.abs()
     }
 }
 

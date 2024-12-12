@@ -230,10 +230,13 @@ impl<'a> Search<'a> {
             best_result.best_move = Some(*move_list.at(0).unwrap())
         }
 
-        let mut aspiration_window = AspirationWindow::infinite();
         while self.parameters.start_time.elapsed() <= self.parameters.soft_timeout
             && best_result.depth <= self.parameters.max_depth
         {
+            // create an aspiration window around the best result so far
+            let mut aspiration_window =
+                AspirationWindow::around(best_result.score, best_result.depth as ScoreType);
+
             let mut score: Score;
             'aspiration_window: loop {
                 // search the tree, starting at the current depth (starts at 1)
@@ -245,10 +248,10 @@ impl<'a> Search<'a> {
                     aspiration_window.beta(),
                 );
 
-                if score <= aspiration_window.alpha() {
+                if aspiration_window.failed_low(score) {
                     // fail low, widen the window
                     aspiration_window.widen_down(score, best_result.depth as ScoreType);
-                } else if score >= aspiration_window.beta() {
+                } else if aspiration_window.failed_high(score) {
                     // fail high, widen the window
                     aspiration_window.widen_up(score, best_result.depth as ScoreType);
                 } else {
