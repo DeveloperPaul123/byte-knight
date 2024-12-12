@@ -14,6 +14,6 @@
 
 use crate::score::ScoreType;
 
-pub(crate) const INITIAL_ASPIRATION_WINDOW: ScoreType = 25;
 pub(crate) const MIN_ASPIRATION_WINDOW: ScoreType = 10;
 pub(crate) const MIN_ASPIRATION_DEPTH: ScoreType = 1;
+pub(crate) const ASPIRATION_WINDOW: ScoreType = 6;

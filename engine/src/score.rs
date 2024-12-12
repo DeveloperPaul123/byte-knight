@@ -19,6 +19,8 @@ use std::{
 };
 use uci_parser::UciScore;
 
+use crate::defs::MAX_DEPTH;
+
 pub(crate) type ScoreType = i16;
 pub(crate) type MoveOrderScoreType = i32;
 /// Represents a score in centipawns.
@@ -28,6 +30,7 @@ pub struct Score(pub ScoreType);
 impl Score {
     pub const DRAW: Score = Score(0);
     pub const MATE: Score = Score(ScoreType::MAX as ScoreType);
+    pub const MINIMUM_MATE: Score = Score(Score::MATE.0 - MAX_DEPTH as ScoreType);
     pub const INF: Score = Score(ScoreType::MAX as ScoreType);
     pub const ALPHA: Score = Score(-Score::INF.0);
     pub const BETA: Score = Score::INF;
@@ -45,7 +48,7 @@ impl Score {
     }
 
     pub fn is_mate(&self) -> bool {
-        self.0.abs() >= Score::MATE.0.abs()
+        self.0.abs() >= Score::MINIMUM_MATE.0.abs()
     }
 }
 

@@ -26,15 +26,9 @@ use itertools::Itertools;
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
 use crate::{
-    aspiration_window::AspirationWindow,
-    evaluation::Evaluation,
-    history_table::HistoryTable,
-    score::{MoveOrderScoreType, Score, ScoreType},
-    ttable::{self, TranspositionTableEntry},
+    aspiration_window::AspirationWindow, defs::MAX_DEPTH, evaluation::Evaluation, history_table::HistoryTable, score::{MoveOrderScoreType, Score, ScoreType}, ttable::{self, TranspositionTableEntry}
 };
 use ttable::TranspositionTable;
-
-const MAX_DEPTH: u8 = 128;
 
 /// Result for a search.
 #[derive(Clone, Copy, Debug)]
@@ -225,6 +219,7 @@ impl<'a> Search<'a> {
         // initialize the best result
         let mut best_result = SearchResult::default();
         let mut move_list = MoveList::new();
+
         self.move_gen.generate_legal_moves(board, &mut move_list);
         if !move_list.is_empty() {
             best_result.best_move = Some(*move_list.at(0).unwrap())
