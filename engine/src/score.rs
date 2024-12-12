@@ -33,8 +33,6 @@ impl Score {
     /// The minimum mate score. This is the maximum score minus the maximum depth.
     pub const MINIMUM_MATE: Score = Score(Score::MATE.0 - MAX_DEPTH as ScoreType);
     pub const INF: Score = Score(ScoreType::MAX as ScoreType);
-    pub const ALPHA: Score = Score(-Score::INF.0);
-    pub const BETA: Score = Score::INF;
 
     // Max/min score for history heuristic
     // Must be lower then the minimum score for captures in MVV_LVA
@@ -52,6 +50,10 @@ impl Score {
     /// This is the case if the absolute value of the score is greater than or equal to `Score::MINIMUM_MATE`.
     pub fn is_mate(&self) -> bool {
         self.0.abs() >= Score::MINIMUM_MATE.0.abs()
+    }
+
+    pub fn pow(&self, exp: u32) -> Score {
+        Score(self.0.pow(exp))
     }
 }
 

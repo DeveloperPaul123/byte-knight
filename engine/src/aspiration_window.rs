@@ -1,6 +1,6 @@
 use crate::{
     score::{Score, ScoreType},
-    tuneable::{ASPIRATION_WINDOW, MIN_ASPIRATION_DEPTH, MIN_ASPIRATION_WINDOW},
+    tuneable::{ASPIRATION_WINDOW, MIN_ASPIRATION_DEPTH},
 };
 
 pub(crate) struct AspirationWindow {
@@ -13,8 +13,8 @@ pub(crate) struct AspirationWindow {
 impl AspirationWindow {
     pub(crate) fn infinite() -> Self {
         Self {
-            alpha: Score::ALPHA,
-            beta: Score::BETA,
+            alpha: -Score::INF,
+            beta: Score::INF,
             alpha_fails: 0,
             beta_fails: 0,
         }
@@ -29,11 +29,11 @@ impl AspirationWindow {
     }
 
     pub(crate) fn failed_low(&self, score: Score) -> bool {
-        score != Score::ALPHA && score <= self.alpha
+        score != -Score::INF && score <= self.alpha
     }
 
     pub(crate) fn failed_high(&self, score: Score) -> bool {
-        score != Score::BETA && score >= self.beta
+        score != Score::INF && score >= self.beta
     }
 
     /// Create a new [`AspirationWindow`] centered around the given score.
@@ -46,8 +46,8 @@ impl AspirationWindow {
         } else {
             let window = Self::window_size(depth);
             Self {
-                alpha: (score - window).max(Score::ALPHA),
-                beta: (score + window).min(Score::BETA),
+                alpha: (score - window).max(-Score::INF),
+                beta: (score + window).min(Score::INF),
                 alpha_fails: 0,
                 beta_fails: 0,
             }
@@ -55,23 +55,24 @@ impl AspirationWindow {
     }
 
     pub(crate) fn widen_down(&mut self, score: Score, depth: ScoreType) {
-        let margin = Self::window_size(depth) << (self.alpha_fails + 1);
-        self.alpha = (score - margin).max(Score::ALPHA);
+        // Note that we do not alter beta here, as we are widening the window downwards.
+        let margin = Self::window_size(depth) + self.alpha_fails as ScoreType * ASPIRATION_WINDOW;
+        self.alpha = (score - margin).max(-Score::INF);
         // save that this was a fail low
         self.alpha_fails += 1;
     }
 
     pub(crate) fn widen_up(&mut self, score: Score, depth: ScoreType) {
         // Note that we do not alter alpha here, as we are widening the window upwards.
-        let margin = Self::window_size(depth) << (self.beta_fails + 1);
-        let new_beta = (score.0 as i32 + margin.0 as i32).min(Score::BETA.0 as i32);
+        let margin = Self::window_size(depth) + self.beta_fails as ScoreType * ASPIRATION_WINDOW;
+        let new_beta = (score.0 as i32 + margin.0 as i32).min(Score::INF.0 as i32);
         self.beta = Score::new(new_beta as ScoreType);
         // save that this was a fail high
         self.beta_fails += 1;
     }
 
-    fn window_size(depth: ScoreType) -> Score {
-        let window = (ASPIRATION_WINDOW + (50 / depth)).max(MIN_ASPIRATION_WINDOW);
-        Score::new(window)
+    fn window_size(_depth: ScoreType) -> Score {
+        // TODO(PT): Scale the window to depth
+        Score::new(ASPIRATION_WINDOW)
     }
 }
