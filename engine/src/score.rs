@@ -21,7 +21,7 @@ use uci_parser::UciScore;
 
 use crate::defs::MAX_DEPTH;
 
-pub(crate) type ScoreType = i16;
+pub type ScoreType = i16;
 pub(crate) type MoveOrderScoreType = i32;
 /// Represents a score in centipawns.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
