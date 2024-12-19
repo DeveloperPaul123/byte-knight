@@ -19,7 +19,9 @@ jobs:
       with:
         lfs: true
     - name: Rust nightly
-      run: rustup default nightly
+      run: |
+        rustup default nightly 
+        rustup component add clippy
     - name: Install just
       uses: extractions/setup-just@v2
     - name: clippy
