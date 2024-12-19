@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Dec 09 2024
+ * Last Modified: Wed Dec 18 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -12,7 +12,7 @@
  *
  */
 
-use chess::{bitboard_helpers, board::Board, pieces::PIECE_NAMES, side::Side};
+use chess::{bitboard_helpers, board::Board, pieces::PIECE_NAMES, side::Side, square};
 
 use crate::score::{Score, ScoreType};
 
@@ -172,6 +172,7 @@ pub const EG_KING_TABLE: [ScoreType; 64] = [
 
 /// Opening/mid-game piece-square tables
 /// Ordered to match the indexing of [`Piece`]
+#[allow(dead_code)]
 const MG_PESTO_TABLE: [&[ScoreType; 64]; 6] = [
     &MG_KING_TABLE,
     &MG_QUEEN_TABLE,
@@ -183,6 +184,7 @@ const MG_PESTO_TABLE: [&[ScoreType; 64]; 6] = [
 
 /// Endgame piece-square tables
 /// Ordered to match the indexing of [`Piece`]
+#[allow(dead_code)]
 const EG_PESTO_TABLE: [&[ScoreType; 64]; 6] = [
     &EG_KING_TABLE,
     &EG_QUEEN_TABLE,
@@ -203,10 +205,9 @@ pub(crate) struct Psqt {
     eg_table: [[ScoreType; 64]; 12],
 }
 
-const FLIP: fn(usize) -> usize = |sq| sq ^ 56;
-
 impl Psqt {
     /// Creates a new [`Psqt`] instance and initializes the piece-square tables.
+    #[allow(dead_code)]
     pub(crate) fn new() -> Self {
         let mut psqt = Psqt {
             mg_table: [[0; 64]; 12],
@@ -228,6 +229,7 @@ impl Psqt {
     /// # Returns
     ///
     /// The score of the position.
+    #[allow(dead_code)]
     pub(crate) fn evaluate(&self, board: &Board) -> Score {
         let side_to_move = board.side_to_move();
         let mut mg: [i32; 2] = [0; 2];
@@ -251,8 +253,10 @@ impl Psqt {
 
         let mg_score = mg[side_to_move as usize] - mg[Side::opposite(side_to_move) as usize];
         let eg_score = eg[side_to_move as usize] - eg[Side::opposite(side_to_move) as usize];
+        println!("psqt got mg {} eg {}", mg_score, eg_score);
         let mg_phase = game_phase.min(24);
         let eg_phase = 24 - mg_phase;
+        println!("psqt phase {} {}", mg_phase, eg_phase);
         let score = (mg_score * mg_phase + eg_score * eg_phase) / 24;
         Score::new(score as i16)
     }
@@ -265,8 +269,10 @@ impl Psqt {
     fn initialize_tables(&mut self) {
         for (p, pc) in (0..6).zip((0..12).step_by(2)) {
             for sq in 0..64 {
-                self.mg_table[pc][sq] = MG_VALUE[p] + MG_PESTO_TABLE[p][FLIP(sq)];
-                self.eg_table[pc][sq] = EG_VALUE[p] + EG_PESTO_TABLE[p][FLIP(sq)];
+                self.mg_table[pc][sq] =
+                    MG_VALUE[p] + MG_PESTO_TABLE[p][square::flip(sq as u8) as usize];
+                self.eg_table[pc][sq] =
+                    EG_VALUE[p] + EG_PESTO_TABLE[p][square::flip(sq as u8) as usize];
                 self.mg_table[pc + 1][sq] = MG_VALUE[p] + MG_PESTO_TABLE[p][sq];
                 self.eg_table[pc + 1][sq] = EG_VALUE[p] + EG_PESTO_TABLE[p][sq];
             }
@@ -277,25 +283,31 @@ impl Psqt {
     /// Output is formatted as a 8x8 board with (mg, eg) values for each square, per piece
     #[allow(dead_code)]
     fn print_tables(&self) {
+        println!("#[rustfmt::skip]");
+        println!(
+            "pub const PSQTS : [[PhasedScore; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]  = ["
+        );
         for (p, pc) in (0..6).zip((0..12).step_by(2)) {
-            println!("Piece: {}", PIECE_NAMES[p]);
-            for row in 0..8 {
+            println!("    // {}", PIECE_NAMES[p]);
+            println!("    [");
+            for row in (0..=7).rev() {
                 for col in 0..8 {
                     let sq = row * 8 + col;
                     if col == 0 {
-                        print!("| ");
+                        print!("        ");
                     }
-
                     print!(
-                        "({:4}, {:4}), ",
+                        "S({:4}, {:4}), ",
                         self.mg_table[pc][sq], self.eg_table[pc][sq]
                     );
                     if col == 7 {
-                        println!(" |");
+                        println!();
                     }
                 }
             }
+            println!("    ],");
         }
+        println!("];");
     }
 }
 
@@ -311,6 +323,8 @@ mod tests {
         let psqt = Psqt::new();
         let score = psqt.evaluate(&board);
         assert_eq!(score, super::Score::new(0));
+
+        psqt.print_tables();
     }
 
     #[test]

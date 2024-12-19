@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 14th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Dec 12 2024
+ * Last Modified: Mon Dec 16 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -22,7 +22,7 @@ use uci_parser::UciScore;
 use crate::defs::MAX_DEPTH;
 
 pub type ScoreType = i16;
-pub(crate) type MoveOrderScoreType = i32;
+pub(crate) type LargeScoreType = i32;
 /// Represents a score in centipawns.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Score(pub ScoreType);
@@ -36,7 +36,7 @@ impl Score {
 
     // Max/min score for history heuristic
     // Must be lower then the minimum score for captures in MVV_LVA
-    pub const MAX_HISTORY: MoveOrderScoreType = 16_384;
+    pub const MAX_HISTORY: LargeScoreType = 16_384;
 
     pub fn new(score: ScoreType) -> Score {
         Score(score)

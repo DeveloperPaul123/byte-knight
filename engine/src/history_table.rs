@@ -4,10 +4,10 @@ use chess::{
     side::Side,
 };
 
-use crate::score::{MoveOrderScoreType, Score};
+use crate::score::{LargeScoreType, Score};
 
 pub struct HistoryTable {
-    table: [[[MoveOrderScoreType; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
+    table: [[[LargeScoreType; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
 }
 
 impl HistoryTable {
@@ -17,7 +17,7 @@ impl HistoryTable {
         Self { table }
     }
 
-    pub(crate) fn get(&self, side: Side, piece: Piece, square: u8) -> MoveOrderScoreType {
+    pub(crate) fn get(&self, side: Side, piece: Piece, square: u8) -> LargeScoreType {
         assert!(side != Side::Both, "Side cannot be Both");
         self.table[side as usize][piece as usize][square as usize]
     }
@@ -27,7 +27,7 @@ impl HistoryTable {
         side: Side,
         piece: Piece,
         square: u8,
-        bonus: MoveOrderScoreType,
+        bonus: LargeScoreType,
     ) {
         assert!(side != Side::Both, "Side cannot be Both");
         let current_value = self.table[side as usize][piece as usize][square as usize];

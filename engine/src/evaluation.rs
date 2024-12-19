@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Dec 10 2024
+ * Last Modified: Wed Dec 18 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -12,38 +12,29 @@
  *
  */
 
-use chess::{board::Board, moves::Move, pieces::Piece, side::Side};
+use chess::{bitboard_helpers, board::Board, moves::Move, pieces::Piece, side::Side};
 
 use crate::{
+    hce_values::ByteKnightValues,
     history_table,
-    psqt::Psqt,
-    score::{MoveOrderScoreType, Score},
+    phased_score::{PhaseType, PhasedScore},
+    psqt::GAMEPHASE_INC,
+    score::{LargeScoreType, Score, ScoreType},
+    traits::{Eval, EvalValues},
     ttable::TranspositionTableEntry,
 };
 
 /// Provides static evaluation of a given chess position.
-pub struct Evaluation {
-    psqt: Psqt,
+pub struct Evaluation<Values>
+where
+    Values: EvalValues + Default,
+{
+    values: Values,
 }
 
-impl Default for Evaluation {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Evaluation {
-    pub fn new() -> Self {
-        Evaluation { psqt: Psqt::new() }
-    }
-
-    /// Evaluates the given position.
-    ///
-    /// # Arguments
-    ///
-    /// - `board`: The [`Board`] to evaluate.
-    pub(crate) fn evaluate_position(&self, board: &Board) -> Score {
-        self.psqt.evaluate(board)
+impl<Values: EvalValues + Default> Evaluation<Values> {
+    pub fn new(values: Values) -> Self {
+        Evaluation { values }
     }
 
     /// Scores a move for ordering. This will return the _negative_ score of
@@ -63,9 +54,9 @@ impl Evaluation {
         mv: &Move,
         tt_entry: &Option<TranspositionTableEntry>,
         history_table: &history_table::HistoryTable,
-    ) -> MoveOrderScoreType {
+    ) -> LargeScoreType {
         if tt_entry.is_some_and(|tt| *mv == tt.board_move) {
-            return MoveOrderScoreType::MIN;
+            return LargeScoreType::MIN;
         }
 
         let mut score = 0;
@@ -82,14 +73,14 @@ impl Evaluation {
         -score
     }
 
-    pub(crate) fn mvv_lva(captured: Piece, capturing: Piece) -> MoveOrderScoreType {
+    pub(crate) fn mvv_lva(captured: Piece, capturing: Piece) -> LargeScoreType {
         let can_capture = captured != Piece::King && captured != Piece::None;
-        ((can_capture as MoveOrderScoreType)
-            * (25 * Evaluation::piece_value(captured) - Evaluation::piece_value(capturing)))
+        ((can_capture as LargeScoreType)
+            * (25 * Self::piece_value(captured) - Self::piece_value(capturing)))
             << 16
     }
 
-    pub(crate) fn piece_value(piece: Piece) -> MoveOrderScoreType {
+    pub(crate) fn piece_value(piece: Piece) -> LargeScoreType {
         match piece {
             Piece::King => 0,
             Piece::Queen => 5,
@@ -102,26 +93,78 @@ impl Evaluation {
     }
 }
 
+impl<Values: EvalValues<ReturnScore = PhasedScore> + Default> Eval<Board> for Evaluation<Values> {
+    /// Evaluates the given position.
+    ///
+    /// # Arguments
+    ///
+    /// - `board`: The [`Board`] to evaluate.
+    fn eval(&self, board: &Board) -> Score {
+        let side_to_move = board.side_to_move();
+        let mut mg: [i32; 2] = [0; 2];
+        let mut eg: [i32; 2] = [0; 2];
+        let mut game_phase = 0_i32;
+
+        let mut occupancy = board.all_pieces();
+        // loop through occupied squares
+        while occupancy.as_number() > 0 {
+            let sq = bitboard_helpers::next_bit(&mut occupancy);
+            let maybe_piece = board.piece_on_square(sq as u8);
+            if let Some((piece, side)) = maybe_piece {
+                let phased_score: PhasedScore = self.values.psqt(sq as u8, piece, side);
+                mg[side as usize] += phased_score.mg() as i32;
+                eg[side as usize] += phased_score.eg() as i32;
+
+                game_phase += GAMEPHASE_INC[piece as usize] as i32;
+            }
+        }
+        let stm_idx = side_to_move as usize;
+        let opposite = Side::opposite(side_to_move) as usize;
+        let mg_score = mg[stm_idx] - mg[opposite];
+        let eg_score = eg[stm_idx] - eg[opposite];
+        let score = PhasedScore::new(mg_score as ScoreType, eg_score as ScoreType);
+        // taper the score based on the game phase
+        let val = score.taper(game_phase.min(24) as PhaseType, 24);
+        Score::new(val)
+    }
+}
+
+pub type ByteKnightEvaluation = Evaluation<ByteKnightValues>;
+
+impl Default for ByteKnightEvaluation {
+    fn default() -> Self {
+        Self::new(ByteKnightValues::default())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use chess::{
-        board::Board, moves::{self, Move}, pieces::{Piece, ALL_PIECES, PIECE_SHORT_NAMES}, side::Side, square::Square
+        board::Board,
+        moves::{self, Move},
+        pieces::{Piece, ALL_PIECES, PIECE_SHORT_NAMES},
+        side::Side,
+        square::Square,
     };
 
-    use crate::{evaluation::Evaluation, score::{MoveOrderScoreType, ScoreType}};
+    use crate::{
+        evaluation::ByteKnightEvaluation,
+        score::{LargeScoreType, ScoreType},
+        traits::Eval,
+    };
 
     #[test]
     fn mvv_lva_scaling() {
         for captured in ALL_PIECES {
             for capturing in ALL_PIECES {
-                let score = Evaluation::mvv_lva(captured, capturing);
+                let score = ByteKnightEvaluation::mvv_lva(captured, capturing);
                 println!(
                     "{} x {} -> {}",
                     PIECE_SHORT_NAMES[capturing as usize],
                     PIECE_SHORT_NAMES[captured as usize],
                     score
                 );
-                assert!((score as i64) < (MoveOrderScoreType::MIN as i64).abs());
+                assert!((score as i64) < (LargeScoreType::MIN as i64).abs());
             }
         }
     }
@@ -142,8 +185,8 @@ mod tests {
         let history_table = Default::default();
         // note that these scores are for ordering, so they are negated
         assert_eq!(
-            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
-            Evaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
+            -ByteKnightEvaluation::score_move_for_ordering(side, &mv, &None, &history_table),
+            ByteKnightEvaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
         );
 
         mv = Move::new(
@@ -156,8 +199,8 @@ mod tests {
         );
 
         assert_eq!(
-            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
-            Evaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
+            -ByteKnightEvaluation::score_move_for_ordering(side, &mv, &None, &history_table),
+            ByteKnightEvaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
         );
 
         mv = Move::new(
@@ -170,8 +213,8 @@ mod tests {
         );
 
         assert_eq!(
-            -Evaluation::score_move_for_ordering(side, &mv, &None, &history_table),
-            Evaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
+            -ByteKnightEvaluation::score_move_for_ordering(side, &mv, &None, &history_table),
+            ByteKnightEvaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
         );
     }
 
@@ -311,146 +354,25 @@ mod tests {
             "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
             "rnbqkb1r/ppppp1pp/7n/4Pp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3",
         ];
-        
+
         let scores: [ScoreType; 128] = [
-            0,
-            56,
-            488,
-            499,
-            -488,
-            -499,
-            980,
-            -980,
-            445,
-            458,
-            -445,
-            -458,
-            0,
-            9,
-            14,
-            12,
-            -9,
-            -14,
-            -12,
-            -488,
-            -499,
-            488,
-            499,
-            -980,
-            980,
-            -445,
-            -458,
-            445,
-            458,
-            0,
-            -9,
-            -14,
-            -12,
-            9,
-            14,
-            12,
-            2,
-            1,
-            0,
-            -342,
-            406,
-            -2,
-            -1,
-            3,
-            342,
-            -406,
-            0,
-            -29,
-            634,
-            -628,
-            25,
-            29,
-            -634,
-            628,
-            0,
-            -1,
-            0,
-            1,
-            -925,
-            -990,
-            -77,
-            929,
-            -990,
-            77,
-            162,
-            95,
-            -162,
-            -95,
-            69,
-            -162,
-            -95,
-            162,
-            95,
-            -69,
-            59,
-            59,
-            0,
-            0,
-            0,
-            0,
-            0,
-            2,
-            0,
-            0,
-            0,
-            0,
-            0,
-            -2,
-            -27,
-            7,
-            4,
-            7,
-            -4,
-            -7,
-            -169,
-            9,
-            27,
-            -7,
-            -4,
-            -7,
-            4,
-            7,
-            169,
-            -9,
-            -4,
-            3,
-            4,
-            -3,
-            9,
-            -9,
-            0,
-            4,
-            -3,
-            -4,
-            3,
-            -9,
-            9,
-            0,
-            -3,
-            15,
-            26,
-            42,
-            3,
-            -15,
-            -26,
-            -42,
-            37,
-            53,
+            0, 56, 488, 499, -488, -499, 980, -980, 445, 458, -445, -458, 0, 9, 14, 12, -9, -14,
+            -12, -488, -499, 488, 499, -980, 980, -445, -458, 445, 458, 0, -9, -14, -12, 9, 14, 12,
+            2, 1, 0, -342, 406, -2, -1, 3, 342, -406, 0, -29, 634, -628, 25, 29, -634, 628, 0, -1,
+            0, 1, -925, -990, -77, 929, -990, 77, 162, 95, -162, -95, 69, -162, -95, 162, 95, -69,
+            59, 59, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, -2, -27, 7, 4, 7, -4, -7, -169, 9, 27, -7, -4,
+            -7, 4, 7, 169, -9, -4, 3, 4, -3, 9, -9, 0, 4, -3, -4, 3, -9, 9, 0, -3, 15, 26, 42, 3,
+            -15, -26, -42, 37, 53,
         ];
 
-        let eval = Evaluation::new();
+        let eval = ByteKnightEvaluation::default();
 
         for (i, fen) in positions.iter().enumerate() {
+            println!("Position {}: {}", i, fen);
             let board = Board::from_fen(fen).unwrap();
-            let score = eval.evaluate_position(&board);
-            // println!("{},", score.0);
+            let score = eval.eval(&board);
+            println!("{},", score.0);
             assert_eq!(score.0, scores[i]);
         }
-
     }
 }
