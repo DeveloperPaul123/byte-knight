@@ -22,13 +22,7 @@ impl HistoryTable {
         self.table[side as usize][piece as usize][square as usize]
     }
 
-    pub(crate) fn update(
-        &mut self,
-        side: Side,
-        piece: Piece,
-        square: u8,
-        bonus: LargeScoreType,
-    ) {
+    pub(crate) fn update(&mut self, side: Side, piece: Piece, square: u8, bonus: LargeScoreType) {
         assert!(side != Side::Both, "Side cannot be Both");
         let current_value = self.table[side as usize][piece as usize][square as usize];
         let clamped_bonus = bonus.clamp(-Score::MAX_HISTORY, Score::MAX_HISTORY);
