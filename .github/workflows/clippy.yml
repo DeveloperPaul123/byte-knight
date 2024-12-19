@@ -18,6 +18,8 @@ jobs:
     - uses: actions/checkout@v4
       with:
         lfs: true
+    - name: Rust nightly
+      run: rustup default nightly
     - name: Install just
       uses: extractions/setup-just@v2
     - name: clippy
