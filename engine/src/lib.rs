@@ -1,12 +1,18 @@
+#![feature(trait_alias)]
+#![feature(type_alias_impl_trait)]
+
 pub mod aspiration_window;
 pub mod defs;
 pub mod engine;
 pub mod evaluation;
+pub mod hce_values;
 pub mod history_table;
 pub mod input_handler;
+pub mod phased_score;
 pub mod psqt;
 pub mod score;
 pub mod search;
 pub mod search_thread;
+pub mod traits;
 pub mod ttable;
 pub mod tuneable;
