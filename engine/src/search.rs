@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Dec 11 2024
+ * Last Modified: Wed Dec 18 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -28,9 +28,10 @@ use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 use crate::{
     aspiration_window::AspirationWindow,
     defs::MAX_DEPTH,
-    evaluation::Evaluation,
+    evaluation::ByteKnightEvaluation,
     history_table::HistoryTable,
-    score::{MoveOrderScoreType, Score, ScoreType},
+    score::{LargeScoreType, Score, ScoreType},
+    traits::Eval,
     ttable::{self, TranspositionTableEntry},
 };
 use ttable::TranspositionTable;
@@ -143,7 +144,7 @@ pub struct Search<'search_lifetime> {
     move_gen: MoveGenerator,
     nodes: u64,
     parameters: SearchParameters,
-    eval: Evaluation,
+    eval: ByteKnightEvaluation,
     stop_flag: Option<Arc<AtomicBool>>,
 }
 
@@ -159,7 +160,7 @@ impl<'a> Search<'a> {
             move_gen: MoveGenerator::new(),
             nodes: 0,
             parameters: parameters.clone(),
-            eval: Evaluation::new(),
+            eval: ByteKnightEvaluation::default(),
             stop_flag: None,
         }
     }
@@ -359,7 +360,7 @@ impl<'a> Search<'a> {
 
         // sort moves by MVV/LVA
         let sorted_moves = move_list.iter().sorted_by_cached_key(|mv| {
-            Evaluation::score_move_for_ordering(
+            ByteKnightEvaluation::score_move_for_ordering(
                 board.side_to_move(),
                 mv,
                 &tt_entry,
@@ -417,7 +418,7 @@ impl<'a> Search<'a> {
                             board.side_to_move(),
                             mv.piece(),
                             mv.to(),
-                            bonus as MoveOrderScoreType,
+                            bonus as LargeScoreType,
                         );
 
                         // apply a penalty to all quiets searched so far
@@ -426,7 +427,7 @@ impl<'a> Search<'a> {
                                 board.side_to_move(),
                                 mv.piece(),
                                 mv.to(),
-                                -bonus as MoveOrderScoreType,
+                                -bonus as LargeScoreType,
                             );
                         }
                     }
@@ -476,7 +477,7 @@ impl<'a> Search<'a> {
     /// The score of the position.
     ///
     fn quiescence(&mut self, board: &mut Board, alpha: Score, beta: Score) -> Score {
-        let standing_eval = self.eval.evaluate_position(board);
+        let standing_eval = self.eval.eval(board);
         if standing_eval >= beta {
             return beta;
         }
@@ -497,7 +498,12 @@ impl<'a> Search<'a> {
         }
 
         let sorted_moves = captures.into_iter().sorted_by_cached_key(|mv| {
-            Evaluation::score_move_for_ordering(board.side_to_move(), mv, &None, self.history_table)
+            ByteKnightEvaluation::score_move_for_ordering(
+                board.side_to_move(),
+                mv,
+                &None,
+                self.history_table,
+            )
         });
         let mut best = standing_eval;
 
@@ -539,13 +545,13 @@ mod tests {
     use chess::{board::Board, pieces::ALL_PIECES};
 
     use crate::{
-        evaluation::Evaluation,
+        evaluation::ByteKnightEvaluation,
         score::Score,
         search::{Search, SearchParameters},
         ttable::TranspositionTable,
     };
 
-    use super::MoveOrderScoreType;
+    use super::LargeScoreType;
 
     #[test]
     fn white_mate_in_1() {
@@ -684,11 +690,11 @@ mod tests {
             ..Default::default()
         };
 
-        let mut min_mvv_lva = MoveOrderScoreType::MAX;
-        let mut max_mvv_lva = MoveOrderScoreType::MIN;
+        let mut min_mvv_lva = LargeScoreType::MAX;
+        let mut max_mvv_lva = LargeScoreType::MIN;
         for capturing in ALL_PIECES {
             for captured in ALL_PIECES.iter().filter(|p| !p.is_king() && !p.is_none()) {
-                let mvv_lva = Evaluation::mvv_lva(*captured, capturing);
+                let mvv_lva = ByteKnightEvaluation::mvv_lva(*captured, capturing);
                 if mvv_lva < min_mvv_lva {
                     min_mvv_lva = mvv_lva;
                 }
@@ -709,7 +715,7 @@ mod tests {
             assert!(res.best_move.is_some());
 
             let side = board.side_to_move();
-            let mut max_history = MoveOrderScoreType::MIN;
+            let mut max_history = LargeScoreType::MIN;
             for piece in ALL_PIECES {
                 for square in 0..64 {
                     let score = history_table.get(side, piece, square);

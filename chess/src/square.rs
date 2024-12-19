@@ -4,7 +4,7 @@
  * Created Date: Friday, August 16th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 26 2024
+ * Last Modified: Wed Dec 18 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -109,6 +109,76 @@ impl Square {
             Color::White
         }
     }
+
+    /// Flips the current square and returns a new instance at the flipped location.
+    pub fn flip(&self) -> Self {
+        let sq = self.to_square_index();
+        let flipped_sq = flip(sq);
+        Self::from_square_index(flipped_sq)
+    }
+}
+
+/// Flips the square vertically.
+///
+/// # Arguments
+///
+/// - `sq` - The square to flip.
+///
+/// # Returns
+///
+/// The flipped square
+///
+/// # Examples
+///
+/// ```
+/// use chess::square::Square;
+/// use chess::square::flip;
+/// use chess::file::File;
+/// use chess::rank::Rank;
+///
+/// let sq = Square::new(File::A, Rank::R1);
+/// let flipped_sq = flip(sq.to_square_index());
+/// assert_eq!(flipped_sq, 56);
+/// let new_sq = Square::from_square_index(flipped_sq);
+/// assert_eq!(new_sq.file, File::A);
+/// assert_eq!(new_sq.rank, Rank::R8);
+pub const fn flip(sq: u8) -> u8 {
+    sq ^ 56
+}
+
+/// Flips the square if the given boolean is `true`.
+///
+/// This will flip the square vertically if `flip` is `true`.
+///
+/// # Arguments
+///
+/// - `flip` - A boolean indicating if the square should be flipped.
+/// - `sq` - The square to flip.
+///
+/// # Returns
+///
+/// The flipped square or sq if `flip` is `false`.
+///
+/// # Examples
+///
+/// ```
+/// use chess::square::Square;
+/// use chess::square::flip_if;
+/// use chess::file::File;
+/// use chess::rank::Rank;
+///
+/// let sq = Square::new(File::A, Rank::R1);
+/// let flipped_sq = flip_if(true, sq.to_square_index());
+/// assert_eq!(flipped_sq, 56);
+/// let new_sq = Square::from_square_index(flipped_sq);
+/// assert_eq!(new_sq.file, File::A);
+/// assert_eq!(new_sq.rank, Rank::R8);
+pub fn flip_if(should_flip: bool, sq: u8) -> u8 {
+    if should_flip {
+        flip(sq)
+    } else {
+        sq
+    }
 }
 
 impl TryFrom<&str> for Square {
@@ -184,10 +254,10 @@ pub const fn is_square_on_rank(square: u8, rank: u8) -> bool {
 #[cfg(test)]
 mod tests {
     use crate::{
-        definitions::Squares,
+        definitions::{NumberOf, Squares},
         file::File,
         rank::Rank,
-        square::{is_square_on_rank, Square},
+        square::{is_square_on_rank, to_square, Square},
     };
 
     #[test]
@@ -214,5 +284,19 @@ mod tests {
         let square = Square::try_from("a1").unwrap();
         let new_square = square.offset(-1, -1);
         assert!(new_square.is_none());
+    }
+
+    #[test]
+    fn flip() {
+        for rank in 0..4_u8 {
+            for file in 0..NumberOf::FILES as u8 {
+                let sq = to_square(file, rank);
+                let square = Square::from_square_index(sq);
+                let flipped = square.flip();
+                assert_eq!(flipped.flip(), square);
+                assert_eq!(flipped.file, square.file);
+                assert_eq!(flipped.rank.as_number(), (Rank::R8 - square.rank) as u8);
+            }
+        }
     }
 }

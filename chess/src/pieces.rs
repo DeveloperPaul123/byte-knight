@@ -4,7 +4,7 @@
  * Created Date: Monday, November 25th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 26 2024
+ * Last Modified: Tue Dec 17 2024
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -48,6 +48,11 @@ pub const ALL_PIECES: [Piece; 6] = [
     Piece::Pawn,
 ];
 
+/// Represents a chess piece.
+///
+/// **Note**: The ordinal value of the piece is used throughout the
+/// code to index into arrays and tables. Changing the value of a piece
+/// would likely be catastrophic and result in a number of bugs and possibly crashes.
 #[repr(u8)]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Piece {
