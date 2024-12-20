@@ -1,150 +1,121 @@
-use std::thread::current;
+use std::usize;
 
-use chess::board::Board;
-use engine::{
-    psqt::{
-        EG_BISHOP_TABLE, EG_KING_TABLE, EG_KNIGHT_TABLE, EG_PAWN_TABLE, EG_QUEEN_TABLE,
-        EG_ROOK_TABLE, EG_VALUE, GAMEPHASE_INC, MG_BISHOP_TABLE, MG_KING_TABLE, MG_KNIGHT_TABLE,
-        MG_PAWN_TABLE, MG_QUEEN_TABLE, MG_ROOK_TABLE, MG_VALUE,
-    },
-    score::ScoreType,
-};
+use anyhow::Result;
+use chess::{board::Board, pieces::Piece};
+use engine::{evaluation::Evaluation, hce_values::PSQTS, score::ScoreType, traits::Eval};
 
-/// Start
-type Offset = usize;
-pub(crate) struct Offsets {
-    table: Vec<Offset>,
-}
-
-const MG_VALUE_INDEX: usize = 0;
-const EG_TABLE_INDEX: usize = 1;
-const GAMEPHASE_INC_INDEX: usize = 2;
-const MG_PAWN_TABLE_INDEX: usize = 3;
-const EG_PAWN_TABLE_INDEX: usize = 4;
-const MG_KNIGHT_TABLE_INDEX: usize = 5;
-const EG_KNIGHT_TABLE_INDEX: usize = 6;
-const MG_BISHOP_TABLE_INDEX: usize = 7;
-const EG_BISHOP_TABLE_INDEX: usize = 8;
-const MG_ROOK_TABLE_INDEX: usize = 9;
-const EG_ROOK_TABLE_INDEX: usize = 10;
-const MG_QUEEN_TABLE_INDEX: usize = 11;
-const EG_QUEEN_TABLE_INDEX: usize = 12;
-const MG_KING_TABLE_INDEX: usize = 13;
-const EG_KING_TABLE_INDEX: usize = 14;
+use crate::{offsets::Offsets, tuner_values::TunerValues};
 
 const K_PRECISION: usize = 10;
 
-impl Offsets {
-    pub(crate) fn new() -> Self {
-        Self {
-            table: vec![
-                0,   // MG_VALUE start
-                6,   // EG_TABLE start
-                12,  // GAMEPHASE_INC start
-                18,  // MG_PAWN_TABLE start
-                82,  // EG_PAWN_TABLE start
-                146, // MG_KNIGHT_TABLE start
-                210, // EG_KNIGHT_TABLE start
-                274, // MG_BISHOP_TABLE start
-                338, // EG_BISHOP_TABLE start
-                402, // MG_ROOK_TABLE start
-                466, // EG_ROOK_TABLE start
-                530, // MG_QUEEN_TABLE start
-                594, // EG_QUEEN_TABLE start
-                658, // MG_KING_TABLE start
-                722, // EG_KING_TABLE start
-            ],
-        }
-    }
-
-    pub(crate) fn total_size(&self) -> usize {
-        self.table.last().unwrap() + EG_KING_TABLE.len()
-    }
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+pub(crate) enum TableType {
+    Midgame,
+    Endgame,
 }
 
-impl Default for Offsets {
-    fn default() -> Self {
-        Self::new()
-    }
+fn calculate_psqt_index(
+    piece: Piece,
+    square: usize,
+    table_type: TableType,
+    offsets: &Offsets,
+) -> Result<usize> {
+    let start_index = offsets.start_index_for_piece(piece, table_type)?;
+    Ok(start_index + square)
 }
 
-struct Tuner<'a> {
+pub(crate) struct Position {
+    pub(crate) board: Board,
+    pub(crate) game_result: f64,
+}
+
+pub(crate) struct Tuner<'a> {
     offsets: Offsets,
-    params: Vec<ScoreType>,
-    positions: &'a Vec<Board>,
+    positions: &'a Vec<Position>,
+    evaluation: Evaluation<TunerValues>,
 }
 
 impl<'a> Tuner<'a> {
-    pub(crate) fn new(positions: &'a Vec<Board>) -> Self {
+    pub(crate) fn new(positions: &'a Vec<Position>) -> Self {
         let offsets = Offsets::new();
-        let mut params: Vec<ScoreType> = Vec::with_capacity(offsets.total_size());
-        // TODO: Populate params from psqts
-        params.extend(&MG_VALUE);
-        params.extend(&EG_VALUE);
-        params.extend(&GAMEPHASE_INC);
-        params.extend(&MG_PAWN_TABLE);
-        params.extend(&EG_PAWN_TABLE);
-        params.extend(&MG_KNIGHT_TABLE);
-        params.extend(&EG_KNIGHT_TABLE);
-        params.extend(&MG_BISHOP_TABLE);
-        params.extend(&EG_BISHOP_TABLE);
-        params.extend(&MG_ROOK_TABLE);
-        params.extend(&EG_ROOK_TABLE);
-        params.extend(&MG_QUEEN_TABLE);
-        params.extend(&EG_QUEEN_TABLE);
-        params.extend(&MG_KING_TABLE);
-        params.extend(&EG_KING_TABLE);
+        let mut params: Vec<ScoreType> = vec![0; offsets.total_size()];
+        for piece in Piece::iter() {
+            for square in 0..64 {
+                let ps = PSQTS[piece as usize][square];
+                let mg_index = calculate_psqt_index(piece, square, TableType::Midgame, &offsets)
+                    .expect(&format!("Failed to get MG index for {}", piece));
+                let eg_index = calculate_psqt_index(piece, square, TableType::Endgame, &offsets)
+                    .expect(&format!("Failed to get EG index for {}", piece));
+                params[mg_index] = ps.mg();
+                params[eg_index] = ps.eg();
+            }
+        }
 
         assert_eq!(params.len(), offsets.total_size());
+        let evaluation = Evaluation::new(TunerValues::new(offsets.clone(), params));
+
         Self {
             offsets,
-            params,
             positions,
+            evaluation,
         }
     }
 
-    pub(crate) fn tune(&self) -> Vec<ScoreType> {
-        let K: f64 = self.compute_k();
+    fn tuner_values(&mut self) -> &mut TunerValues {
+        self.evaluation.mutable_values()
+    }
+
+    pub(crate) fn tune(&mut self) -> &Vec<ScoreType> {
+        let computed_k: f64 = self.compute_k();
         let adjustement = 1;
 
-        let best_error = self.mean_square_error(K);
+        let best_error = self.mean_square_error(computed_k);
         let mut improved = true;
-        let mut best_params = self.params.clone();
 
+        let param_len = self.evaluation.values().params().len();
         while improved {
             improved = false;
-            for i in 0..self.params.len() {
-                let mut new_params = self.params.clone();
-                new_params[i] += adjustement;
-                let new_error = self.mean_square_error(K);
+            for i in 0..param_len {
+                self.tuner_values().increment_param(i, adjustement);
+                let new_error = self.mean_square_error(computed_k);
                 if new_error < best_error {
-                    best_params = new_params;
+                    // commit the new param
+                    self.tuner_values().commit();
                     improved = true;
                 } else {
-                    new_params[i] -= 2 * adjustement;
-                    let new_error = self.mean_square_error(K);
+                    self.tuner_values().decrement_param(i, 2 * adjustement);
+                    let new_error = self.mean_square_error(computed_k);
                     if new_error < best_error {
-                        best_params = new_params;
+                        // commit the new param
+                        self.tuner_values().commit();
                         improved = true;
                     }
                 }
             }
         }
 
-        best_params
+        // return the best parameters
+        self.evaluation.values().params()
     }
 
     fn sigmoid(K: f64, score: ScoreType) -> f64 {
         1.0 / (1.0 + 10_f64.powf(-K * score as f64 / 400.0))
     }
+
     fn mean_square_error(&self, K: f64) -> f64 {
-        let error = 0.0;
+        let mut error = 0.0;
         // TODO:
         //  - Loop over all positions
         //  - Evalute the board using our current parameters
         //  - Calculate the sigmoid of the score
         //  - Calculate the error as the square of the difference between the actual result and the sigmoid
         //  - Increase the error accumulator
+
+        for pos in self.positions.iter() {
+            let score = self.evaluation.eval(&pos.board);
+            let sigmoid = Self::sigmoid(K, score.0);
+            error += (pos.game_result - sigmoid).powi(2);
+        }
         error / self.number_of_positions()
     }
 
@@ -153,7 +124,7 @@ impl<'a> Tuner<'a> {
     }
 
     /// Computes the optimal K value to minimize the error of the initial parameters.
-    /// Based on the implementation in Andy Grant's original paper. 
+    /// Based on the implementation in Andy Grant's original paper.
     fn compute_k(&self) -> f64 {
         let mut start = 0.0;
         let mut end = 10.0;
@@ -197,6 +168,6 @@ mod tests {
     fn construct_tuner() {
         let positions = vec![]; // Add appropriate Board instances here
         let tuner = Tuner::new(&positions);
-        assert_eq!(tuner.params.len(), 786);
+        assert_eq!(tuner.evaluation.values().params().len(), 786);
     }
 }
