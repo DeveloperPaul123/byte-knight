@@ -27,14 +27,22 @@ use crate::{
 /// Provides static evaluation of a given chess position.
 pub struct Evaluation<Values>
 where
-    Values: EvalValues + Default,
+    Values: EvalValues,
 {
     values: Values,
 }
 
-impl<Values: EvalValues + Default> Evaluation<Values> {
+impl<Values: EvalValues> Evaluation<Values> {
     pub fn new(values: Values) -> Self {
         Evaluation { values }
+    }
+
+    pub fn values(&self) -> &Values {
+        &self.values
+    }
+
+    pub fn mutable_values(&mut self) -> &mut Values {
+        &mut self.values
     }
 
     /// Scores a move for ordering. This will return the _negative_ score of
@@ -93,7 +101,7 @@ impl<Values: EvalValues + Default> Evaluation<Values> {
     }
 }
 
-impl<Values: EvalValues<ReturnScore = PhasedScore> + Default> Eval<Board> for Evaluation<Values> {
+impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<Values> {
     /// Evaluates the given position.
     ///
     /// # Arguments
