@@ -115,7 +115,7 @@ fn get_positions() -> Vec<tuner::Position> {
 
 fn print_table(name: String, table: &[ScoreType]) {
     println!("{} :", name);
-    for rank in (0..=7).rev() {
+    for rank in 0..8 {
         for file in 0..8 {
             print!("{:4} ", table[rank * 8 + file]);
             if file == 7 {
