@@ -135,6 +135,11 @@ impl Piece {
     pub fn as_char(&self) -> char {
         PIECE_SHORT_NAMES[*self as usize].to_ascii_lowercase()
     }
+
+    /// Returns an iterator over all the pieces except [`Piece::None`].
+    pub fn iter() -> impl Iterator<Item = Piece> {
+        ALL_PIECES.iter().copied()
+    }
 }
 
 impl Display for Piece {
