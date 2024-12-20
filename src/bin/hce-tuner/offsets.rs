@@ -10,35 +10,36 @@ pub(crate) struct Offsets {
     table: Vec<Offset>,
 }
 
-const MG_PAWN_TABLE_INDEX: usize = 0;
-const EG_PAWN_TABLE_INDEX: usize = 1;
-const MG_KNIGHT_TABLE_INDEX: usize = 2;
-const EG_KNIGHT_TABLE_INDEX: usize = 3;
-const MG_BISHOP_TABLE_INDEX: usize = 4;
-const EG_BISHOP_TABLE_INDEX: usize = 5;
-const MG_ROOK_TABLE_INDEX: usize = 6;
-const EG_ROOK_TABLE_INDEX: usize = 7;
-const MG_QUEEN_TABLE_INDEX: usize = 8;
-const EG_QUEEN_TABLE_INDEX: usize = 9;
-const MG_KING_TABLE_INDEX: usize = 10;
-const EG_KING_TABLE_INDEX: usize = 11;
+// Indexes for the Offset table based on the piece order in ['Piece']
+const MG_KING_TABLE_INDEX: usize = 0;
+const EG_KING_TABLE_INDEX: usize = 1;
+const MG_QUEEN_TABLE_INDEX: usize = 2;
+const EG_QUEEN_TABLE_INDEX: usize = 3;
+const MG_ROOK_TABLE_INDEX: usize = 4;
+const EG_ROOK_TABLE_INDEX: usize = 5;
+const MG_BISHOP_TABLE_INDEX: usize = 6;
+const EG_BISHOP_TABLE_INDEX: usize = 7;
+const MG_KNIGHT_TABLE_INDEX: usize = 8;
+const EG_KNIGHT_TABLE_INDEX: usize = 9;
+const MG_PAWN_TABLE_INDEX: usize = 10;
+const EG_PAWN_TABLE_INDEX: usize = 11;
 
 impl Offsets {
     pub(crate) fn new() -> Self {
         Self {
             table: vec![
-                0,  // MG_PAWN_TABLE start
-                64,  // EG_PAWN_TABLE start
-                128, // MG_KNIGHT_TABLE start
-                192, // EG_KNIGHT_TABLE start
-                256, // MG_BISHOP_TABLE start
-                320, // EG_BISHOP_TABLE start
-                384, // MG_ROOK_TABLE start
-                448, // EG_ROOK_TABLE start
-                512, // MG_QUEEN_TABLE start
-                576, // EG_QUEEN_TABLE start
-                640, // MG_KING_TABLE start
-                704, // EG_KING_TABLE start
+                0,   // King midgame
+                64,  // King endgame
+                128, // Queen midgame
+                192, // Queen endgame
+                256, // Rook midgame
+                320, // Rook endgame
+                384, // Bishop midgame
+                448, // Bishop endgame
+                512, // Knight midgame
+                576, // Knight endgame
+                640, // Pawn midgame
+                704, // Pawn endgame
             ],
         }
     }

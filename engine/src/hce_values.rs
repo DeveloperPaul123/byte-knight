@@ -10,6 +10,7 @@ use crate::{
     traits::EvalValues,
 };
 
+/// Piece-Square Tables, ordered by the ordinality of the pieces. See ['pieces::Piece']
 #[rustfmt::skip]
 pub const PSQTS : [[PhasedScore; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]  = [
     // King

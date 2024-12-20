@@ -131,7 +131,7 @@ impl<'a> Tuner<'a> {
         let mut step = 1.0;
         let mut best_e = self.mean_square_error(start);
 
-        for i in 0..K_PRECISION {
+        for _i in 0..K_PRECISION {
             let mut current_k = start - step;
             // Optimize K to minimize the error
             while current_k < end {
@@ -161,13 +161,13 @@ mod tests {
     #[test]
     fn offsets() {
         let offsets = Offsets::new();
-        assert_eq!(offsets.total_size(), 786);
+        assert_eq!(offsets.total_size(), 768);
     }
 
     #[test]
     fn construct_tuner() {
         let positions = vec![]; // Add appropriate Board instances here
         let tuner = Tuner::new(&positions);
-        assert_eq!(tuner.evaluation.values().params().len(), 786);
+        assert_eq!(tuner.evaluation.values().params().len(), 768);
     }
 }
