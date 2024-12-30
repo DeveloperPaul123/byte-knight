@@ -1,6 +1,7 @@
 use chess::{board::Board, definitions::NumberOf};
 use clap::Parser;
 use engine::score::ScoreType;
+mod epd_parser;
 mod offsets;
 mod tuner;
 mod tuner_values;
