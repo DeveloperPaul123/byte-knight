@@ -10,7 +10,7 @@ pub(crate) struct TunerValues {
     temporary_param: Option<(usize, ScoreType)>,
 }
 
-impl<'a> TunerValues {
+impl TunerValues {
     pub(crate) fn new(offsets: Offsets, params: Vec<ScoreType>) -> Self {
         Self {
             offsets,
@@ -40,12 +40,13 @@ impl<'a> TunerValues {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn discard(&mut self) {
         self.temporary_param = None;
     }
 }
 
-impl<'a> EvalValues for TunerValues {
+impl EvalValues for TunerValues {
     type ReturnScore = PhasedScore;
 
     fn psqt(&self, square: u8, piece: Piece, side: chess::side::Side) -> Self::ReturnScore {

@@ -1,5 +1,3 @@
-use std::usize;
-
 use anyhow::Result;
 use chess::{board::Board, pieces::Piece};
 use engine::{evaluation::Evaluation, hce_values::PSQTS, score::ScoreType, traits::Eval};
@@ -30,7 +28,6 @@ pub(crate) struct Position {
 }
 
 pub(crate) struct Tuner<'a> {
-    offsets: Offsets,
     positions: &'a Vec<Position>,
     evaluation: Evaluation<TunerValues>,
 }
@@ -55,7 +52,6 @@ impl<'a> Tuner<'a> {
         let evaluation = Evaluation::new(TunerValues::new(offsets.clone(), params));
 
         Self {
-            offsets,
             positions,
             evaluation,
         }
@@ -111,7 +107,7 @@ impl<'a> Tuner<'a> {
         //  - Calculate the error as the square of the difference between the actual result and the sigmoid
         //  - Increase the error accumulator
 
-        for pos in self.positions.iter() {
+        for pos in self.positions {
             let score = self.evaluation.eval(&pos.board);
             let sigmoid = Self::sigmoid(K, score.0);
             error += (pos.game_result - sigmoid).powi(2);
