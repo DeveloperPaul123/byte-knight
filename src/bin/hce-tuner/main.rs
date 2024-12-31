@@ -13,6 +13,7 @@ struct Options {
     input_data: String,
 }
 
+#[allow(dead_code)]
 fn get_positions() -> Vec<tuner::Position> {
     vec![
         tuner::Position {
@@ -134,9 +135,11 @@ fn print_params(params: &Vec<ScoreType>) {
 }
 
 fn main() {
-    // let options = Options::parse();
-    // println!("Input data: {}", options.input_data);
-    let positions = get_positions();
+    let options = Options::parse();
+    println!("Reading data from: {}", options.input_data);
+    let positions = epd_parser::parse_epd_file(options.input_data.as_str());
+    println!("Read {} positions", positions.len());
+    // let positions = get_positions();
     let mut tuner = tuner::Tuner::new(&positions);
     let tuned_result = tuner.tune();
 
