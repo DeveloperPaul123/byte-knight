@@ -138,8 +138,9 @@ fn main() {
     let options = Options::parse();
     println!("Reading data from: {}", options.input_data);
     let positions = epd_parser::parse_epd_file(options.input_data.as_str());
-    println!("Read {} positions", positions.len());
     // let positions = get_positions();
+    println!("Read {} positions", positions.len());
+
     let mut tuner = tuner::Tuner::new(&positions);
     let tuned_result = tuner.tune();
 
