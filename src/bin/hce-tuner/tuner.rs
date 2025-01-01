@@ -62,10 +62,13 @@ impl<'a> Tuner<'a> {
     }
 
     pub(crate) fn tune(&mut self) -> &Vec<ScoreType> {
+        println!("Computing optimal K value...");
         let computed_k: f64 = self.compute_k();
+        println!("Optimal K value: {}", computed_k);
         let adjustement = 1;
 
-        let best_error = self.mean_square_error(computed_k);
+        let mut best_error = self.mean_square_error(computed_k);
+        println!("Initial error: {}", best_error);
         let mut improved = true;
 
         let param_len = self.evaluation.values().params().len();
@@ -75,16 +78,25 @@ impl<'a> Tuner<'a> {
                 self.tuner_values().increment_param(i, adjustement);
                 let new_error = self.mean_square_error(computed_k);
                 if new_error < best_error {
+                    println!("New error: {} for param {}", new_error, i);
                     // commit the new param
                     self.tuner_values().commit();
+                    // update the best error and mark the improvement
+                    best_error = new_error;
                     improved = true;
                 } else {
-                    self.tuner_values().decrement_param(i, 2 * adjustement);
+                    // if we're here, the increment didn't improve the error, let's try decrementing
+                    self.tuner_values().decrement_param(i, adjustement);
                     let new_error = self.mean_square_error(computed_k);
                     if new_error < best_error {
+                        println!("New error: {} for param {}", new_error, i);
                         // commit the new param
                         self.tuner_values().commit();
+                        // update the best error and mark the improvement
+                        best_error = new_error;
                         improved = true;
+                    } else {
+                        self.tuner_values().discard();
                     }
                 }
             }
@@ -100,7 +112,7 @@ impl<'a> Tuner<'a> {
 
     fn mean_square_error(&self, K: f64) -> f64 {
         let mut error = 0.0;
-        // TODO:
+        
         //  - Loop over all positions
         //  - Evalute the board using our current parameters
         //  - Calculate the sigmoid of the score
@@ -133,10 +145,11 @@ impl<'a> Tuner<'a> {
             while current_k < end {
                 current_k = current_k + step;
                 let e = self.mean_square_error(current_k);
-                if e <= best_e {
+                if e < best_e {
                     // found a better value, update the best error and the start value
                     best_e = e;
                     start = current_k;
+                    println!("New best K: {} with error: {}", start, best_e);
                 }
             }
 
