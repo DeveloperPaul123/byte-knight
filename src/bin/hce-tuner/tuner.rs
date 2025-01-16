@@ -72,6 +72,7 @@ impl<'a> Tuner<'a> {
         let mut improved = true;
 
         let param_len = self.evaluation.values().params().len();
+        println!("Tuning {} parameters", param_len);
         while improved {
             improved = false;
             for i in 0..param_len {
@@ -106,13 +107,13 @@ impl<'a> Tuner<'a> {
         self.evaluation.values().params()
     }
 
-    fn sigmoid(K: f64, score: ScoreType) -> f64 {
-        1.0 / (1.0 + 10_f64.powf(-K * score as f64 / 400.0))
+    fn sigmoid(k: f64, score: ScoreType) -> f64 {
+        1.0 / (1.0 + f64::exp(-k * score as f64))
     }
 
-    fn mean_square_error(&self, K: f64) -> f64 {
+    fn mean_square_error(&self, k: f64) -> f64 {
         let mut error = 0.0;
-        
+
         //  - Loop over all positions
         //  - Evalute the board using our current parameters
         //  - Calculate the sigmoid of the score
@@ -121,7 +122,7 @@ impl<'a> Tuner<'a> {
 
         for pos in self.positions {
             let score = self.evaluation.eval(&pos.board);
-            let sigmoid = Self::sigmoid(K, score.0);
+            let sigmoid = Self::sigmoid(k, score.0);
             error += (pos.game_result - sigmoid).powi(2);
         }
         error / self.number_of_positions()
@@ -132,34 +133,26 @@ impl<'a> Tuner<'a> {
     }
 
     /// Computes the optimal K value to minimize the error of the initial parameters.
-    /// Based on the implementation in Andy Grant's original paper.
+    /// Taken from https://github.com/jw1912/hce-tuner/
     fn compute_k(&self) -> f64 {
-        let mut start = 0.0;
-        let mut end = 10.0;
-        let mut step = 1.0;
-        let mut best_e = self.mean_square_error(start);
+        let rate = 10f64;
+        let mut k = 2.5;
+        let delta = 1e-5;
+        let goal = 1e-6;
+        let mut deviation = 1f64;
 
-        for _i in 0..K_PRECISION {
-            let mut current_k = start - step;
-            // Optimize K to minimize the error
-            while current_k < end {
-                current_k = current_k + step;
-                let e = self.mean_square_error(current_k);
-                if e < best_e {
-                    // found a better value, update the best error and the start value
-                    best_e = e;
-                    start = current_k;
-                    println!("New best K: {} with error: {}", start, best_e);
-                }
+        while deviation.abs() > goal {
+            let up = self.mean_square_error(k + delta);
+            let down = self.mean_square_error(k - delta);
+            deviation = (up - down) / (2. * delta);
+            k -= deviation * rate;
+
+            if k <= 0.0 {
+                println!("k {k:.4} decr {down:.5} incr {up:.5}");
             }
-
-            // We will repeat, but adjust the search space
-            end = start + step;
-            start = start - step;
-            step = step / 10.0;
         }
 
-        start
+        k
     }
 }
 
