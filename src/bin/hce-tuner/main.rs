@@ -1,10 +1,11 @@
-use chess::{board::Board, definitions::NumberOf};
+use chess::{board::Board, definitions::NumberOf, pieces::PIECE_NAMES};
 use clap::Parser;
 use engine::score::ScoreType;
 mod epd_parser;
 mod offsets;
 mod tuner;
 mod tuner_values;
+mod gradient_descent;
 
 #[derive(Parser, Debug)]
 #[command(version, about="Texel tuner for HCE in byte-knight", long_about=None)]
@@ -115,23 +116,39 @@ fn get_positions() -> Vec<tuner::Position> {
     ]
 }
 
-fn print_table(name: String, table: &[ScoreType]) {
-    println!("{} :", name);
+fn print_table(indent: usize, table: &[ScoreType]) {
     for rank in 0..8 {
         for file in 0..8 {
-            print!("{:4} ", table[rank * 8 + file]);
+            let idx = rank * 8 + file;
+            if file == 0 {
+                print!("{:indent$}", "", indent = indent);
+            }
+
+            print!(
+                "S({:4}, {:4}), ",
+                table[idx],
+                table[NumberOf::SQUARES + idx]
+            );
             if file == 7 {
                 println!();
             }
         }
     }
 }
+
 fn print_params(params: &Vec<ScoreType>) {
     println!("Tuned parameters:");
-    for i in (0..params.len()).step_by(NumberOf::SQUARES) {
-        let table = &params[i..i + NumberOf::SQUARES];
-        print_table(format!("Table {}", i / NumberOf::SQUARES), table);
+    println!("=================");
+    println!("pub const PSQTS : [[PhasedScore; NumberOf::SQUARES]; NumberOf::PIECE_TYPES] = [");
+    for i in (0..params.len()).step_by(NumberOf::SQUARES * 2) {
+        println!("    // {}", PIECE_NAMES[i / (NumberOf::SQUARES * 2)]);
+        println!("    [");
+
+        let table = &params[i..i + NumberOf::SQUARES * 2];
+        print_table(8, table);
+        println!("    ],");
     }
+    println!("];");
 }
 
 fn main() {
