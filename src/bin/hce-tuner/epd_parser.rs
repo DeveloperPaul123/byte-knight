@@ -4,11 +4,15 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use chess::board::Board;
+use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
+use engine::psqt::GAMEPHASE_INC;
 
-use crate::tuner::Position;
+use crate::{
+    offsets::{self, Offsets},
+    tuner::TuningPosition,
+};
 
-pub(crate) fn parse_epd_file(file_path: &str) -> Vec<Position> {
+pub(crate) fn parse_epd_file(file_path: &str) -> Vec<TuningPosition> {
     let mut positions = Vec::new();
     let file = File::open(file_path).expect("Failed to open file");
     let reader = BufReader::new(file);
@@ -22,7 +26,7 @@ pub(crate) fn parse_epd_file(file_path: &str) -> Vec<Position> {
     positions
 }
 
-fn parse_epd_line(line: &str) -> Result<Position> {
+fn process_epd_line(line: &str) -> Result<(Board, f64)> {
     let mut parts = line.rsplitn(2, ' ');
     // EPD result
     let game_result_part = parts.next();
@@ -31,11 +35,57 @@ fn parse_epd_line(line: &str) -> Result<Position> {
     // FEN
     let fen_part = parts.next();
     let fen = fen_part.unwrap().trim();
+    let board = Board::from_fen(fen)?;
 
-    Ok(Position {
-        board: Board::from_fen(fen).unwrap(),
+    Ok((board, game_result))
+}
+
+fn parse_epd_line(line: &str) -> Result<TuningPosition> {
+    let (board, game_result) = process_epd_line(line)?;
+    let mut w_indexes = Vec::new();
+    let mut b_indexes = Vec::new();
+    // loop through all pieces on the board and calculate the index into the parameter array
+    // for each piece
+    let mut phase = 0;
+    let offsets = Offsets::new();
+    for piece in Piece::iter() {
+        let mut w_bb = *board.piece_bitboard(piece, Side::White);
+        let mut b_bb = *board.piece_bitboard(piece, Side::Black);
+
+        // update game phase
+        phase += w_bb.as_number().count_ones() as usize * GAMEPHASE_INC[piece as usize] as usize;
+        phase += b_bb.as_number().count_ones() as usize * GAMEPHASE_INC[piece as usize] as usize;
+        while w_bb.as_number() > 0 {
+            let sq = bitboard_helpers::next_bit(&mut w_bb);
+            let mg_start_index =
+                offsets.start_index_for_piece(piece, crate::tuner::TableType::Midgame)?;
+            let eg_start_index =
+                offsets.start_index_for_piece(piece, crate::tuner::TableType::Endgame)?;
+
+            w_indexes.push(mg_start_index + sq);
+            w_indexes.push(eg_start_index + sq);
+        }
+        // repeat for black
+        while b_bb.as_number() > 0 {
+            let sq = bitboard_helpers::next_bit(&mut b_bb);
+            let mg_start_index =
+                offsets.start_index_for_piece(piece, crate::tuner::TableType::Midgame)?;
+            let eg_start_index =
+                offsets.start_index_for_piece(piece, crate::tuner::TableType::Endgame)?;
+            b_indexes.push(mg_start_index + sq);
+            b_indexes.push(eg_start_index + sq);
+        }
+    }
+
+    let tuning_pos = TuningPosition::new(
+        w_indexes,
+        b_indexes,
+        phase,
         game_result,
-    })
+        board.side_to_move(),
+    );
+
+    Ok(tuning_pos)
 }
 
 /// Parse the game result from part of the EPD line.
@@ -85,7 +135,9 @@ fn get_game_result(part: &str) -> Result<f64> {
 
 #[cfg(test)]
 mod tests {
-    use crate::epd_parser::get_game_result;
+    use chess::side::Side;
+
+    use crate::epd_parser::{get_game_result, process_epd_line};
 
     #[test]
     fn game_result() {
@@ -121,9 +173,21 @@ mod tests {
             "r2q1rk1/ppp1npbp/4b1p1/1P3nN1/2Pp4/3P4/PB1NBPPP/R2QR1K1 b - - 0 1 [0.0]",
         ];
 
-        for line in epd_lines {
+        const EXPECTED_GAME_PHASES: [usize; 10] = [7, 18, 12, 10, 10, 8, 17, 20, 5, 24];
+        const EXPECTED_GAME_RESULTS: [f64; 10] = [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        for (i, line) in epd_lines.iter().enumerate() {
             let position = super::parse_epd_line(line);
             assert!(position.is_ok());
+            let pos = position.unwrap();
+            let (board, _) = process_epd_line(line).unwrap();
+            let total_piece_count = board.all_pieces().as_number().count_ones();
+            assert_eq!(
+                pos.parameter_indexes[Side::White as usize].len()
+                    + pos.parameter_indexes[Side::Black as usize].len(),
+                total_piece_count as usize * 2
+            );
+            assert_eq!(pos.phase, EXPECTED_GAME_PHASES[i]);
+            assert_eq!(pos.game_result, EXPECTED_GAME_RESULTS[i]);
         }
     }
 }
