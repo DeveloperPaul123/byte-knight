@@ -1,5 +1,5 @@
 use anyhow::Result;
-use chess::{board::Board, pieces::Piece};
+use chess::{board::Board, definitions::NumberOf, pieces::Piece, side::Side};
 use engine::{evaluation::Evaluation, hce_values::PSQTS, score::ScoreType, traits::Eval};
 
 use crate::{offsets::Offsets, tuner_values::TunerValues};
@@ -25,6 +25,32 @@ fn calculate_psqt_index(
 pub(crate) struct Position {
     pub(crate) board: Board,
     pub(crate) game_result: f64,
+}
+
+pub(crate) struct TuningPosition {
+    pub(crate) parameter_indexes: [Vec<usize>; NumberOf::SIDES],
+    pub(crate) phase: usize,
+    pub(crate) game_result: f64,
+    pub(crate) side_to_move: Side,
+}
+
+impl TuningPosition {
+    pub(crate) fn new(
+        white_indexes: Vec<usize>,
+        black_indexes: Vec<usize>,
+        phase: usize,
+        game_result: f64,
+        side_to_move: Side,
+    ) -> Self {
+        // Side::White == 0, Side::Black == 1
+        let parameter_indexes = [white_indexes, black_indexes];
+        Self {
+            parameter_indexes,
+            phase,
+            game_result,
+            side_to_move,
+        }
+    }
 }
 
 pub(crate) struct Tuner<'a> {

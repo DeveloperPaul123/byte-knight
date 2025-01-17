@@ -5,7 +5,6 @@ mod epd_parser;
 mod offsets;
 mod tuner;
 mod tuner_values;
-mod gradient_descent;
 
 #[derive(Parser, Debug)]
 #[command(version, about="Texel tuner for HCE in byte-knight", long_about=None)]
@@ -158,8 +157,9 @@ fn main() {
     // let positions = get_positions();
     println!("Read {} positions", positions.len());
 
-    let mut tuner = tuner::Tuner::new(&positions);
-    let tuned_result = tuner.tune();
+    // TODO: Fix this
+    // let mut tuner = tuner::Tuner::new(&positions);
+    // let tuned_result = tuner.tune();
 
-    print_params(&tuned_result);
+    // print_params(&tuned_result);
 }
