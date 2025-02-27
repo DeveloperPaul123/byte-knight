@@ -56,6 +56,12 @@ impl TuningPosition {
 pub(crate) struct Tuner<'a> {
     positions: &'a Vec<Position>,
     evaluation: Evaluation<TunerValues>,
+    learning_rate: f64,
+    beta1: f64,
+    beta2: f64,
+    max_iterations: usize,
+    tolerance: f64,
+    initial_k: f64,
 }
 
 impl<'a> Tuner<'a> {
@@ -80,6 +86,12 @@ impl<'a> Tuner<'a> {
         Self {
             positions,
             evaluation,
+            learning_rate: 0.01,
+            beta1: 0.9,
+            beta2: 0.999,
+            max_iterations: 1000,
+            tolerance: 1e-6,
+            initial_k: 2.5,
         }
     }
 
