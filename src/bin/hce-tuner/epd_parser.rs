@@ -7,7 +7,7 @@ use anyhow::{anyhow, Result};
 use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
 use engine::psqt::GAMEPHASE_INC;
 
-use crate::{offsets::Offsets, tuner::TuningPosition};
+use crate::{offsets::Offsets, tuning_position::TuningPosition};
 
 pub(crate) fn parse_epd_file(file_path: &str) -> Vec<TuningPosition> {
     let mut positions = Vec::new();

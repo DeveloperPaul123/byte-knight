@@ -1,4 +1,7 @@
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    ops::{Add, AddAssign, Div, Mul, Sub, SubAssign},
+};
 
 use crate::score::{LargeScoreType, ScoreType};
 
@@ -38,6 +41,90 @@ impl PhasedScore {
         let eg_phase = max_phase - mg_phase;
         ((self.mg() as PhaseType * mg_phase + self.eg() as PhaseType * eg_phase) / max_phase)
             as ScoreType
+    }
+
+    pub fn sqrt(&self) -> Self {
+        Self::new(self.mg().isqrt(), self.eg().isqrt())
+    }
+}
+
+impl Add<PhasedScore> for PhasedScore {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(self.mg() + rhs.mg(), self.eg() + rhs.eg())
+    }
+}
+
+impl AddAssign<PhasedScore> for PhasedScore {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
+impl Add<f64> for PhasedScore {
+    type Output = Self;
+
+    fn add(self, rhs: f64) -> Self::Output {
+        Self::new(
+            (self.mg() as f64 + rhs) as ScoreType,
+            (self.eg() as f64 + rhs) as ScoreType,
+        )
+    }
+}
+
+impl AddAssign<f64> for PhasedScore {
+    fn add_assign(&mut self, rhs: f64) {
+        *self = *self + rhs;
+    }
+}
+
+impl Sub<PhasedScore> for PhasedScore {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::new(self.mg() - rhs.mg(), self.eg() - rhs.eg())
+    }
+}
+
+impl SubAssign<PhasedScore> for PhasedScore {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+
+impl Mul<f64> for PhasedScore {
+    type Output = Self;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        Self::new(
+            (self.mg() as f64 * rhs) as ScoreType,
+            (self.eg() as f64 * rhs) as ScoreType,
+        )
+    }
+}
+
+impl Mul<PhasedScore> for f64 {
+    type Output = PhasedScore;
+
+    fn mul(self, rhs: PhasedScore) -> Self::Output {
+        rhs * self
+    }
+}
+
+impl Mul<PhasedScore> for PhasedScore {
+    type Output = PhasedScore;
+
+    fn mul(self, rhs: PhasedScore) -> Self::Output {
+        PhasedScore::new(self.mg() * rhs.mg(), self.eg() * rhs.eg())
+    }
+}
+
+impl Div<PhasedScore> for PhasedScore {
+    type Output = PhasedScore;
+
+    fn div(self, rhs: PhasedScore) -> Self::Output {
+        PhasedScore::new(self.mg() / rhs.mg(), self.eg() / rhs.eg())
     }
 }
 
