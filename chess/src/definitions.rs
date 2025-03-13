@@ -53,6 +53,8 @@ impl NumberOf {
     pub const RANKS: usize = 8;
     pub const SIDES: usize = 2;
     pub const CASTLING_OPTIONS: usize = 16;
+    /// Number of parameters in the evaluation function. Currently we only have PSQTs
+    pub const PARAMETERS: usize = NumberOf::PIECE_TYPES * NumberOf::SQUARES;
 }
 
 pub const EMPTY: u64 = 0;
