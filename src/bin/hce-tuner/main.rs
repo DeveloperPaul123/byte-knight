@@ -1,13 +1,9 @@
-use chess::{board::Board, definitions::NumberOf, pieces::PIECE_NAMES};
 use clap::Parser;
-use engine::score::ScoreType;
-use parameters::Parameters;
 mod epd_parser;
 mod math;
 mod offsets;
 mod parameters;
 mod tuner;
-mod tuner_values;
 mod tuning_position;
 
 #[derive(Parser, Debug)]
