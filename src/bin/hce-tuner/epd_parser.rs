@@ -64,13 +64,7 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         }
     }
 
-    let tuning_pos = TuningPosition::new(
-        w_indexes,
-        b_indexes,
-        phase,
-        game_result,
-        board.side_to_move(),
-    );
+    let tuning_pos = TuningPosition::new(w_indexes, b_indexes, phase, game_result);
 
     Ok(tuning_pos)
 }
