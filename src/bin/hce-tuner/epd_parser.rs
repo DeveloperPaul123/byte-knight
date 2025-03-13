@@ -44,7 +44,6 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
     // loop through all pieces on the board and calculate the index into the parameter array
     // for each piece
     let mut phase = 0;
-    let offsets = Offsets::new();
     for piece in Piece::iter() {
         let mut w_bb = *board.piece_bitboard(piece, Side::White);
         let mut b_bb = *board.piece_bitboard(piece, Side::Black);
@@ -54,23 +53,14 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         phase += b_bb.as_number().count_ones() as usize * GAMEPHASE_INC[piece as usize] as usize;
         while w_bb.as_number() > 0 {
             let sq = bitboard_helpers::next_bit(&mut w_bb);
-            let mg_start_index =
-                offsets.start_index_for_piece(piece, crate::tuner::TableType::Midgame)?;
-            let eg_start_index =
-                offsets.start_index_for_piece(piece, crate::tuner::TableType::Endgame)?;
-
-            w_indexes.push(mg_start_index + sq);
-            w_indexes.push(eg_start_index + sq);
+            let index = Offsets::offset_for_piece_and_square(sq, piece);
+            w_indexes.push(index);
         }
         // repeat for black
         while b_bb.as_number() > 0 {
             let sq = bitboard_helpers::next_bit(&mut b_bb);
-            let mg_start_index =
-                offsets.start_index_for_piece(piece, crate::tuner::TableType::Midgame)?;
-            let eg_start_index =
-                offsets.start_index_for_piece(piece, crate::tuner::TableType::Endgame)?;
-            b_indexes.push(mg_start_index + sq);
-            b_indexes.push(eg_start_index + sq);
+            let index = Offsets::offset_for_piece_and_square(sq, piece);
+            b_indexes.push(index);
         }
     }
 

@@ -156,8 +156,7 @@ mod tests {
 
     #[test]
     fn offsets() {
-        let offsets = Offsets::new();
-        assert_eq!(offsets.total_size(), 768);
+        assert_eq!(Offsets::END, 384);
     }
 
     #[test]
