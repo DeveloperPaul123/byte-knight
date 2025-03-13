@@ -4,7 +4,7 @@
  * Created Date: Friday, August 30th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Nov 21 2024
+ * Last Modified: Fri Mar 07 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -105,7 +105,7 @@ fn try_to_make_table(
 }
 
 fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
-    let mut rng = ChaChaRng::from_entropy();
+    let mut rng = ChaChaRng::from_os_rng();
     let mut magic_numbers = Vec::with_capacity(NumberOf::SQUARES);
     assert!(piece == Piece::Rook || piece == Piece::Bishop);
 
