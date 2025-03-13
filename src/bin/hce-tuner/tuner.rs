@@ -1,20 +1,7 @@
-use std::num::NonZero;
-
-use anyhow::Result;
-use chess::{
-    board::Board,
-    definitions::NumberOf,
-    pieces::{Piece, ALL_PIECES},
-};
+use chess::{definitions::NumberOf, pieces::ALL_PIECES};
 use engine::phased_score::PhasedScore;
 
-use crate::{offsets::Offsets, parameters::Parameters, tuning_position::TuningPosition};
-
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
-pub(crate) enum TableType {
-    Midgame,
-    Endgame,
-}
+use crate::{parameters::Parameters, tuning_position::TuningPosition};
 
 pub(crate) struct Tuner<'a> {
     positions: &'a Vec<TuningPosition>,
@@ -153,6 +140,7 @@ impl<'a> Tuner<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::offsets::Offsets;
 
     #[test]
     fn offsets() {

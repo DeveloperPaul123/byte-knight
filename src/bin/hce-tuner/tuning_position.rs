@@ -7,7 +7,6 @@ pub(crate) struct TuningPosition {
     pub(crate) parameter_indexes: [Vec<usize>; NumberOf::SIDES],
     pub(crate) phase: usize,
     pub(crate) game_result: f64,
-    pub(crate) side_to_move: Side,
 }
 
 impl TuningPosition {
@@ -16,7 +15,6 @@ impl TuningPosition {
         black_indexes: Vec<usize>,
         phase: usize,
         game_result: f64,
-        side_to_move: Side,
     ) -> Self {
         // Side::White == 0, Side::Black == 1
         let parameter_indexes = [white_indexes, black_indexes];
@@ -24,7 +22,6 @@ impl TuningPosition {
             parameter_indexes,
             phase,
             game_result,
-            side_to_move,
         }
     }
 
