@@ -1,9 +1,0 @@
-perft 6 -0
-perft 10 -0
-perft 10 -0
-perft 1 -0
-perft 2 -0
-perft 10 -0
-perft 6 -0
-perft 7 -0
-perft 7 -0
