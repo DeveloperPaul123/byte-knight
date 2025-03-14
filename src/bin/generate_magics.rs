@@ -38,7 +38,7 @@ impl Display for TableFillError {
 }
 
 fn generate_random_u64<R: Rng>(rng: &mut R) -> u64 {
-    rng.gen::<u64>() & rng.gen::<u64>() & rng.gen::<u64>()
+    rng.random::<u64>() & rng.random::<u64>() & rng.random::<u64>()
 }
 
 fn is_valid_random_number(random_num: u64, relevant_bb: Bitboard) -> bool {
