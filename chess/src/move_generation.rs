@@ -17,10 +17,10 @@ use crate::{
     bitboard_helpers,
     board::Board,
     definitions::{
-        NumberOf, Squares, BISHOP_BLOCKER_PERMUTATIONS, QUEEN_OFFSETS, ROOK_BLOCKER_PERMUTATIONS,
+        BISHOP_BLOCKER_PERMUTATIONS, NumberOf, QUEEN_OFFSETS, ROOK_BLOCKER_PERMUTATIONS, Squares,
     },
     file::File,
-    magics::{MagicNumber, BISHOP_MAGIC_VALUES, ROOK_MAGIC_VALUES},
+    magics::{BISHOP_MAGIC_VALUES, MagicNumber, ROOK_MAGIC_VALUES},
     move_list::MoveList,
     moves::{Move, MoveDescriptor, MoveType, PromotionDescriptor},
     pieces::{Piece, SQUARE_NAME},
@@ -285,7 +285,10 @@ impl MoveGenerator {
                     );
                     attack_table[index] = attacks[i];
                 } else {
-                    panic!("Collision detected while initializing attack tables for piece {:?} and square {} - \n\t{}", piece, SQUARE_NAME[square as usize], magics[square as usize]);
+                    panic!(
+                        "Collision detected while initializing attack tables for piece {:?} and square {} - \n\t{}",
+                        piece, SQUARE_NAME[square as usize], magics[square as usize]
+                    );
                 }
             }
 
@@ -889,19 +892,11 @@ impl MoveGenerator {
                     match us {
                         Side::White => {
                             let (value, did_overflow) = to_square.overflowing_add(direction);
-                            if did_overflow {
-                                None
-                            } else {
-                                Some(value)
-                            }
+                            if did_overflow { None } else { Some(value) }
                         }
                         Side::Black => {
                             let (value, did_overflow) = to_square.overflowing_sub(direction);
-                            if did_overflow {
-                                None
-                            } else {
-                                Some(value)
-                            }
+                            if did_overflow { None } else { Some(value) }
                         }
                         Side::Both => panic!("Both side not allowed"),
                     }

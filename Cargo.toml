@@ -2,7 +2,7 @@
 name = "byte-knight"
 version = "1.0.0"
 # 2024 isn't stable yet
-edition = "2021"
+edition = "2024"
 authors = ["Paul Tsouchlos <developer.paul.123@gmail.com>"]
 license = "GPL-3.0"
 
@@ -12,21 +12,20 @@ members = ["engine", "chess"]
 [dependencies]
 engine = { path = "engine" }
 chess = { path = "chess" }
-anyhow = "1.0.93"
+anyhow = "1.0.97"
 arrayvec = "0.7.6"
-clap = { version = "4.5.21", features = ["derive"] }
-colored = "2.1.0"
-console = { version = "0.15.8", features = ["windows-console-colors"] }
+clap = { version = "4.5.32", features = ["derive"] }
+colored = "3.0.0"
+console = { version = "0.15.11", features = ["windows-console-colors"] }
 csv = "1.3.1"
-indicatif = { version = "0.17.9", features = ["rayon"] }
-itertools = "0.13.0"
-rand = { version = "0.8.5", features = ["small_rng"] }
-rand_chacha = "0.3.1"
+indicatif = { version = "0.17.11", features = ["rayon"] }
+itertools = "0.14.0"
+rand = { version = "0.9.0", features = ["small_rng"] }
+rand_chacha = "0.9.0"
 rayon = "1.10.0"
-serde = { version = "1.0.215", features = ["derive"] }
-stopwatch = "0.0.7"
-thiserror = "2.0.3"
-uci-parser = { version = "0.2.0", features = [
+serde = { version = "1.0.219", features = ["derive"] }
+thiserror = "2.0.12"
+uci-parser = { version = "1.1.0", features = [
     "parse-go-perft",
     "parse-position-kiwipete",
     "types",

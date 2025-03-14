@@ -63,24 +63,24 @@ impl ZobristRandomValues {
             .for_each(|piece_values| {
                 piece_values.iter_mut().for_each(|square_values| {
                     square_values.iter_mut().for_each(|value| {
-                        *value = random.gen();
+                        *value = random.random();
                     });
                 });
             });
 
         random_values.castling_values.iter_mut().for_each(|value| {
-            *value = random.gen();
+            *value = random.random();
         });
 
         random_values
             .en_passant_values
             .iter_mut()
             .for_each(|value| {
-                *value = random.gen();
+                *value = random.random();
             });
 
         random_values.side_values.iter_mut().for_each(|value| {
-            *value = random.gen();
+            *value = random.random();
         });
 
         random_values

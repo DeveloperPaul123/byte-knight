@@ -174,11 +174,7 @@ pub const fn flip(sq: u8) -> u8 {
 /// assert_eq!(new_sq.file, File::A);
 /// assert_eq!(new_sq.rank, Rank::R8);
 pub fn flip_if(should_flip: bool, sq: u8) -> u8 {
-    if should_flip {
-        flip(sq)
-    } else {
-        sq
-    }
+    if should_flip { flip(sq) } else { sq }
 }
 
 impl TryFrom<&str> for Square {
@@ -257,7 +253,7 @@ mod tests {
         definitions::{NumberOf, Squares},
         file::File,
         rank::Rank,
-        square::{is_square_on_rank, to_square, Square},
+        square::{Square, is_square_on_rank, to_square},
     };
 
     #[test]

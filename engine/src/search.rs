@@ -15,8 +15,8 @@
 use std::{
     fmt::Display,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
     time::{Duration, Instant},
 };

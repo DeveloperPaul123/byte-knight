@@ -142,7 +142,7 @@ mod tests {
     use chess::{
         board::Board,
         moves::{self, Move},
-        pieces::{Piece, ALL_PIECES, PIECE_SHORT_NAMES},
+        pieces::{ALL_PIECES, PIECE_SHORT_NAMES, Piece},
         side::Side,
         square::Square,
     };
