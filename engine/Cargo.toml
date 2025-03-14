@@ -2,16 +2,16 @@
 name = "engine"
 version = "1.0.0"
 # 2024 isn't stable yet
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 chess = { path = "../chess" }
 anyhow = "1.0.93"
-itertools = "0.13.0"
+itertools = "0.14.0"
 uci-parser = { version = "0.2.0", features = [
     "parse-go-perft",
     "parse-position-kiwipete",
     "types",
 ] }
-rand = { version = "0.8.5", features = ["small_rng"] }
-rand_chacha = "0.3.1"
+rand = { version = "0.9.0", features = ["small_rng"] }
+rand_chacha = "0.9.0"

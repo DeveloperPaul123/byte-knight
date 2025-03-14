@@ -1,6 +1,3 @@
-#![feature(trait_alias)]
-#![feature(type_alias_impl_trait)]
-
 pub mod aspiration_window;
 pub mod defs;
 pub mod engine;
