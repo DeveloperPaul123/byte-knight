@@ -1,9 +1,8 @@
-use chess::pieces::ALL_PIECES;
+use chess::{definitions::NumberOf, pieces::ALL_PIECES};
+use engine::hce_values::PSQTS;
 
 use crate::{
-    offsets::PARAMETER_COUNT,
-    parameters::Parameters,
-    tuner_score::TuningScore,
+    offsets::PARAMETER_COUNT, parameters::Parameters,
     tuning_position::TuningPosition,
 };
 
@@ -33,14 +32,11 @@ impl<'a> Tuner<'a> {
     }
 
     fn seed_weights(&mut self) {
-        // king, queen, rook, bishop, knight, pawn
-        const VALS: [f64; 6] = [0.0, 900.0, 500.0, 300.0, 300.0, 100.0];
 
         for &piece in ALL_PIECES.iter() {
-            let val = VALS[piece as usize];
-            let s = TuningScore::new(val, val);
-
-            for sq in 0..64 {
+            for sq in 0..NumberOf::SQUARES {
+                // seed from our PSQTS table
+                let s = PSQTS[piece as usize][sq].into();
                 self.weights[64 * piece as usize + sq] = s;
             }
         }
