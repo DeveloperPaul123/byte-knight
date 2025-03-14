@@ -42,10 +42,6 @@ impl PhasedScore {
         ((self.mg() as PhaseType * mg_phase + self.eg() as PhaseType * eg_phase) / max_phase)
             as ScoreType
     }
-
-    pub fn sqrt(&self) -> Self {
-        Self::new(self.mg().isqrt(), self.eg().isqrt())
-    }
 }
 
 impl Add<PhasedScore> for PhasedScore {

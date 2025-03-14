@@ -1,7 +1,6 @@
 use chess::{definitions::NumberOf, side::Side};
-use engine::phased_score::PhasedScore;
 
-use crate::{math, parameters::Parameters};
+use crate::{math, parameters::Parameters, tuner_score::TuningScore};
 
 pub(crate) struct TuningPosition {
     pub(crate) parameter_indexes: [Vec<usize>; NumberOf::SIDES],
@@ -26,7 +25,7 @@ impl TuningPosition {
     }
 
     pub(crate) fn evaluate(&self, parameters: &Parameters) -> f64 {
-        let mut score = PhasedScore::new(0, 0);
+        let mut score: TuningScore = Default::default();
 
         for &idx in &self.parameter_indexes[Side::White as usize] {
             score += parameters[idx];

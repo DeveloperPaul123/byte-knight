@@ -1,23 +1,28 @@
 use std::ops::{Add, Index, IndexMut};
 
 use chess::{definitions::NumberOf, side::Side};
-use engine::{
-    phased_score::PhasedScore,
-    score::ScoreType,
-};
 
-use crate::{math, tuning_position::TuningPosition};
+use crate::{math, tuner_score::TuningScore, tuning_position::TuningPosition};
 
-pub struct Parameters([PhasedScore; NumberOf::PARAMETERS]);
+pub struct Parameters([TuningScore; NumberOf::PARAMETERS]);
+
+impl Parameters {
+    pub(crate) fn len(&self) -> usize {
+        self.0.len()
+    }
+    pub(crate) fn as_slice(&self) -> &[TuningScore] {
+        &self.0
+    }
+}
 
 impl Default for Parameters {
     fn default() -> Self {
-        Self([PhasedScore::default(); NumberOf::PARAMETERS])
+        Self([TuningScore::default(); NumberOf::PARAMETERS])
     }
 }
 
 impl Index<usize> for Parameters {
-    type Output = PhasedScore;
+    type Output = TuningScore;
 
     fn index(&self, index: usize) -> &Self::Output {
         &self.0[index]
@@ -50,7 +55,7 @@ impl Parameters {
             let term =
                 (point.game_result - sigmoid_result) * (1. - sigmoid_result) * sigmoid_result;
             let phase_adjustment =
-                term * PhasedScore::new(point.phase as ScoreType, (1 - point.phase) as ScoreType);
+                term * TuningScore::new(point.phase as f64, (1 - point.phase) as f64);
 
             for idx in &point.parameter_indexes[Side::White as usize] {
                 gradient[*idx] += phase_adjustment;

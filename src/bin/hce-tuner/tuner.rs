@@ -1,7 +1,11 @@
-use chess::{definitions::NumberOf, pieces::ALL_PIECES};
-use engine::phased_score::PhasedScore;
+use chess::pieces::ALL_PIECES;
 
-use crate::{parameters::Parameters, tuning_position::TuningPosition};
+use crate::{
+    offsets::PARAMETER_COUNT,
+    parameters::Parameters,
+    tuner_score::TuningScore,
+    tuning_position::TuningPosition,
+};
 
 pub(crate) struct Tuner<'a> {
     positions: &'a Vec<TuningPosition>,
@@ -15,16 +19,16 @@ pub(crate) struct Tuner<'a> {
 }
 
 impl<'a> Tuner<'a> {
-    pub(crate) fn new(positions: &'a Vec<TuningPosition>) -> Self {
+    pub(crate) fn new(positions: &'a Vec<TuningPosition>, max_epochs: usize) -> Self {
         Self {
             positions,
             weights: Parameters::default(),
             momentum: Parameters::default(),
             velocity: Parameters::default(),
-            learning_rate: 0.01,
+            learning_rate: 0.05,
             beta1: 0.9,
             beta2: 0.999,
-            max_epochs: 5000,
+            max_epochs,
         }
     }
 
@@ -34,7 +38,7 @@ impl<'a> Tuner<'a> {
 
         for &piece in ALL_PIECES.iter() {
             let val = VALS[piece as usize];
-            let s = PhasedScore::new(val as i16, val as i16);
+            let s = TuningScore::new(val, val);
 
             for sq in 0..64 {
                 self.weights[64 * piece as usize + sq] = s;
@@ -48,13 +52,14 @@ impl<'a> Tuner<'a> {
         println!("Computing optimal K value...");
         let computed_k: f64 = self.compute_k();
         println!("Optimal K value: {}", computed_k);
+        println!("Using {} positions", self.positions.len());
 
         for epoch in 1..=self.max_epochs {
             self.run_epoch(computed_k);
 
             if epoch % 100 == 0 {
-                println!("Epoch: {}", epoch);
-                println!("Error: {}", self.mean_square_error(computed_k));
+                let error = self.mean_square_error(computed_k);
+                println!("Epoch: {epoch} error {error:.7}");
             }
         }
 
@@ -64,7 +69,7 @@ impl<'a> Tuner<'a> {
     fn run_epoch(&mut self, k: f64) {
         let gradients = self.gradients(k);
 
-        for i in 0..NumberOf::PARAMETERS {
+        for i in 0..PARAMETER_COUNT {
             let adj = (-2. * k / self.positions.len() as f64) * gradients[i];
             self.momentum[i] = self.beta1 * self.momentum[i] + (1. - self.beta1) * adj;
             self.velocity[i] = self.beta2 * self.velocity[i] + (1. - self.beta2) * adj * adj;
@@ -150,6 +155,6 @@ mod tests {
     #[test]
     fn construct_tuner() {
         let positions = vec![]; // Add appropriate Board instances here
-        let _ = Tuner::new(&positions);
+        let _ = Tuner::new(&positions, 5000);
     }
 }
