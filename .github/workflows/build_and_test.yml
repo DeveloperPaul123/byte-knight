@@ -10,13 +10,28 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  build-nightly:
 
     runs-on: ubuntu-22.04
 
     steps:
     - name: Rust nightly
-      run: rustup default nightly
+      run: rustup default stable
+    - uses: actions/checkout@v4
+      with:
+        lfs: true
+    - name: Install just
+      uses: extractions/setup-just@v2
+    - name: Run tests
+      run: just test
+
+  build-stable:
+
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Rust stable
+      run: rustup default stable
     - uses: actions/checkout@v4
       with:
         lfs: true

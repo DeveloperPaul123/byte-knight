@@ -2,27 +2,26 @@ name: Clippy Check
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   build:
-
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        lfs: true
-    - name: Rust nightly
-      run: |
-        rustup default nightly 
-        rustup component add clippy
-    - name: Install just
-      uses: extractions/setup-just@v2
-    - name: clippy
-      run: just lint
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Rust stable
+        run: |
+          rustup default stable 
+          rustup component add clippy
+      - name: Install just
+        uses: extractions/setup-just@v2
+      - name: clippy
+        run: just lint
