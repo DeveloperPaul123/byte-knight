@@ -15,8 +15,8 @@
 use std::fmt::Display;
 
 use crate::{
-    pieces::{Piece, PIECE_SHORT_NAMES, SQUARE_NAME},
-    square::{to_square, Square},
+    pieces::{PIECE_SHORT_NAMES, Piece, SQUARE_NAME},
+    square::{Square, to_square},
 };
 const MOVE_INFO_CAPTURED_PIECE_SHIFT: u32 = 20;
 const MOVE_INFO_PIECE_SHIFT: u32 = 17;
@@ -140,13 +140,13 @@ impl Move {
             None => 0,
             _ => 0,
         };
-        let move_info = (captured_piece.unwrap_or(Piece::None) as u32)
-            << MOVE_INFO_CAPTURED_PIECE_SHIFT
-            | (piece as u32) << MOVE_INFO_PIECE_SHIFT
+        let move_info = ((captured_piece.unwrap_or(Piece::None) as u32)
+            << MOVE_INFO_CAPTURED_PIECE_SHIFT)
+            | ((piece as u32) << MOVE_INFO_PIECE_SHIFT)
             | (from_index << MOVE_INFO_FROM_SHIFT)
             | (to_index << MOVE_INFO_TO_SHIFT)
             | (promotion_descriptor << MOVE_INFO_PROMOTION_DESCRIPTOR_SHIFT)
-            | (is_promotion as u32) << MOVE_INFO_IS_PROMOTION_SHIFT
+            | ((is_promotion as u32) << MOVE_INFO_IS_PROMOTION_SHIFT)
             | descriptor as u32;
         Self { move_info }
     }

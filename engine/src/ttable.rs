@@ -145,7 +145,7 @@ mod tests {
     #[test]
     fn get_index() {
         let tt = TranspositionTable::from_size_in_mb(32);
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let random_numbers: Vec<u64> = (0..tt.size()).map(|_| rng.random::<u64>()).collect();
         let min = random_numbers.iter().min().unwrap();
         let max = random_numbers.iter().max().unwrap();
