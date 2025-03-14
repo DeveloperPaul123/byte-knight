@@ -608,7 +608,7 @@ impl Board {
 #[cfg(test)]
 mod tests {
     use crate::{
-        definitions::{Squares, DEFAULT_FEN},
+        definitions::{DEFAULT_FEN, Squares},
         file::File,
         move_generation::MoveGenerator,
         move_list::MoveList,

@@ -13,7 +13,7 @@
  */
 
 use crate::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 pub struct SplitPerftResult {
     pub mv: Move,

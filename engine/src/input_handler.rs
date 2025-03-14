@@ -13,12 +13,12 @@
  */
 
 use std::{
-    io::{stdin, BufRead},
+    io::{BufRead, stdin},
     str::FromStr,
     sync::{
+        Arc,
         atomic::{AtomicBool, Ordering},
         mpsc::{self, Receiver},
-        Arc,
     },
     thread::JoinHandle,
 };

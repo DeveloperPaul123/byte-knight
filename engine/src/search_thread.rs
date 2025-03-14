@@ -16,9 +16,9 @@ use std::{
     io::Write,
     str::FromStr,
     sync::{
+        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
         mpsc::{self, Sender},
-        Arc, Mutex,
     },
     thread::JoinHandle,
 };

@@ -1,6 +1,6 @@
 use chess::{
     definitions::NumberOf,
-    pieces::{Piece, PIECE_NAMES},
+    pieces::{PIECE_NAMES, Piece},
     side::Side,
 };
 

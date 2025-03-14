@@ -14,10 +14,10 @@
 
 use std::fmt::{Display, Formatter};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use chess::{
     bitboard::Bitboard,
-    definitions::{NumberOf, BISHOP_BLOCKER_PERMUTATIONS, ROOK_BLOCKER_PERMUTATIONS},
+    definitions::{BISHOP_BLOCKER_PERMUTATIONS, NumberOf, ROOK_BLOCKER_PERMUTATIONS},
     magics::MagicNumber,
     move_generation::MoveGenerator,
     pieces::{Piece, SQUARE_NAME},

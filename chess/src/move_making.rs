@@ -22,7 +22,7 @@ use crate::{
     side::Side,
     square::{self, Square},
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 impl Board {
     /// Make a move using UCI notation.
