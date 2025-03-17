@@ -108,7 +108,7 @@ fn get_game_result(part: &str) -> Result<f64> {
     } else if part.starts_with("0-1") {
         Ok(0.0)
     } else {
-        // try to parse as f64 direcly
+        // try to parse as f64 directly
         part.parse::<f64>()
             .map_err(|_| anyhow!("Failed to parse game result"))
     }
