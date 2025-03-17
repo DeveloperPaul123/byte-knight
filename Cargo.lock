@@ -81,7 +81,6 @@ name = "byte-knight"
 version = "1.0.0"
 dependencies = [
  "anyhow",
- "arrayvec",
  "chess",
  "clap",
  "colored",
@@ -89,13 +88,11 @@ dependencies = [
  "csv",
  "engine",
  "indicatif",
- "itertools",
  "rand",
  "rand_chacha",
  "rayon",
  "serde",
  "thiserror 2.0.12",
- "uci-parser",
 ]
 
 [[package]]
@@ -110,15 +107,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arrayvec",
- "clap",
- "colored",
- "console",
- "csv",
- "indicatif",
- "itertools",
  "rand",
- "rand_chacha",
- "rayon",
  "serde",
  "thiserror 2.0.12",
 ]
@@ -257,7 +246,6 @@ dependencies = [
  "chess",
  "itertools",
  "rand",
- "rand_chacha",
  "uci-parser",
 ]
 
