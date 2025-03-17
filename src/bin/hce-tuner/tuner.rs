@@ -1,10 +1,7 @@
 use chess::{definitions::NumberOf, pieces::ALL_PIECES};
 use engine::hce_values::PSQTS;
 
-use crate::{
-    offsets::PARAMETER_COUNT, parameters::Parameters,
-    tuning_position::TuningPosition,
-};
+use crate::{offsets::PARAMETER_COUNT, parameters::Parameters, tuning_position::TuningPosition};
 
 pub(crate) struct Tuner<'a> {
     positions: &'a Vec<TuningPosition>,
@@ -32,7 +29,6 @@ impl<'a> Tuner<'a> {
     }
 
     fn seed_weights(&mut self) {
-
         for &piece in ALL_PIECES.iter() {
             for sq in 0..NumberOf::SQUARES {
                 // seed from our PSQTS table

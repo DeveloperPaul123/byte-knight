@@ -3,7 +3,7 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
 use engine::psqt::GAMEPHASE_INC;
 
