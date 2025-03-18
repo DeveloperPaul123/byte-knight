@@ -97,7 +97,7 @@ impl<'a> Tuner<'a> {
                 .sum::<f64>()
         });
 
-        (total_error / self.positions.len() as f64) as f64
+        total_error / self.positions.len() as f64
     }
 
     /// Computes the optimal K value to minimize the error of the initial parameters.
