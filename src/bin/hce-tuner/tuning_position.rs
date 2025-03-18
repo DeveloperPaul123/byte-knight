@@ -35,7 +35,7 @@ impl TuningPosition {
             score -= parameters[idx];
         }
 
-        self.phase as f64 * score.mg() as f64 + (1 - self.phase) as f64 * score.eg() as f64
+        self.phase as f64 * score.mg() + (1 - self.phase) as f64 * score.eg()
     }
 
     pub(crate) fn error(&self, k: f64, params: &Parameters) -> f64 {

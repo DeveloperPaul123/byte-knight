@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 26 2024
+ * Last Modified: Mon Mar 17 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -205,7 +205,7 @@ impl Board {
                 // check if the rook was on a corner square
                 // if so, remove the castling rights for that side
                 let corners = [Squares::A8, Squares::H8, Squares::A1, Squares::H1];
-                if corners.iter().any(|sq| *sq == to) {
+                if corners.contains(&to) {
                     self.set_castling_rights(
                         self.castling_rights() & !(get_castling_right_to_remove(them, to)),
                     );

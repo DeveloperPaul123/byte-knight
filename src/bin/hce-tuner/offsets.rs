@@ -21,8 +21,8 @@ mod tests {
     #[test]
     fn offset_calculation() {
         // verify that offset calculation is correct
-        let mut sq = 33;
-        let mut piece = Piece::Pawn;
+        let sq = 33;
+        let piece = Piece::Pawn;
         let offset = Offsets::offset_for_piece_and_square(sq, piece);
         assert_eq!(353, offset)
     }

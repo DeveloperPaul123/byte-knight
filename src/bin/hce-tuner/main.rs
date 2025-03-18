@@ -61,5 +61,5 @@ fn main() {
     let mut tuner = tuner::Tuner::new(&positions, epochs);
     let tuned_result = tuner.tune();
 
-    print_params(&tuned_result);
+    print_params(tuned_result);
 }

@@ -140,7 +140,7 @@ mod tests {
 
     #[test]
     fn epd_line() {
-        let epd_lines = vec![
+        let epd_lines = [
             // from lichess big3
             "5r2/p4pk1/2pb4/8/1p2rN2/4p3/PPPB4/3K4 w - - 0 3 [0.0]",
             "r2q1rk1/3n1p2/2pp3p/1pb1p1p1/p3P3/P1NP1N1P/RPP2PP1/5QK1 b - - 0 2 [0.0]",
