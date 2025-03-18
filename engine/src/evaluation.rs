@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Dec 18 2024
+ * Last Modified: Tue Mar 18 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -15,7 +15,7 @@
 use chess::{bitboard_helpers, board::Board, moves::Move, pieces::Piece, side::Side};
 
 use crate::{
-    hce_values::ByteKnightValues,
+    hce_values::{ByteKnightValues, GAME_PHASE_MAX},
     history_table,
     phased_score::{PhaseType, PhasedScore},
     psqt::GAMEPHASE_INC,
@@ -132,7 +132,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         let eg_score = eg[stm_idx] - eg[opposite];
         let score = PhasedScore::new(mg_score as ScoreType, eg_score as ScoreType);
         // taper the score based on the game phase
-        let val = score.taper(game_phase.min(24) as PhaseType, 24);
+        let val = score.taper(game_phase.min(GAME_PHASE_MAX) as PhaseType, GAME_PHASE_MAX);
         Score::new(val)
     }
 }
