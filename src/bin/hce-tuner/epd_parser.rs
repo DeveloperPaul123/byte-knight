@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::{Result, anyhow};
-use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
+use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side, square};
 use engine::psqt::GAMEPHASE_INC;
 
 use crate::{offsets::Offsets, tuning_position::TuningPosition};
@@ -53,7 +53,9 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         phase += b_bb.as_number().count_ones() as usize * GAMEPHASE_INC[piece as usize] as usize;
         while w_bb.as_number() > 0 {
             let sq = bitboard_helpers::next_bit(&mut w_bb);
-            let index = Offsets::offset_for_piece_and_square(sq, piece);
+            // note we still have to flip the square for the white side
+            let index =
+                Offsets::offset_for_piece_and_square(square::flip(sq as u8) as usize, piece);
             w_indexes.push(index);
         }
         // repeat for black
@@ -64,7 +66,12 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         }
     }
 
-    let tuning_pos = TuningPosition::new(w_indexes, b_indexes, phase, game_result);
+    let stm = match board.side_to_move() {
+        Side::White => 1f64,
+        Side::Black => -1f64,
+        Side::Both => panic!("Side to move cannot be both."),
+    };
+    let tuning_pos = TuningPosition::new(w_indexes, b_indexes, phase, game_result, stm);
 
     Ok(tuning_pos)
 }
@@ -117,8 +124,12 @@ fn get_game_result(part: &str) -> Result<f64> {
 #[cfg(test)]
 mod tests {
     use chess::side::Side;
+    use engine::{evaluation::ByteKnightEvaluation, traits::Eval};
 
-    use crate::epd_parser::{get_game_result, process_epd_line};
+    use crate::{
+        epd_parser::{get_game_result, process_epd_line},
+        parameters::Parameters,
+    };
 
     #[test]
     fn game_result() {
@@ -156,6 +167,9 @@ mod tests {
 
         const EXPECTED_GAME_PHASES: [usize; 10] = [7, 18, 12, 10, 10, 8, 17, 20, 5, 24];
         const EXPECTED_GAME_RESULTS: [f64; 10] = [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        let eval = ByteKnightEvaluation::default();
+        let params = Parameters::create_from_engine_values();
+
         for (i, line) in epd_lines.iter().enumerate() {
             let position = super::parse_epd_line(line);
             assert!(position.is_ok());
@@ -165,10 +179,15 @@ mod tests {
             assert_eq!(
                 pos.parameter_indexes[Side::White as usize].len()
                     + pos.parameter_indexes[Side::Black as usize].len(),
-                total_piece_count as usize * 2
+                total_piece_count as usize
             );
             assert_eq!(pos.phase, EXPECTED_GAME_PHASES[i]);
             assert_eq!(pos.game_result, EXPECTED_GAME_RESULTS[i]);
+            // also verify that the evaluation matches
+            let expected_value = eval.eval(&board);
+            let val = pos.evaluate(&params);
+            println!("{} // {}", expected_value, val);
+            assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
     }
 }

@@ -58,7 +58,8 @@ fn main() {
     println!("Read {} positions", positions.len());
 
     let epochs = options.epochs.unwrap_or(10_000);
-    let mut tuner = tuner::Tuner::new(&positions, epochs);
+    let parameters = Parameters::create_from_engine_values();
+    let mut tuner = tuner::Tuner::new(parameters, &positions, epochs);
     let tuned_result = tuner.tune();
 
     print_params(tuned_result);

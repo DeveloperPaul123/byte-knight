@@ -1,6 +1,3 @@
-use chess::{definitions::NumberOf, pieces::ALL_PIECES};
-use engine::hce_values::PSQTS;
-
 use crate::{offsets::PARAMETER_COUNT, parameters::Parameters, tuning_position::TuningPosition};
 
 pub(crate) struct Tuner<'a> {
@@ -15,10 +12,14 @@ pub(crate) struct Tuner<'a> {
 }
 
 impl<'a> Tuner<'a> {
-    pub(crate) fn new(positions: &'a Vec<TuningPosition>, max_epochs: usize) -> Self {
+    pub(crate) fn new(
+        initial_params: Parameters,
+        positions: &'a Vec<TuningPosition>,
+        max_epochs: usize,
+    ) -> Self {
         Self {
             positions,
-            weights: Parameters::default(),
+            weights: initial_params,
             momentum: Parameters::default(),
             velocity: Parameters::default(),
             learning_rate: 0.05,
@@ -28,19 +29,7 @@ impl<'a> Tuner<'a> {
         }
     }
 
-    fn seed_weights(&mut self) {
-        for &piece in ALL_PIECES.iter() {
-            for sq in 0..NumberOf::SQUARES {
-                // seed from our PSQTS table
-                let s = PSQTS[piece as usize][sq].into();
-                self.weights[64 * piece as usize + sq] = s;
-            }
-        }
-    }
-
     pub(crate) fn tune(&mut self) -> &Parameters {
-        self.seed_weights();
-
         println!("Computing optimal K value...");
         let computed_k: f64 = self.compute_k();
         println!("Optimal K value: {}", computed_k);
@@ -147,6 +136,7 @@ mod tests {
     #[test]
     fn construct_tuner() {
         let positions = vec![]; // Add appropriate Board instances here
-        let _ = Tuner::new(&positions, 5000);
+        let params = Parameters::create_from_engine_values();
+        let _ = Tuner::new(params, &positions, 5000);
     }
 }

@@ -28,6 +28,12 @@ impl TuningScore {
     pub fn sqrt(&self) -> Self {
         Self::new(self.mg().sqrt(), self.eg().sqrt())
     }
+
+    pub fn taper(&self, phase: f64, max_phase: f64) -> f64 {
+        let mg_phase = phase.min(max_phase);
+        let eg_phase = max_phase - mg_phase;
+        (self.mg() * mg_phase + self.eg() * eg_phase) / max_phase
+    }
 }
 
 impl From<PhasedScore> for TuningScore {

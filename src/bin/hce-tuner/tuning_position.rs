@@ -1,4 +1,5 @@
 use chess::{definitions::NumberOf, side::Side};
+use engine::hce_values::GAME_PHASE_MAX;
 
 use crate::{math, parameters::Parameters, tuner_score::TuningScore};
 
@@ -6,6 +7,7 @@ pub(crate) struct TuningPosition {
     pub(crate) parameter_indexes: [Vec<usize>; NumberOf::SIDES],
     pub(crate) phase: usize,
     pub(crate) game_result: f64,
+    pub(crate) side_to_move: f64,
 }
 
 impl TuningPosition {
@@ -14,6 +16,7 @@ impl TuningPosition {
         black_indexes: Vec<usize>,
         phase: usize,
         game_result: f64,
+        side_to_move: f64,
     ) -> Self {
         // Side::White == 0, Side::Black == 1
         let parameter_indexes = [white_indexes, black_indexes];
@@ -21,6 +24,7 @@ impl TuningPosition {
             parameter_indexes,
             phase,
             game_result,
+            side_to_move,
         }
     }
 
@@ -35,7 +39,7 @@ impl TuningPosition {
             score -= parameters[idx];
         }
 
-        self.phase as f64 * score.mg() + (1 - self.phase) as f64 * score.eg()
+        score.taper(self.phase as f64, GAME_PHASE_MAX as f64) * self.side_to_move
     }
 
     pub(crate) fn error(&self, k: f64, params: &Parameters) -> f64 {

@@ -1,6 +1,7 @@
 use std::ops::{Add, Index, IndexMut};
 
-use chess::{definitions::NumberOf, side::Side};
+use chess::{definitions::NumberOf, pieces::ALL_PIECES, side::Side};
+use engine::hce_values::PSQTS;
 
 use crate::{math, tuner_score::TuningScore, tuning_position::TuningPosition};
 
@@ -48,6 +49,18 @@ impl Add<Parameters> for Parameters {
 }
 
 impl Parameters {
+    pub(crate) fn create_from_engine_values() -> Parameters {
+        let mut params = Parameters::default();
+        for &piece in ALL_PIECES.iter() {
+            for sq in 0..NumberOf::SQUARES {
+                // seed from our PSQTS table
+                let s = PSQTS[piece as usize][sq].into();
+                params[64 * piece as usize + sq] = s;
+            }
+        }
+        params
+    }
+
     pub(crate) fn gradient_batch(&self, k: f64, data: &[TuningPosition]) -> Self {
         let mut gradient = Parameters::default();
         for point in data {
