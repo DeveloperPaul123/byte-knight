@@ -73,7 +73,7 @@ fn plot_k(tuner: &Tuner) {
         .progress_count(data_point_count as u64)
         .map(|val| {
             let k = val as f64 / data_point_count as f64 * (k_max - k_min) + k_min;
-            let error = tuner.mean_square_error(k as f64);
+            let error = tuner.mean_square_error(k);
             (k as f32, error as f32)
         })
         .collect_into_vec(&mut points);

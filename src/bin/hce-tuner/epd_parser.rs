@@ -71,7 +71,7 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         Side::Black => -1f64,
         Side::Both => panic!("Side to move cannot be both."),
     };
-    
+
     let result = match board.side_to_move() {
         Side::White => game_result,
         Side::Black => 1.0 - game_result,
@@ -216,7 +216,7 @@ mod tests {
             "2r1k3/8/b2p1p2/p3p1r1/Pp2P1Bp/1Pq4P/2P2R2/2Q1R2K b - - ce 0.6721",
         ];
 
-        for (i, line) in epd_lines.iter().enumerate() {
+        for line in epd_lines.iter() {
             let position = super::parse_epd_line(line);
             assert!(position.is_ok());
             let pos = position.unwrap();
