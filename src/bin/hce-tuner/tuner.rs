@@ -75,7 +75,7 @@ impl<'a> Tuner<'a> {
         })
     }
 
-    fn mean_square_error(&self, k: f64) -> f64 {
+    pub(crate) fn mean_square_error(&self, k: f64) -> f64 {
         let chunk_size = self
             .positions
             .len()
