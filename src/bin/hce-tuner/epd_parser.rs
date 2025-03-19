@@ -71,7 +71,14 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         Side::Black => -1f64,
         Side::Both => panic!("Side to move cannot be both."),
     };
-    let tuning_pos = TuningPosition::new(w_indexes, b_indexes, phase, game_result, stm);
+    
+    let result = match board.side_to_move() {
+        Side::White => game_result,
+        Side::Black => 1.0 - game_result,
+        Side::Both => panic!("Side to move cannot be both."),
+    };
+
+    let tuning_pos = TuningPosition::new(w_indexes, b_indexes, phase, result, stm);
 
     Ok(tuning_pos)
 }
