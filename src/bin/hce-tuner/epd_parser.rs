@@ -197,4 +197,36 @@ mod tests {
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
     }
+
+    #[test]
+    fn gedas_epd_lines() {
+        let epd_lines = [
+            "8/8/7p/1P2k2P/4p1P1/1p1r4/1R2K3/8 b - - ce 0.7306",
+            "2r3k1/1pr2qp1/p2bpp1p/3p1n2/3P1PP1/2P2N2/RQ2NP1P/4R2K b - - ce 0.8325",
+            "r2q1rk1/p1bb1ppp/P1n1pn2/2p5/1pN5/1Q1P1NP1/1P1BPPBP/2R2RK1 b - - ce 0.4102",
+            "4k3/3n1p2/p3p1rp/4P1B1/3p1P2/b1p1q3/P1R3PP/2RQ3K w - - ce 0.2295",
+            "3q1rk1/3bpp1p/6p1/1Bn1P1P1/3p1B2/8/2P3PP/Q4RK1 w - - ce 0.4457",
+            "2rk4/3r2p1/p1pb1p1p/P3p3/1PR4P/3RP1P1/3BKP2/8 b - - ce 0.4194",
+            "1R6/2p3pk/3n1q1p/2Q1p3/2p1P3/6P1/4K2P/8 w - - ce 0.5295",
+            "4r1k1/Rb5p/5pp1/3pn3/3N1B2/4P2P/5PP1/6K1 b - - ce 0.4183",
+            "8/4k3/R2b4/4pp2/5r2/2P2P1P/1P3KB1/8 b - - ce 0.2446",
+            "2R5/r3p1kp/5pp1/pR2n3/4P3/PP2K1PP/1r6/5B2 w - - ce 0.4323",
+            "2b1r1k1/4q2p/4P1p1/3NQp2/1p1Rn3/5BP1/PP5P/1K6 b - - ce 0.2024",
+            "8/6k1/5p2/2pPqB1P/2Pp2K1/8/5Q1b/8 b - - ce 0.4936",
+            "2r1k3/8/b2p1p2/p3p1r1/Pp2P1Bp/1Pq4P/2P2R2/2Q1R2K b - - ce 0.6721",
+        ];
+
+        for (i, line) in epd_lines.iter().enumerate() {
+            let position = super::parse_epd_line(line);
+            assert!(position.is_ok());
+            let pos = position.unwrap();
+            let (board, _) = process_epd_line(line).unwrap();
+            let total_piece_count = board.all_pieces().as_number().count_ones();
+            assert_eq!(
+                pos.parameter_indexes[Side::White as usize].len()
+                    + pos.parameter_indexes[Side::Black as usize].len(),
+                total_piece_count as usize
+            );
+        }
+    }
 }
