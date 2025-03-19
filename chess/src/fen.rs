@@ -4,7 +4,7 @@
  * Created Date: Tuesday, November 26th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 26 2024
+ * Last Modified: Wed Mar 19 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -102,10 +102,10 @@ pub(crate) const FEN_PART_PARSERS: [FenPartParser; 6] = [
 /// # Errors
 /// There are many possible errors that can occur when splitting a FEN string. Some of the most common
 /// errors include:
-/// - The FEN string is empty
-/// - The FEN string does not have 6 parts (4 parts are allowed if the last 2 parts are omitted)
-/// - The FEN string has an invalid character in the piece placement part
-/// - The FEN string has an extra / in the piece placement part
+/// - The FEN string is empty.
+/// - The FEN string does not have 6 parts (4 parts are allowed if the last 2 parts are omitted).
+/// - The FEN string has an invalid character in the piece placement part.
+/// - The FEN string has an extra / in the piece placement part.
 pub fn split_fen_string(fen: &str) -> SplitFenStringResult {
     if fen.is_empty() {
         return Err(FenError::new("FEN string is empty"));
@@ -119,6 +119,9 @@ pub fn split_fen_string(fen: &str) -> SplitFenStringResult {
 
     if parts.len() == 4 {
         parts.append(&mut vec![String::from("0"), String::from("1")]);
+    } else if parts.len() == 5 && parts[4] == "ce" {
+        parts[4] = String::from("0");
+        parts.push(String::from("1"));
     }
 
     if parts.len() != 6 {
