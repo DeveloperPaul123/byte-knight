@@ -49,5 +49,6 @@
         "perft",
         "Tsouchlos",
         "zobrist"
-    ]
+    ],
+    "makefile.configureOnOpen": false
 }
