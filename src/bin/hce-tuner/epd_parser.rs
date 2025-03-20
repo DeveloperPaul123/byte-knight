@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::{Result, anyhow};
-use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side, square};
+use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
 use engine::psqt::GAMEPHASE_INC;
 
 use crate::{offsets::Offsets, tuning_position::TuningPosition};
@@ -24,14 +24,26 @@ pub(crate) fn parse_epd_file(file_path: &str) -> Vec<TuningPosition> {
 }
 
 fn process_epd_line(line: &str) -> Result<(Board, f64)> {
-    let mut parts = line.rsplitn(2, ' ');
+    // find the split point between the FEN and the result
+    let split_point = if let Some(idx) = line.rfind("ce") {
+        idx
+    } else if let Some(idx) = line.rfind("c9") {
+        idx
+    } else {
+        line.rfind(' ').unwrap()
+    };
+
+    let fen = &line[..split_point].trim();
+    let result = &line[split_point..]
+        .replace("ce", "")
+        .replace("c9", "")
+        .trim()
+        .to_string();
+
     // EPD result
-    let game_result_part = parts.next();
-    let game_result = get_game_result(game_result_part.unwrap())?;
+    let game_result = get_game_result(result)?;
 
     // FEN
-    let fen_part = parts.next();
-    let fen = fen_part.unwrap().trim();
     let board = Board::from_fen(fen)?;
 
     Ok((board, game_result))
@@ -54,14 +66,13 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         while w_bb.as_number() > 0 {
             let sq = bitboard_helpers::next_bit(&mut w_bb);
             // note we still have to flip the square for the white side
-            let index =
-                Offsets::offset_for_piece_and_square(square::flip(sq as u8) as usize, piece);
+            let index = Offsets::offset_for_piece_and_square(sq, piece, Side::White);
             w_indexes.push(index);
         }
         // repeat for black
         while b_bb.as_number() > 0 {
             let sq = bitboard_helpers::next_bit(&mut b_bb);
-            let index = Offsets::offset_for_piece_and_square(sq, piece);
+            let index = Offsets::offset_for_piece_and_square(sq, piece, Side::Black);
             b_indexes.push(index);
         }
     }
@@ -72,10 +83,16 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         Side::Both => panic!("Side to move cannot be both."),
     };
 
-    let result = match board.side_to_move() {
-        Side::White => game_result,
-        Side::Black => 1.0 - game_result,
-        Side::Both => panic!("Side to move cannot be both."),
+    let result = match game_result {
+        // if we have an exact result, this indicates that we parsed a "book" file
+        // not an epd with centipawn evaluation
+        0.0 | 0.5 | 1.0 => game_result,
+        // otherwise, adjust based on the side to move
+        _ => match board.side_to_move() {
+            Side::White => game_result,
+            Side::Black => 1.0 - game_result,
+            Side::Both => panic!("Side to move cannot be both."),
+        },
     };
 
     let tuning_pos = TuningPosition::new(w_indexes, b_indexes, phase, result, stm);
@@ -130,12 +147,13 @@ fn get_game_result(part: &str) -> Result<f64> {
 
 #[cfg(test)]
 mod tests {
-    use chess::side::Side;
+    use chess::{board::Board, side::Side};
     use engine::{evaluation::ByteKnightEvaluation, traits::Eval};
 
     use crate::{
         epd_parser::{get_game_result, process_epd_line},
         parameters::Parameters,
+        tuning_position::TuningPosition,
     };
 
     #[test]
@@ -154,6 +172,24 @@ mod tests {
             let game_result = get_game_result(result).unwrap();
             assert_eq!(game_result, values[i]);
         }
+    }
+
+    fn test_epd_lines(lines: &[&str]) -> Vec<(TuningPosition, Board, f64)> {
+        let mut results = Vec::new();
+        for line in lines.iter() {
+            let position = super::parse_epd_line(line);
+            assert!(position.is_ok());
+            let pos = position.unwrap();
+            let (board, result) = process_epd_line(line).unwrap();
+            let total_piece_count = board.all_pieces().as_number().count_ones();
+            assert_eq!(
+                pos.parameter_indexes[Side::White as usize].len()
+                    + pos.parameter_indexes[Side::Black as usize].len(),
+                total_piece_count as usize
+            );
+            results.push((pos, board, result));
+        }
+        results
     }
 
     #[test]
@@ -177,29 +213,22 @@ mod tests {
         let eval = ByteKnightEvaluation::default();
         let params = Parameters::create_from_engine_values();
 
-        for (i, line) in epd_lines.iter().enumerate() {
-            let position = super::parse_epd_line(line);
-            assert!(position.is_ok());
-            let pos = position.unwrap();
-            let (board, _) = process_epd_line(line).unwrap();
-            let total_piece_count = board.all_pieces().as_number().count_ones();
-            assert_eq!(
-                pos.parameter_indexes[Side::White as usize].len()
-                    + pos.parameter_indexes[Side::Black as usize].len(),
-                total_piece_count as usize
-            );
-            assert_eq!(pos.phase, EXPECTED_GAME_PHASES[i]);
-            assert_eq!(pos.game_result, EXPECTED_GAME_RESULTS[i]);
+        let parsed_results = test_epd_lines(&epd_lines);
+
+        for (i, (position, board, result)) in parsed_results.iter().enumerate() {
+            assert_eq!(position.phase, EXPECTED_GAME_PHASES[i]);
+            assert_eq!(position.game_result, EXPECTED_GAME_RESULTS[i]);
+            assert_eq!(*result, EXPECTED_GAME_RESULTS[i]);
             // also verify that the evaluation matches
-            let expected_value = eval.eval(&board);
-            let val = pos.evaluate(&params);
+            let expected_value = eval.eval(board);
+            let val = position.evaluate(&params);
             println!("{} // {}", expected_value, val);
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
     }
 
     #[test]
-    fn gedas_epd_lines() {
+    fn gedas_epd_data() {
         let epd_lines = [
             "8/8/7p/1P2k2P/4p1P1/1p1r4/1R2K3/8 b - - ce 0.7306",
             "2r3k1/1pr2qp1/p2bpp1p/3p1n2/3P1PP1/2P2N2/RQ2NP1P/4R2K b - - ce 0.8325",
@@ -216,17 +245,63 @@ mod tests {
             "2r1k3/8/b2p1p2/p3p1r1/Pp2P1Bp/1Pq4P/2P2R2/2Q1R2K b - - ce 0.6721",
         ];
 
-        for line in epd_lines.iter() {
-            let position = super::parse_epd_line(line);
-            assert!(position.is_ok());
-            let pos = position.unwrap();
-            let (board, _) = process_epd_line(line).unwrap();
-            let total_piece_count = board.all_pieces().as_number().count_ones();
-            assert_eq!(
-                pos.parameter_indexes[Side::White as usize].len()
-                    + pos.parameter_indexes[Side::Black as usize].len(),
-                total_piece_count as usize
-            );
+        // note we do 1 - game result if black is to move
+        const EXPECTED_PARSED_GAME_RESULTS: [f64; 13] = [
+            0.7306, 0.8325, 0.4102, 0.2295, 0.4457, 0.4194, 0.5295, 0.4183, 0.2446, 0.4323, 0.2024,
+            0.4936, 0.6721,
+        ];
+        let eval = ByteKnightEvaluation::default();
+        let params = Parameters::create_from_engine_values();
+
+        let parsed_results = test_epd_lines(&epd_lines);
+        for (i, (position, board, result)) in parsed_results.iter().enumerate() {
+            // note we do 1 - game result if black is to move
+            let expected_game_result: f64 = match board.side_to_move() {
+                Side::Black => 1.0 - EXPECTED_PARSED_GAME_RESULTS[i],
+                Side::White => EXPECTED_PARSED_GAME_RESULTS[i],
+                Side::Both => panic!("Side to move cannot be both."),
+            };
+
+            assert_eq!(position.game_result, expected_game_result);
+            assert_eq!(*result, EXPECTED_PARSED_GAME_RESULTS[i]);
+            let expected_value = eval.eval(board);
+            let val = position.evaluate(&params);
+            println!("{} // {}", expected_value, val);
+            assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
+        }
+    }
+
+    #[test]
+    fn zurichess_epd_data() {
+        let epd_lines = [
+            "r2qkr2/p1pp1ppp/1pn1pn2/2P5/3Pb3/2N1P3/PP3PPP/R1B1KB1R b KQq - c9 \"0-1\";",
+            "r4rk1/3bppb1/p3q1p1/1p1p3p/2pPn3/P1P1PN1P/1PB1QPPB/1R3RK1 b - - c9 \"1/2-1/2\";",
+            "4Q3/8/8/8/6k1/4K2p/3N4/5q2 b - - c9 \"0-1\";",
+            "r4rk1/1Qpbq1bp/p1n2np1/3p1p2/3P1P2/P1NBPN1P/1P1B2P1/R4RK1 b - - c9 \"0-1\";",
+            "r1bqk2r/2p2ppp/2p5/p3pn2/1bB5/2NP2P1/PPP1NP1P/R1B1K2R w KQkq - c9 \"0-1\";",
+            "8/8/4kp2/8/5K2/6p1/6P1/8 b - - c9 \"1/2-1/2\";",
+            "r4rk1/3p2pp/p7/1pq2p2/2n2P2/P2Q3P/2P1NRP1/R5K1 w - - c9 \"1/2-1/2\";",
+            "2rqk1n1/p6p/1p1pp3/8/4P3/P1b5/R2N1PPP/3QR1K1 w - - c9 \"1-0\";",
+            "1r4k1/2qb1pb1/2p2P1p/8/p7/N1BB3P/P5P1/2Q2R1K b - - c9 \"1-0\";",
+            "R7/1r6/5p2/8/P4k2/8/1p6/4K3 w - - c9 \"0-1\";",
+        ];
+
+        // note we do 1 - game result if black is to move
+        const EXPECTED_PARSED_GAME_RESULTS: [f64; 10] =
+            [0.0, 0.5, 0.0, 0.0, 0.0, 0.5, 0.5, 1.0, 1.0, 0.0];
+
+        let eval = ByteKnightEvaluation::default();
+        let params = Parameters::create_from_engine_values();
+
+        let parsed_results = test_epd_lines(&epd_lines);
+        for (i, (position, board, result)) in parsed_results.iter().enumerate() {
+            // in this case no adjustment is needed since the game result is already adjusted
+            assert_eq!(position.game_result, EXPECTED_PARSED_GAME_RESULTS[i]);
+            assert_eq!(*result, EXPECTED_PARSED_GAME_RESULTS[i]);
+            let expected_value = eval.eval(board);
+            let val = position.evaluate(&params);
+            println!("{} // {}", expected_value, val);
+            assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
     }
 }

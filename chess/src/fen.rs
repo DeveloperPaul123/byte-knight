@@ -119,9 +119,6 @@ pub fn split_fen_string(fen: &str) -> SplitFenStringResult {
 
     if parts.len() == 4 {
         parts.append(&mut vec![String::from("0"), String::from("1")]);
-    } else if parts.len() == 5 && parts[4] == "ce" {
-        parts[4] = String::from("0");
-        parts.push(String::from("1"));
     }
 
     if parts.len() != 6 {
