@@ -140,7 +140,7 @@ fn main() {
             );
             let mut tuner = tuner::Tuner::new(parameters, &positions, epchs);
             let tuned_results = tuner.tune();
-            print_params(&tuned_results);
+            print_params(tuned_results);
         }
         Command::PlotK { input_data } => {
             let positions = parse_data(&input_data);

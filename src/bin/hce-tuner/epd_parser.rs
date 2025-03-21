@@ -77,10 +77,7 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         }
     }
 
-    let is_white_relative = match game_result {
-        0.0 | 0.5 | 1.0 => true,
-        _ => false,
-    };
+    let is_white_relative = matches!(game_result, 0.0 | 0.5 | 1.0);
 
     let result = if is_white_relative {
         game_result
@@ -207,9 +204,8 @@ mod tests {
         ];
 
         let mut expected_game_phases: [f64; 10] = [7., 18., 12., 10., 10., 8., 17., 20., 5., 24.];
-        for i in 0..expected_game_phases.len() {
-            // scale to [0, 1]
-            expected_game_phases[i] /= GAME_PHASE_MAX as f64;
+        for phase in &mut expected_game_phases {
+            *phase /= GAME_PHASE_MAX as f64;
         }
 
         const EXPECTED_GAME_RESULTS: [f64; 10] = [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0];
@@ -225,6 +221,7 @@ mod tests {
             // also verify that the evaluation matches
             let expected_value = eval.eval(board);
 
+            // tuning position evaluation is always from white's perspective
             let val = match board.side_to_move() {
                 Side::White => position.evaluate(&params),
                 Side::Black => -position.evaluate(&params),
@@ -274,7 +271,13 @@ mod tests {
             assert_eq!(position.game_result, expected_game_result);
             assert_eq!(*result, EXPECTED_PARSED_GAME_RESULTS[i]);
             let expected_value = eval.eval(board);
-            let val = position.evaluate(&params);
+
+            // tuning position evaluation is always from white's perspective
+            let val = match board.side_to_move() {
+                Side::White => position.evaluate(&params),
+                Side::Black => -position.evaluate(&params),
+                Side::Both => panic!("Side to move cannot be both."),
+            };
             println!("{} // {}", expected_value, val);
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
@@ -308,7 +311,12 @@ mod tests {
             assert_eq!(position.game_result, EXPECTED_PARSED_GAME_RESULTS[i]);
             assert_eq!(*result, EXPECTED_PARSED_GAME_RESULTS[i]);
             let expected_value = eval.eval(board);
-            let val = position.evaluate(&params);
+            // tuning position evaluation is always from white's perspective
+            let val = match board.side_to_move() {
+                Side::White => position.evaluate(&params),
+                Side::Black => -position.evaluate(&params),
+                Side::Both => panic!("Side to move cannot be both."),
+            };
             println!("{} // {}", expected_value, val);
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
