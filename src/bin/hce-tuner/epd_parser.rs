@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::{Result, anyhow};
 use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
-use engine::psqt::GAMEPHASE_INC;
+use engine::{hce_values::GAME_PHASE_MAX, psqt::GAMEPHASE_INC};
 
 use crate::{offsets::Offsets, tuning_position::TuningPosition};
 
@@ -77,25 +77,23 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         }
     }
 
-    let stm = match board.side_to_move() {
-        Side::White => 1f64,
-        Side::Black => -1f64,
-        Side::Both => panic!("Side to move cannot be both."),
+    let is_white_relative = match game_result {
+        0.0 | 0.5 | 1.0 => true,
+        _ => false,
     };
 
-    let result = match game_result {
-        // if we have an exact result, this indicates that we parsed a "book" file
-        // not an epd with centipawn evaluation
-        0.0 | 0.5 | 1.0 => game_result,
-        // otherwise, adjust based on the side to move
-        _ => match board.side_to_move() {
+    let result = if is_white_relative {
+        game_result
+    } else {
+        match board.side_to_move() {
             Side::White => game_result,
             Side::Black => 1.0 - game_result,
             Side::Both => panic!("Side to move cannot be both."),
-        },
+        }
     };
 
-    let tuning_pos = TuningPosition::new(w_indexes, b_indexes, phase, result, stm);
+    let scaled_phase = phase as f64 / (GAME_PHASE_MAX as f64);
+    let tuning_pos = TuningPosition::new(w_indexes, b_indexes, scaled_phase, result);
 
     Ok(tuning_pos)
 }
@@ -148,7 +146,7 @@ fn get_game_result(part: &str) -> Result<f64> {
 #[cfg(test)]
 mod tests {
     use chess::{board::Board, side::Side};
-    use engine::{evaluation::ByteKnightEvaluation, traits::Eval};
+    use engine::{evaluation::ByteKnightEvaluation, hce_values::GAME_PHASE_MAX, traits::Eval};
 
     use crate::{
         epd_parser::{get_game_result, process_epd_line},
@@ -208,7 +206,12 @@ mod tests {
             "r2q1rk1/ppp1npbp/4b1p1/1P3nN1/2Pp4/3P4/PB1NBPPP/R2QR1K1 b - - 0 1 [0.0]",
         ];
 
-        const EXPECTED_GAME_PHASES: [usize; 10] = [7, 18, 12, 10, 10, 8, 17, 20, 5, 24];
+        let mut expected_game_phases: [f64; 10] = [7., 18., 12., 10., 10., 8., 17., 20., 5., 24.];
+        for i in 0..expected_game_phases.len() {
+            // scale to [0, 1]
+            expected_game_phases[i] /= GAME_PHASE_MAX as f64;
+        }
+
         const EXPECTED_GAME_RESULTS: [f64; 10] = [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0];
         let eval = ByteKnightEvaluation::default();
         let params = Parameters::create_from_engine_values();
@@ -216,12 +219,18 @@ mod tests {
         let parsed_results = test_epd_lines(&epd_lines);
 
         for (i, (position, board, result)) in parsed_results.iter().enumerate() {
-            assert_eq!(position.phase, EXPECTED_GAME_PHASES[i]);
+            assert_eq!(position.phase, expected_game_phases[i]);
             assert_eq!(position.game_result, EXPECTED_GAME_RESULTS[i]);
             assert_eq!(*result, EXPECTED_GAME_RESULTS[i]);
             // also verify that the evaluation matches
             let expected_value = eval.eval(board);
-            let val = position.evaluate(&params);
+
+            let val = match board.side_to_move() {
+                Side::White => position.evaluate(&params),
+                Side::Black => -position.evaluate(&params),
+                Side::Both => panic!("Side to move cannot be both."),
+            };
+
             println!("{} // {}", expected_value, val);
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
