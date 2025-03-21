@@ -12,6 +12,7 @@ use crate::{
     math, offsets::PARAMETER_COUNT, tuner_score::TuningScore, tuning_position::TuningPosition,
 };
 
+/// Set of parameters that serve as input for tuning.
 pub struct Parameters([TuningScore; PARAMETER_COUNT]);
 
 #[allow(dead_code)]
@@ -28,9 +29,6 @@ fn piece_value(piece: Piece) -> f64 {
 }
 
 impl Parameters {
-    pub(crate) fn len(&self) -> usize {
-        self.0.len()
-    }
     pub(crate) fn as_slice(&self) -> &[TuningScore] {
         &self.0
     }

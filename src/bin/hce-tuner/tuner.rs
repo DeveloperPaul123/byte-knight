@@ -113,7 +113,6 @@ impl<'a> Tuner<'a> {
             let left = self.mean_square_error(k - delta);
             dev = (right - left) / (100000. * delta);
             k -= dev;
-            println!("dev {:.5}", dev.abs());
             if k <= 0.0 {
                 println!("k {k:.4} decr {left:.5} incr {right:.5}");
             }
