@@ -88,20 +88,19 @@ impl ByteKnight {
                         writeln!(stdout, "{}", UciResponse::<String>::ReadyOk).unwrap();
                     }
                     UciCommand::Uci => {
-                        let id = UciResponse::Id {
-                            name: About::NAME,
-                            author: About::AUTHORS,
-                        };
+                        let name = UciResponse::Name(About::NAME.to_string());
+                        let authors = UciResponse::Author(About::AUTHORS.to_string());
 
                         let options = vec![
-                            UciOption::spin("Hash", 16, 1, 1024),
-                            UciOption::spin("Threads", 1, 1, 1),
+                            UciOption::<&str, i32>::spin("Hash", 16, 1, 1024),
+                            UciOption::<&str, i32>::spin("Threads", 1, 1, 1),
                         ];
                         // TODO: Actually implement the hash option
                         for option in options {
                             writeln!(stdout, "{}", UciResponse::Option(option)).unwrap();
                         }
-                        writeln!(stdout, "{}", id).unwrap();
+                        writeln!(stdout, "{}", name).unwrap();
+                        writeln!(stdout, "{}", authors).unwrap();
                         writeln!(stdout, "{}", UciResponse::<String>::UciOk).unwrap();
                     }
                     UciCommand::UciNewGame => {

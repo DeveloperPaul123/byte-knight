@@ -10,6 +10,9 @@ use crate::{
     traits::EvalValues,
 };
 
+pub const GAME_PHASE_MAX: i32 = 24;
+
+/// Piece-Square Tables, ordered by the ordinality of the pieces. See ['pieces::Piece']
 #[rustfmt::skip]
 pub const PSQTS : [[PhasedScore; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]  = [
     // King
