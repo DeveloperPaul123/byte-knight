@@ -1,16 +1,15 @@
-use std::process::exit;
-
 use chess::{
     definitions::NumberOf,
     pieces::{ALL_PIECES, PIECE_NAMES},
 };
-use clap::Parser;
+use clap::{Parser, Subcommand, ValueEnum};
 use indicatif::ParallelProgressIterator;
 use parameters::Parameters;
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 use textplots::{Chart, Plot, Shape};
 use tuner::Tuner;
 use tuner_score::TuningScore;
+use tuning_position::TuningPosition;
 mod epd_parser;
 mod math;
 mod offsets;
@@ -22,24 +21,42 @@ mod tuning_position;
 #[derive(Parser, Debug)]
 #[command(version, about="Texel tuner for HCE in byte-knight", long_about=None)]
 struct Options {
-    #[clap(short, long, help = "Filterd, marked EPD input data.")]
-    input_data: String,
-    #[clap(short, long, help = "Number of epochs to run.")]
-    epochs: Option<usize>,
-    #[clap(
-        long,
-        action,
-        default_value_t = false,
-        help = "Plot k versus error for the given dataset"
-    )]
-    plot_k: bool,
-    #[clap(
-        long,
-        action,
-        default_value_t = false,
-        help = "Compute error of current parameters"
-    )]
-    compute_error: bool,
+    #[command(subcommand)]
+    command: Command,
+}
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+enum ParameterStartType {
+    Zero,
+    EngineValues,
+    PieceValues,
+}
+
+const INPUT_DATA_HELP: &str = "Filtered, marked EPD or 'book' input data.";
+#[derive(Subcommand, Debug)]
+enum Command {
+    Tune {
+        #[clap(short, long, help = INPUT_DATA_HELP)]
+        input_data: String,
+        #[clap(short, long, help = "Number of epochs to run.")]
+        epochs: Option<usize>,
+        #[arg(value_enum, short, long, help = "How to start the parameters", default_value_t = ParameterStartType::Zero)]
+        param_start_type: ParameterStartType,
+    },
+    PlotK {
+        #[clap(short, long, help = INPUT_DATA_HELP)]
+        input_data: String,
+    },
+    ComputeError {
+        #[clap(short, long, help = INPUT_DATA_HELP)]
+        input_data: String,
+        #[clap(
+            short,
+            long,
+            help = "k value to compute error for (0.009)",
+            default_value_t = 0.009
+        )]
+        k: f64,
+    },
 }
 
 fn print_table(indent: usize, table: &[TuningScore]) {
@@ -76,8 +93,8 @@ fn print_params(params: &Parameters) {
 
 fn plot_k(tuner: &Tuner) {
     let mut points = Vec::new();
-    let data_point_count = 10_000;
-    let k_min = -0.1;
+    let data_point_count = 1_000;
+    let k_min = 0.;
     let k_max = 0.1;
     (0..data_point_count)
         .into_par_iter()
@@ -91,32 +108,52 @@ fn plot_k(tuner: &Tuner) {
 
     Chart::new(180, 60, k_min as f32, k_max as f32)
         .lineplot(&Shape::Points(points.as_slice()))
-        .display();
+        .nice();
+}
+
+fn parse_data(input_data: &str) -> Vec<TuningPosition> {
+    println!("Reading data from: {}", input_data);
+    let positions = epd_parser::parse_epd_file(input_data);
+    // let positions = get_positions();
+    println!("Read {} positions", positions.len());
+    positions
 }
 
 fn main() {
     let options = Options::parse();
-    println!("Reading data from: {}", options.input_data);
-    let positions = epd_parser::parse_epd_file(options.input_data.as_str());
-    // let positions = get_positions();
-    println!("Read {} positions", positions.len());
-
-    let epochs = options.epochs.unwrap_or(10_000);
-    let parameters = Parameters::create_from_engine_values();
-    let mut tuner = tuner::Tuner::new(parameters, &positions, epochs);
-
-    if options.plot_k {
-        plot_k(&tuner);
-        exit(0);
+    match options.command {
+        Command::Tune {
+            input_data,
+            epochs,
+            param_start_type,
+        } => {
+            let positions = parse_data(&input_data);
+            let parameters = match param_start_type {
+                ParameterStartType::Zero => Parameters::default(),
+                ParameterStartType::EngineValues => Parameters::create_from_engine_values(),
+                ParameterStartType::PieceValues => Parameters::create_from_piece_values(),
+            };
+            let epchs = epochs.unwrap_or(10_000);
+            println!(
+                "Tuning parameters from {:?} for {} epochs",
+                param_start_type, epchs
+            );
+            let mut tuner = tuner::Tuner::new(parameters, &positions, epchs);
+            let tuned_results = tuner.tune();
+            print_params(&tuned_results);
+        }
+        Command::PlotK { input_data } => {
+            let positions = parse_data(&input_data);
+            let parameters = Parameters::create_from_engine_values();
+            let tuner = tuner::Tuner::new(parameters, &positions, 10_000);
+            plot_k(&tuner);
+        }
+        Command::ComputeError { input_data, k } => {
+            let positions = parse_data(&input_data);
+            let parameters = Parameters::create_from_engine_values();
+            let tuner = tuner::Tuner::new(parameters, &positions, 10_000);
+            let error = tuner.mean_square_error(k);
+            println!("Error for k {:.8}: {:.8}", k, error);
+        }
     }
-
-    if options.compute_error {
-        let k = tuner.compute_k();
-        let error = tuner.mean_square_error(k);
-        println!("k: {}, error: {}", k, error);
-        exit(0);
-    }
-
-    let tuned_result = tuner.tune();
-    print_params(tuned_result);
 }
