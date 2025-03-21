@@ -1,6 +1,9 @@
 use std::process::exit;
 
-use chess::{definitions::NumberOf, pieces::PIECE_NAMES};
+use chess::{
+    definitions::NumberOf,
+    pieces::{ALL_PIECES, PIECE_NAMES},
+};
 use clap::Parser;
 use indicatif::ParallelProgressIterator;
 use parameters::Parameters;
@@ -52,11 +55,12 @@ fn print_params(params: &Parameters) {
     println!("Tuned parameters:");
     println!("=================");
     println!("pub const PSQTS : [[PhasedScore; NumberOf::SQUARES]; NumberOf::PIECE_TYPES] = [");
-    for i in (0..params.len()).step_by(NumberOf::SQUARES) {
-        println!("    // {}", PIECE_NAMES[i / (NumberOf::SQUARES)]);
+    for piece in ALL_PIECES {
+        println!("    // {}", PIECE_NAMES[piece as usize]);
         println!("    [");
-
-        let table = &params.as_slice()[i..i + NumberOf::SQUARES];
+        let start_idx = piece as usize * NumberOf::SQUARES;
+        let end_index = start_idx + NumberOf::SQUARES;
+        let table = &params.as_slice()[start_idx..end_index];
         print_table(8, table);
         println!("    ],");
     }
