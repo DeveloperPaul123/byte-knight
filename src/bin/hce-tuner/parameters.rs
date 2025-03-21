@@ -8,9 +8,11 @@ use chess::{
 };
 use engine::hce_values::PSQTS;
 
-use crate::{math, tuner_score::TuningScore, tuning_position::TuningPosition};
+use crate::{
+    math, offsets::PARAMETER_COUNT, tuner_score::TuningScore, tuning_position::TuningPosition,
+};
 
-pub struct Parameters([TuningScore; NumberOf::PARAMETERS]);
+pub struct Parameters([TuningScore; PARAMETER_COUNT]);
 
 #[allow(dead_code)]
 fn piece_value(piece: Piece) -> f64 {
@@ -86,7 +88,7 @@ impl Parameters {
 
 impl Default for Parameters {
     fn default() -> Self {
-        Self([TuningScore::default(); NumberOf::PARAMETERS])
+        Self([TuningScore::default(); PARAMETER_COUNT])
     }
 }
 
@@ -109,7 +111,7 @@ impl Add<Parameters> for Parameters {
 
     fn add(self, rhs: Self) -> Self::Output {
         let mut result = Parameters::default();
-        for i in 0..NumberOf::PARAMETERS {
+        for i in 0..PARAMETER_COUNT {
             result[i] = self[i] + rhs[i];
         }
         result
