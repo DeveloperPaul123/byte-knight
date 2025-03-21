@@ -69,8 +69,7 @@ impl Parameters {
             let sigmoid_result = math::sigmoid(k * point.evaluate(self));
             let term =
                 (point.game_result - sigmoid_result) * (1. - sigmoid_result) * sigmoid_result;
-            let phase_adjustment =
-                term * TuningScore::new(point.phase as f64, 1f64 - point.phase as f64);
+            let phase_adjustment = term * TuningScore::new(point.phase, 1. - point.phase);
 
             for idx in &point.parameter_indexes[Side::White as usize] {
                 gradient[*idx] += phase_adjustment;

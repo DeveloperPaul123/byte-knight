@@ -32,7 +32,7 @@ impl<'a> Tuner<'a> {
     pub(crate) fn tune(&mut self) -> &Parameters {
         println!("Computing optimal K value...");
         let computed_k: f64 = self.compute_k();
-        println!("Optimal K value: {}", computed_k);
+        println!("Optimal K value: {:.8}", computed_k);
         println!("Using {} positions", self.positions.len());
 
         for epoch in 1..=self.max_epochs {
@@ -102,7 +102,7 @@ impl<'a> Tuner<'a> {
 
     /// Computes the optimal K value to minimize the error of the initial parameters.
     /// Taken from https://github.com/jw1912/hce-tuner/
-    fn compute_k(&self) -> f64 {
+    pub(crate) fn compute_k(&self) -> f64 {
         let mut k = 0.009;
         let delta = 0.00001;
         let goal = 0.000001;

@@ -29,10 +29,15 @@ impl TuningScore {
         Self::new(self.mg().sqrt(), self.eg().sqrt())
     }
 
-    pub fn taper(&self, phase: f64, max_phase: f64) -> f64 {
-        let mg_phase = phase.min(max_phase);
-        let eg_phase = max_phase - mg_phase;
-        (self.mg() * mg_phase + self.eg() * eg_phase) / max_phase
+    /// Taper the score based on the phase of the game.
+    ///
+    /// # Arguments
+    /// * `phase` - The current phase of the game. This should already be scaled to the range [0, max_phase].
+    ///
+    /// # Returns
+    /// The tapered score.
+    pub fn taper(&self, phase: f64) -> f64 {
+        self.mg() * phase + self.eg() * (1. - phase)
     }
 }
 
