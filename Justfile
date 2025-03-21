@@ -4,7 +4,7 @@ default: build
 
 build:
     echo "Building the project..."
-    cargo build --release
+    cargo build --release --all
 
 test:
     echo "Running tests..."
