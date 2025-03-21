@@ -33,6 +33,13 @@ struct Options {
         help = "Plot k versus error for the given dataset"
     )]
     plot_k: bool,
+    #[clap(
+        long,
+        action,
+        default_value_t = false,
+        help = "Compute error of current parameters"
+    )]
+    compute_error: bool,
 }
 
 fn print_table(indent: usize, table: &[TuningScore]) {
@@ -103,7 +110,13 @@ fn main() {
         exit(0);
     }
 
-    let tuned_result = tuner.tune();
+    if options.compute_error {
+        let k = tuner.compute_k();
+        let error = tuner.mean_square_error(k);
+        println!("k: {}, error: {}", k, error);
+        exit(0);
+    }
 
+    let tuned_result = tuner.tune();
     print_params(tuned_result);
 }
