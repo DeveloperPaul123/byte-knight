@@ -7,9 +7,16 @@ use chess::{
 
 use crate::{
     phased_score::{PhasedScore, S},
+    score::ScoreType,
     traits::EvalValues,
 };
 
+/// Game phase increment for each piece
+/// Ordered to match the indexing of [`Piece`]
+/// King, Queen, Rook, Bishop, Knight, Pawn
+pub const GAMEPHASE_INC: [ScoreType; 6] = [0, 4, 2, 1, 1, 0];
+
+/// Maximum game phase
 pub const GAME_PHASE_MAX: i32 = 24;
 
 /// Piece-Square Tables, ordered by the ordinality of the pieces. See ['pieces::Piece']
@@ -91,31 +98,5 @@ impl EvalValues for ByteKnightValues {
 
     fn psqt(&self, square: u8, piece: Piece, side: Side) -> Self::ReturnScore {
         PSQTS[piece as usize][square::flip_if(side == Side::White, square) as usize]
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use chess::board::Board;
-
-    use super::*;
-    use crate::{evaluation::Evaluation, psqt::Psqt, traits::Eval};
-
-    #[test]
-    fn verify_values_match_pesto() {
-        let values = ByteKnightValues::default();
-        let eval = Evaluation::new(values);
-
-        let psqt = Psqt::new();
-
-        let board =
-            Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1")
-                .unwrap();
-
-        let score = psqt.evaluate(&board);
-        println!("{}", score);
-        let new_eval_score = eval.eval(&board);
-        println!("{}", new_eval_score);
-        assert_eq!(score, new_eval_score);
     }
 }

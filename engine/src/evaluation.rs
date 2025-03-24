@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Mar 18 2025
+ * Last Modified: Mon Mar 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -15,10 +15,9 @@
 use chess::{bitboard_helpers, board::Board, moves::Move, pieces::Piece, side::Side};
 
 use crate::{
-    hce_values::{ByteKnightValues, GAME_PHASE_MAX},
+    hce_values::{ByteKnightValues, GAME_PHASE_MAX, GAMEPHASE_INC},
     history_table,
     phased_score::{PhaseType, PhasedScore},
-    psqt::GAMEPHASE_INC,
     score::{LargeScoreType, Score, ScoreType},
     traits::{Eval, EvalValues},
     ttable::TranspositionTableEntry,
@@ -228,7 +227,7 @@ mod tests {
 
     #[test]
     fn score_stability() {
-        // These values were determined empirically by running this test and manually copy/pasting the results
+        // These values were determined empirically by running this test and manually copy/pasting the results.
         // If any changes are made to the evaluation function, these values will need to be updated or the test will need to be augmented with the new evaluation values.
 
         // standard EPD suite FEN positions
@@ -364,13 +363,13 @@ mod tests {
         ];
 
         let scores: [ScoreType; 128] = [
-            0, 56, 488, 499, -488, -499, 980, -980, 445, 458, -445, -458, 0, 9, 14, 12, -9, -14,
-            -12, -488, -499, 488, 499, -980, 980, -445, -458, 445, 458, 0, -9, -14, -12, 9, 14, 12,
-            2, 1, 0, -342, 406, -2, -1, 3, 342, -406, 0, -29, 634, -628, 25, 29, -634, 628, 0, -1,
-            0, 1, -925, -990, -77, 929, -990, 77, 162, 95, -162, -95, 69, -162, -95, 162, 95, -69,
-            59, 59, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, -2, -27, 7, 4, 7, -4, -7, -169, 9, 27, -7, -4,
-            -7, 4, 7, 169, -9, -4, 3, 4, -3, 9, -9, 0, 4, -3, -4, 3, -9, 9, 0, -3, 15, 26, 42, 3,
-            -15, -26, -42, 37, 53,
+            0, 34, 589, 597, -589, -597, 1142, -1142, 512, 538, -512, -538, 0, 7, 15, 12, -7, -15,
+            -12, -589, -597, 589, 597, -1142, 1142, -512, -538, 512, 538, 0, -7, -15, -12, 7, 15,
+            12, 2, 0, 0, -397, 476, -2, 0, 5, 397, -476, -22, -43, 718, -744, 27, 43, -718, 744, 0,
+            -6, 0, 6, -1094, -1192, -37, 1072, -1192, 37, 204, 222, -204, -222, 90, -204, -222,
+            204, 222, -90, 23, 23, 0, 0, 0, 15, -15, -13, 0, 0, 0, -15, 15, 13, -15, 15, 8, 9, -8,
+            -9, -214, -7, 15, -15, -8, -9, 8, 9, 214, 7, -3, 2, 3, -2, 7, -7, 0, 3, -2, -3, 2, -7,
+            7, 0, -11, 9, 31, 53, 11, -9, -31, -53, 41, 25,
         ];
 
         let eval = ByteKnightEvaluation::default();

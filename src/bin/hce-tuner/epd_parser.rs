@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::{Result, anyhow};
 use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
-use engine::{hce_values::GAME_PHASE_MAX, psqt::GAMEPHASE_INC};
+use engine::{hce_values::GAME_PHASE_MAX, hce_values::GAMEPHASE_INC};
 
 use crate::{offsets::Offsets, tuning_position::TuningPosition};
 
