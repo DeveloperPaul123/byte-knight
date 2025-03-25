@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Dec 18 2024
+ * Last Modified: Tue Mar 25 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -33,6 +33,7 @@ use crate::{
     score::{LargeScoreType, Score, ScoreType},
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
+    tuneable::{MAX_RFP_DEPTH, RFP_MARGIN},
 };
 use ttable::TranspositionTable;
 
@@ -345,6 +346,11 @@ impl<'a> Search<'a> {
             }
         }
 
+        // can we prune the current node with something other than TT?
+        if let Some(score) = self.pruned_score(board, depth, ply, alpha, beta) {
+            return score;
+        }
+
         // get all legal moves
         let mut move_list = MoveList::new();
         self.move_gen.generate_legal_moves(board, &mut move_list);
@@ -460,6 +466,43 @@ impl<'a> Search<'a> {
             ));
 
         best_score
+    }
+
+    /// Checks to see if the current node can be pruned. If it can, returns the score. Otherwise returns None.
+    ///
+    /// # Arguments
+    ///
+    /// - `board` - The current board state.
+    /// - `depth` - The current depth.
+    /// - `beta` - The current beta value.
+    ///
+    /// # Returns
+    ///
+    /// The score of the position if it can be pruned, otherwise None.
+    fn pruned_score(
+        &self,
+        board: &Board,
+        depth: i16,
+        ply: i16,
+        alpha: Score,
+        beta: Score,
+    ) -> Option<Score> {
+        let is_pv_node = ply == 0 || beta - alpha > Score::new(1);
+
+        // no pruning if we are in check or if we are in a PV node
+        if board.is_in_check(&self.move_gen) || is_pv_node {
+            return None;
+        }
+
+        let static_eval = self.eval.eval(board);
+        // Reverse futility pruning
+        // https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html
+        // https://www.chessprogramming.org/Reverse_Futility_Pruning
+        // If the static evaluation is very high and beats beta by a depth-dependent margin, we can prune the move.
+        if depth <= MAX_RFP_DEPTH && static_eval - RFP_MARGIN * depth > beta {
+            return Some(static_eval);
+        }
+        None
     }
 
     /// Implements [quiescence search](https://www.chessprogramming.org/Quiescence_Search).
