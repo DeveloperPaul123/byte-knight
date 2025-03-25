@@ -21,6 +21,7 @@ use crate::{
     score::{LargeScoreType, Score, ScoreType},
     traits::{Eval, EvalValues},
     ttable::TranspositionTableEntry,
+    tuneable::KILLER_MOVE_BONUS,
 };
 
 /// Provides static evaluation of a given chess position.
@@ -61,6 +62,7 @@ impl<Values: EvalValues> Evaluation<Values> {
         mv: &Move,
         tt_entry: &Option<TranspositionTableEntry>,
         history_table: &history_table::HistoryTable,
+        killer_move: Option<&Move>,
     ) -> LargeScoreType {
         if tt_entry.is_some_and(|tt| *mv == tt.board_move) {
             return LargeScoreType::MIN;
@@ -70,6 +72,13 @@ impl<Values: EvalValues> Evaluation<Values> {
         if mv.is_quiet() {
             //history heuristic
             score += history_table.get(stm, mv.piece(), mv.to());
+
+            // killer moves
+            if let Some(km) = killer_move {
+                if *km == *mv {
+                    score += KILLER_MOVE_BONUS;
+                }
+            }
         } else if mv.is_capture() {
             // mvv-lva for captures
             // safe to unwrap the captured piece because we already checked
@@ -156,6 +165,7 @@ mod tests {
 
     use crate::{
         evaluation::ByteKnightEvaluation,
+        killer_moves_table::KillerMovesTable,
         score::{LargeScoreType, ScoreType},
         traits::Eval,
     };
@@ -190,9 +200,16 @@ mod tests {
         );
         let side = Side::Black;
         let history_table = Default::default();
+        let killer_moves_table: KillerMovesTable = Default::default();
         // note that these scores are for ordering, so they are negated
         assert_eq!(
-            -ByteKnightEvaluation::score_move_for_ordering(side, &mv, &None, &history_table),
+            -ByteKnightEvaluation::score_move_for_ordering(
+                side,
+                &mv,
+                &None,
+                &history_table,
+                killer_moves_table.get(0).as_ref()
+            ),
             ByteKnightEvaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
         );
 
@@ -206,7 +223,13 @@ mod tests {
         );
 
         assert_eq!(
-            -ByteKnightEvaluation::score_move_for_ordering(side, &mv, &None, &history_table),
+            -ByteKnightEvaluation::score_move_for_ordering(
+                side,
+                &mv,
+                &None,
+                &history_table,
+                killer_moves_table.get(0).as_ref()
+            ),
             ByteKnightEvaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
         );
 
@@ -220,7 +243,13 @@ mod tests {
         );
 
         assert_eq!(
-            -ByteKnightEvaluation::score_move_for_ordering(side, &mv, &None, &history_table),
+            -ByteKnightEvaluation::score_move_for_ordering(
+                side,
+                &mv,
+                &None,
+                &history_table,
+                killer_moves_table.get(0).as_ref()
+            ),
             ByteKnightEvaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
         );
     }
