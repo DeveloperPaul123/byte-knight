@@ -5,6 +5,7 @@ pub mod evaluation;
 pub mod hce_values;
 pub mod history_table;
 pub mod input_handler;
+pub mod killer_moves_table;
 pub mod phased_score;
 pub mod score;
 pub mod search;
