@@ -4,7 +4,7 @@
  * Created Date: Wednesday, December 11th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Dec 12 2024
+ * Last Modified: Tue Mar 25 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -16,4 +16,4 @@ use crate::score::ScoreType;
 
 pub(crate) const MIN_ASPIRATION_DEPTH: ScoreType = 1;
 pub(crate) const ASPIRATION_WINDOW: ScoreType = 50;
-pub(crate) const KILLER_MOVE_BONUS: i32 = 10_000;
+pub(crate) const KILLER_MOVE_BONUS: i32 = 100_000;
