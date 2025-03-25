@@ -16,4 +16,7 @@ use crate::score::ScoreType;
 
 pub(crate) const MIN_ASPIRATION_DEPTH: ScoreType = 1;
 pub(crate) const ASPIRATION_WINDOW: ScoreType = 50;
+
+pub(crate) const MAX_RFP_DEPTH: ScoreType = 4;
+pub(crate) const RFP_MARGIN: ScoreType = 82;
 pub(crate) const KILLER_MOVE_BONUS: i32 = 1_000_000;
