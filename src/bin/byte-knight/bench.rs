@@ -163,7 +163,8 @@ pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
     let mut nodes = 0u64;
     let mut tt = Default::default();
     let mut hist = Default::default();
-    let mut search = Search::new(&config, &mut tt, &mut hist);
+    let mut killers = Default::default();
+    let mut search = Search::new(&config, &mut tt, &mut hist, &mut killers);
 
     for bench in benchmark_strings {
         let fen: &str = bench.split(';').next().unwrap();
