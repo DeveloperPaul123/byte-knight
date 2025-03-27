@@ -24,6 +24,25 @@ use crate::defs::MAX_DEPTH;
 pub type ScoreType = i16;
 pub(crate) type LargeScoreType = i32;
 /// Represents a score in centipawns.
+///
+/// This type has saturating add/sub operations to prevent overflow.
+/// It will not wrap around on overflow, but instead saturate to the internal types min/max.
+///
+/// The score is represented as a signed 16-bit integer, which allows for a range of -32,768 to 32,767.
+///
+/// Example usage:
+/// ```rust
+/// use engine::score::{Score, ScoreType};
+/// let score = Score::new(150); // Represents a score of 150 centipawns
+/// let mate_score = Score::MATE; // Represents a checkmate score
+/// let draw_score = Score::DRAW; // Represents a draw score
+/// let mut s = Score::INF / 2;
+/// s += Score::INF;
+/// assert_eq!(s, Score::INF); // Saturating addition
+/// let mut ss = -Score::INF;
+/// ss -= Score::INF;
+/// assert_eq!(ss, Score::new(ScoreType::MIN)); // Saturating subtraction
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Score(pub ScoreType);
 
@@ -83,55 +102,55 @@ impl Neg for Score {
 
 impl AddAssign for Score {
     fn add_assign(&mut self, other: Score) {
-        self.0 += other.0;
+        *self = *self + other;
     }
 }
 
 impl AddAssign<ScoreType> for Score {
     fn add_assign(&mut self, other: ScoreType) {
-        self.0 += other;
+        *self = *self + other;
     }
 }
 
 impl Add for Score {
     type Output = Score;
 
-    fn add(self, other: Score) -> Score {
-        Score(self.0 + other.0)
+    fn add(self, other: Score) -> Self::Output {
+        Score(self.0.saturating_add(other.0))
     }
 }
 
 impl Add<ScoreType> for Score {
     type Output = Score;
 
-    fn add(self, other: ScoreType) -> Score {
-        Score(self.0 + other)
+    fn add(self, other: ScoreType) -> Self::Output {
+        Score(self.0.saturating_add(other))
     }
 }
 
 impl Sub for Score {
     type Output = Score;
-    fn sub(self, other: Score) -> Score {
-        Score(self.0 - other.0)
+    fn sub(self, other: Score) -> Self::Output {
+        Score(self.0.saturating_sub(other.0))
     }
 }
 
 impl Sub<ScoreType> for Score {
     type Output = Score;
     fn sub(self, other: ScoreType) -> Score {
-        Score(self.0 - other)
+        Score(self.0.saturating_sub(other))
     }
 }
 
 impl SubAssign for Score {
     fn sub_assign(&mut self, other: Score) {
-        self.0 -= other.0;
+        *self = *self - other;
     }
 }
 
 impl SubAssign<ScoreType> for Score {
     fn sub_assign(&mut self, rhs: ScoreType) {
-        self.0 -= rhs;
+        *self = *self - rhs;
     }
 }
 
@@ -191,5 +210,16 @@ impl Shl<u32> for Score {
     type Output = Score;
     fn shl(self, rhs: u32) -> Score {
         Score(self.0 << rhs)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn add_assign() {
+        let mut right = Score::INF / 2;
+        right += Score::INF;
+        assert_eq!(right, Score::INF);
     }
 }
