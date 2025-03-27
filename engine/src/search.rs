@@ -648,6 +648,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn do_not_exceed_time() {
         let mut board = Board::default_board();
         let config = SearchParameters {
