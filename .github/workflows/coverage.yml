@@ -14,7 +14,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Rust nightly
-        run: rustup default nightly
+        run: |
+          rustup default nightly
+          rustup component add llvm-tools-preview
       - uses: actions/checkout@v4
         with:
           lfs: true
