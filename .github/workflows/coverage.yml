@@ -23,7 +23,6 @@ jobs:
       - name: Install grcov
         run: |
           sudo apt update
-          sudo apt upgrade -y
           sudo apt install -y grcov
       - name: Install just
         uses: extractions/setup-just@v2
