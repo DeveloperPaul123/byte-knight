@@ -1,0 +1,36 @@
+name: Code coverage
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  generate-coverage:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Rust nightly
+        run: rustup default nightly
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Install just
+        uses: extractions/setup-just@v2
+      - name: Install grcov
+        run: |
+          sudo apt update
+          sudo apt upgrade -y
+          ssudo apt install -y grcov
+      - name: Install just
+        uses: extractions/setup-just@v2
+      - name: Generate coverage
+        run: just coverage
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: target/debug/coverage/byte-knight.lcov
