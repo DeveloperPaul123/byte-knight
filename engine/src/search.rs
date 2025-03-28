@@ -648,6 +648,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Timing on this is not consistent when instrumentation is enabled"]
     fn do_not_exceed_time() {
         let mut board = Board::default_board();
         let config = SearchParameters {

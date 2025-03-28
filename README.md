@@ -1,5 +1,7 @@
 <center><h1> byte-knight </h1></center>
 
+[![codecov](https://codecov.io/gh/DeveloperPaul123/byte-knight/graph/badge.svg?token=USEPKU8K4G)](https://codecov.io/gh/DeveloperPaul123/byte-knight)
+
 `byte-knight` is a UCI compliant chess engine written in Rust. It started as a port of the chess engine I submitted for Sebatian Lague's [Chess Engine Challenge](https://github.com/DeveloperPaul123/Leonidas) where it placed in the top 32 out of 600+ entries.
 
 # Overview
