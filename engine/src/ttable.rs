@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Dec 02 2024
+ * Last Modified: Sat Apr 12 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -14,11 +14,11 @@
 
 use chess::moves::Move;
 
-use crate::score::Score;
+use crate::{node_types::NodeType, score::Score};
 
 const BYTES_PER_MB: usize = 1024 * 1024;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EntryFlag {
     Exact,
     LowerBound,
@@ -26,7 +26,7 @@ pub enum EntryFlag {
 }
 
 /// A transposition table entry.
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct TranspositionTableEntry {
     pub zobrist: u64,
     pub score: Score,
@@ -79,6 +79,13 @@ const fn fast_range_64(word: u64, p: u64) -> u64 {
     ((word as u128 * p as u128) >> 64) as u64
 }
 
+#[derive(Debug, Clone)]
+pub(crate) enum ProbeResult {
+    CutOff(TranspositionTableEntry),
+    Hit(TranspositionTableEntry),
+    Empty,
+}
+
 impl TranspositionTable {
     pub(crate) fn from_capacity(capacity: usize) -> Self {
         Self {
@@ -98,7 +105,7 @@ impl TranspositionTable {
         fast_range_64(zobrist, self.table.len() as u64) as usize
     }
 
-    pub(crate) fn get_entry(&mut self, zobrist: u64) -> Option<TranspositionTableEntry> {
+    pub(crate) fn get_entry(&self, zobrist: u64) -> Option<TranspositionTableEntry> {
         let index = self.get_index(zobrist);
         self.table[index]
     }
@@ -127,6 +134,55 @@ impl TranspositionTable {
     pub(crate) fn size(&self) -> usize {
         self.table.len()
     }
+
+    /// Probes the transposition table for a potential entry/cutoff.
+    ///
+    /// # Arguments
+    ///
+    /// - `depth` - The depth of the search.
+    /// - `zobrist` - The zobrist hash of the position.
+    /// - `alpha` - The alpha value of the search.
+    /// - `beta` - The beta value of the search.
+    ///
+    /// # Returns
+    ///
+    /// - `ProbeResult` - The result of the probe.
+    pub(crate) fn probe<Node: NodeType>(
+        &mut self,
+        depth: i16,
+        zobrist: u64,
+        alpha: Score,
+        beta: Score,
+    ) -> ProbeResult {
+        if let Some(entry) = self.get_entry(zobrist) {
+            self.accesses += 1;
+            // verify the zobrist hash as we could have collisions due to using modulo as a hash function
+            // and the fact that we are using a fixed size table.
+            if entry.zobrist == zobrist {
+                self.hits += 1;
+                if entry.depth >= depth as u8 {
+                    // can we cut off?
+                    // cutoff can only happen if the entry depth >= current depth and 1 of the following:
+                    // - the entry type is exact
+                    // - the entry type is lower bound and the score >= beta
+                    // - the entry type is upper bound and the score <= alpha
+                    // see https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
+                    if entry.flag == EntryFlag::Exact
+                        || ((entry.flag == EntryFlag::LowerBound && entry.score >= beta)
+                            || (entry.flag == EntryFlag::UpperBound && entry.score <= alpha))
+                    {
+                        return ProbeResult::CutOff(entry);
+                    }
+                }
+                return ProbeResult::Hit(entry);
+            } else {
+                // collision
+                self.collisions += 1;
+            }
+        }
+
+        ProbeResult::Empty
+    }
 }
 
 #[cfg(test)]
@@ -149,7 +205,7 @@ mod tests {
         let random_numbers: Vec<u64> = (0..tt.size()).map(|_| rng.random::<u64>()).collect();
         let min = random_numbers.iter().min().unwrap();
         let max = random_numbers.iter().max().unwrap();
-        println!("min/max random number: {}/{}", min, max);
+        println!("min/max random number: {min}/{max}");
         println!("Table size: {}", tt.size());
         let mut index_histogram: HashMap<usize, usize> = HashMap::new();
         random_numbers.iter().for_each(|&num| {
@@ -164,11 +220,11 @@ mod tests {
         let mean = index_histogram.values().sum::<usize>() as f64 / index_histogram.len() as f64;
         let count = index_histogram.len();
 
-        println!("Min: {}, Max: {}, Mean: {}, Len: {}", min, max, mean, count);
+        println!("Min: {min}, Max: {max}, Mean: {mean}, Len: {count}");
         let unique_keys = random_numbers.iter().unique().count();
-        println!("Unique keys: {}", unique_keys);
+        println!("Unique keys: {unique_keys}");
         let collision_rate = (1.0 - (count as f64 / unique_keys as f64)) * 100.0;
-        println!("Collision rate: {}", collision_rate);
+        println!("Collision rate: {collision_rate}");
     }
 
     #[test]

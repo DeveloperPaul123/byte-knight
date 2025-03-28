@@ -4,7 +4,7 @@
  * Created Date: Monday, November 25th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Dec 10 2024
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -16,11 +16,11 @@ use std::fmt::Display;
 
 /// Represents a side to play in chess.
 #[repr(usize)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Side {
+    #[default]
     White = 0,
     Black = 1,
-    Both = 2,
 }
 
 impl Side {
@@ -29,7 +29,6 @@ impl Side {
         match side {
             Side::White => Side::Black,
             Side::Black => Side::White,
-            _ => Side::Both,
         }
     }
 
@@ -48,20 +47,6 @@ impl Side {
     pub fn is_black(&self) -> bool {
         matches!(self, Self::Black)
     }
-
-    /// Returns `true` if the side is [`Both`].
-    ///
-    /// [`Both`]: Side::Both
-    #[must_use]
-    pub fn is_both(&self) -> bool {
-        matches!(self, Self::Both)
-    }
-}
-
-impl Default for Side {
-    fn default() -> Self {
-        Self::White
-    }
 }
 
 impl Display for Side {
@@ -69,7 +54,6 @@ impl Display for Side {
         match self {
             Self::White => write!(f, "W"),
             Self::Black => write!(f, "B"),
-            Self::Both => write!(f, "W|B"),
         }
     }
 }
@@ -81,8 +65,71 @@ impl TryFrom<u8> for Side {
         match value {
             0 => Ok(Self::White),
             1 => Ok(Self::Black),
-            2 => Ok(Self::Both),
             _ => Err(()),
         }
+    }
+}
+
+impl TryFrom<char> for Side {
+    type Error = ();
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            'w' => Ok(Self::White),
+            'b' => Ok(Self::Black),
+            _ => Err(()),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn side_default() {
+        let side: Side = Default::default();
+        assert_eq!(side, Side::White);
+    }
+
+    #[test]
+    fn side_from_u8() {
+        assert_eq!(Side::try_from(0), Ok(Side::White));
+        assert_eq!(Side::try_from(1), Ok(Side::Black));
+        assert_eq!(Side::try_from(3), Err(()));
+    }
+
+    #[test]
+    fn side_from_char() {
+        assert_eq!(Side::try_from('w'), Ok(Side::White));
+        assert_eq!(Side::try_from('b'), Ok(Side::Black));
+
+        for char in ('a'..='z').filter(|val| *val != 'w' && *val != 'b') {
+            assert!(Side::try_from(char).is_err());
+        }
+    }
+
+    #[test]
+    fn display_side() {
+        assert_eq!(Side::White.to_string(), "W");
+        assert_eq!(Side::Black.to_string(), "B");
+    }
+
+    #[test]
+    fn opposite() {
+        assert_eq!(Side::opposite(Side::White), Side::Black);
+        assert_eq!(Side::opposite(Side::Black), Side::White);
+    }
+
+    #[test]
+    fn is_white() {
+        assert!(Side::White.is_white());
+        assert!(!Side::Black.is_white());
+    }
+
+    #[test]
+    fn is_black() {
+        assert!(!Side::White.is_black());
+        assert!(Side::Black.is_black());
     }
 }

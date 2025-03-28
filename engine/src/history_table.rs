@@ -10,6 +10,22 @@ pub struct HistoryTable {
     table: [[[LargeScoreType; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
 }
 
+/// Safe calculation of the bonus applied to quiet moves that are inserted into the history table.
+/// This uses `wrappinag_mul` and `wrapping_sub` to safely calculate the value.
+///
+/// # Arguments
+///
+/// - depth: The current depth
+///
+/// # Returns
+///
+/// The calculated history score.
+pub(crate) fn calculate_bonus_for_depth(depth: i16) -> i16 {
+    depth
+        .saturating_mul(Score::HISTORY_MULT)
+        .saturating_sub(Score::HISTORY_OFFSET)
+}
+
 impl HistoryTable {
     pub(crate) fn new() -> Self {
         let table =
@@ -18,12 +34,10 @@ impl HistoryTable {
     }
 
     pub(crate) fn get(&self, side: Side, piece: Piece, square: u8) -> LargeScoreType {
-        assert!(side != Side::Both, "Side cannot be Both");
         self.table[side as usize][piece as usize][square as usize]
     }
 
     pub(crate) fn update(&mut self, side: Side, piece: Piece, square: u8, bonus: LargeScoreType) {
-        assert!(side != Side::Both, "Side cannot be Both");
         let current_value = self.table[side as usize][piece as usize][square as usize];
         let clamped_bonus = bonus.clamp(-Score::MAX_HISTORY, Score::MAX_HISTORY);
         let new_value = current_value + clamped_bonus
@@ -43,7 +57,7 @@ impl HistoryTable {
 
     pub(crate) fn print_for_side(&self, side: Side) {
         for (piece_type, piece_name) in PIECE_NAMES.iter().enumerate() {
-            println!("{} - {}", piece_name, side);
+            println!("{piece_name} - {side}");
             // print from white's perspective
             for rank in (0..=NumberOf::RANKS - 1).rev() {
                 print!("|");
@@ -65,7 +79,9 @@ impl Default for HistoryTable {
 
 #[cfg(test)]
 mod tests {
-    use super::HistoryTable;
+    use crate::defs::MAX_DEPTH;
+
+    use super::{HistoryTable, calculate_bonus_for_depth};
     use chess::{definitions::Squares, pieces::Piece, side::Side};
 
     #[test]
@@ -95,5 +111,14 @@ mod tests {
         assert_eq!(history_table.get(side, piece, square), score);
         history_table.update(side, piece, square, score);
         assert_eq!(history_table.get(side, piece, square), score + score);
+    }
+
+    #[test]
+    fn calculate_bonus_for_any_depth() {
+        for depth in 1..MAX_DEPTH {
+            let bonus = calculate_bonus_for_depth(depth as i16);
+            assert!(bonus > 0);
+            assert!(bonus as i32 <= i16::MAX.into());
+        }
     }
 }

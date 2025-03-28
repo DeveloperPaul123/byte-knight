@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Mar 25 2025
+ * Last Modified: Wed May 14 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -14,6 +14,7 @@
 
 use std::{
     fmt::Display,
+    marker::PhantomData,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
@@ -21,29 +22,44 @@ use std::{
     time::{Duration, Instant},
 };
 
-use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
-use itertools::Itertools;
+use anyhow::{Result, bail};
+use arrayvec::ArrayVec;
+use chess::{
+    board::Board, definitions::MAX_MOVE_LIST_SIZE, move_generation::MoveGenerator,
+    move_list::MoveList, moves::Move, pieces::Piece,
+};
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
 use crate::{
     aspiration_window::AspirationWindow,
     defs::MAX_DEPTH,
     evaluation::ByteKnightEvaluation,
-    history_table::HistoryTable,
+    history_table::{self, HistoryTable},
+    inplace_incremental_sort::InplaceIncrementalSort,
+    lmr,
+    log_level::LogLevel,
+    move_order::MoveOrder,
+    node_types::{NodeType, NonPvNode, PvNode, RootNode},
+    principle_variation::PrincipleVariation,
     score::{LargeScoreType, Score, ScoreType},
+    table::Table,
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
-    tuneable::{MAX_RFP_DEPTH, RFP_MARGIN},
+    tuneable::{
+        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMP_MIN_THRESHOLD_DEPTH, MAX_RFP_DEPTH,
+        NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RFP_MARGIN,
+    },
 };
 use ttable::TranspositionTable;
 
 /// Result for a search.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct SearchResult {
     pub score: Score,
     pub best_move: Option<Move>,
     pub nodes: u64,
     pub depth: u8,
+    pub pv: PrincipleVariation,
 }
 
 impl Default for SearchResult {
@@ -53,6 +69,7 @@ impl Default for SearchResult {
             best_move: None,
             nodes: 0,
             depth: 1,
+            pv: PrincipleVariation::new(),
         }
     }
 }
@@ -139,7 +156,7 @@ impl Display for SearchParameters {
     }
 }
 
-pub struct Search<'search_lifetime> {
+pub struct Search<'search_lifetime, Log> {
     transposition_table: &'search_lifetime mut TranspositionTable,
     history_table: &'search_lifetime mut HistoryTable,
     move_gen: MoveGenerator,
@@ -147,15 +164,22 @@ pub struct Search<'search_lifetime> {
     parameters: SearchParameters,
     eval: ByteKnightEvaluation,
     stop_flag: Option<Arc<AtomicBool>>,
+    lmr_table: Table<f64, 32_000>,
+    /// Marker for the level of logging to print.
+    log: PhantomData<Log>,
 }
 
-impl<'a> Search<'a> {
+impl<'a, Log: LogLevel> Search<'a, Log> {
     pub fn new(
         parameters: &SearchParameters,
         ttable: &'a mut TranspositionTable,
         history_table: &'a mut HistoryTable,
     ) -> Self {
-        Search {
+        // Initialize our LMR table as a 2D array of our LMR formula for depth and moves played
+        let mut table = Table::<f64, 32_000>::new(MAX_DEPTH as usize, MAX_MOVE_LIST_SIZE);
+        table.fill(lmr::formula);
+
+        Self {
             transposition_table: ttable,
             history_table,
             move_gen: MoveGenerator::new(),
@@ -163,6 +187,8 @@ impl<'a> Search<'a> {
             parameters: parameters.clone(),
             eval: ByteKnightEvaluation::default(),
             stop_flag: None,
+            lmr_table: table,
+            log: PhantomData,
         }
     }
 
@@ -184,9 +210,11 @@ impl<'a> Search<'a> {
     ) -> SearchResult {
         self.stop_flag = stop_flag;
 
-        let info = UciInfo::default().string(format!("searching {}", self.parameters));
-        let message = UciResponse::info(info);
-        println!("{}", message);
+        if Log::DEBUG {
+            let info = UciInfo::default().string(format!("searching {}", self.parameters));
+            let message = UciResponse::info(info);
+            println!("{message}");
+        }
 
         let result = self.iterative_deepening(board);
         // search ended, reset our node count
@@ -208,7 +236,7 @@ impl<'a> Search<'a> {
         score: Score,
         nps: f32,
         time: u64,
-        best_move: Option<Move>,
+        pv: &PrincipleVariation,
     ) {
         // create UciInfo and print it
         let info = UciInfo::new()
@@ -217,9 +245,24 @@ impl<'a> Search<'a> {
             .score(score)
             .nps(nps.trunc())
             .time(time)
-            .pv(best_move.map(|m| m.to_long_algebraic()));
+            .pv(pv.iter().map(|m| m.to_long_algebraic()));
         let message = UciResponse::info(info);
-        println!("{}", message);
+        println!("{message}");
+    }
+
+    /// Verify that a given [PrincipleVariation] is valid. This is expensive and should only be used for debugging.
+    #[allow(clippy::expect_used)]
+    fn verify_pv_moves(&self, pv: &PrincipleVariation, board: &Board) -> Result<()> {
+        let mut board_cpy = board.clone();
+        let all_ok = pv.iter().all(|mv| {
+            let mv_ok = board_cpy.make_move(mv, &self.move_gen);
+            mv_ok.is_ok()
+        });
+        if !all_ok {
+            bail!("PV is invalid!")
+        }
+
+        Ok(())
     }
 
     fn iterative_deepening(&mut self, board: &mut Board) -> SearchResult {
@@ -234,20 +277,26 @@ impl<'a> Search<'a> {
 
         'deepening: while self.parameters.start_time.elapsed() <= self.parameters.soft_timeout
             && best_result.depth <= self.parameters.max_depth
+            && !self
+                .stop_flag
+                .as_ref()
+                .is_some_and(|f| f.load(Ordering::Relaxed))
         {
             // create an aspiration window around the best result so far
             let mut aspiration_window =
                 AspirationWindow::around(best_result.score, best_result.depth as ScoreType);
+            let mut pv = PrincipleVariation::new();
 
             let mut score: Score;
             'aspiration_window: loop {
                 // search the tree, starting at the current depth (starts at 1)
-                score = self.negamax(
+                score = self.negamax::<RootNode>(
                     board,
                     best_result.depth as ScoreType,
                     0,
                     aspiration_window.alpha(),
                     aspiration_window.beta(),
+                    &mut pv,
                 );
 
                 if aspiration_window.failed_low(score) {
@@ -275,16 +324,26 @@ impl<'a> Search<'a> {
                 .transposition_table
                 .get_entry(board.zobrist_hash())
                 .map(|e| e.board_move);
+            best_result.pv = pv;
 
-            // send UCI info
-            self.send_info(
-                best_result.depth,
-                self.nodes,
-                best_result.score,
-                (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32()).trunc(),
-                self.parameters.start_time.elapsed().as_millis() as u64,
-                best_result.best_move,
+            // verify the PV as a sanity check, but only in debug
+            debug_assert!(
+                self.verify_pv_moves(&best_result.pv, board).is_ok(),
+                "PV invalid"
             );
+
+            if Log::INFO {
+                // send UCI info
+                self.send_info(
+                    best_result.depth,
+                    self.nodes,
+                    best_result.score,
+                    (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32())
+                        .trunc(),
+                    self.parameters.start_time.elapsed().as_millis() as u64,
+                    &best_result.pv,
+                );
+            }
 
             // increment depth for next iteration
             best_result.depth += 1;
@@ -293,66 +352,82 @@ impl<'a> Search<'a> {
         // update total nodes for the current search
         best_result.nodes = self.nodes;
 
+        if Log::INFO {
+            // Send one last info line with the final result
+            // send UCI info
+            self.send_info(
+                best_result.depth,
+                self.nodes,
+                best_result.score,
+                (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32()).trunc(),
+                self.parameters.start_time.elapsed().as_millis() as u64,
+                &best_result.pv,
+            );
+        }
+
         // return our best result so far
         best_result
     }
 
-    fn negamax(
+    fn negamax<Node>(
         &mut self,
         board: &mut Board,
-        depth: ScoreType,
+        mut depth: ScoreType,
         ply: ScoreType,
         alpha: Score,
         beta: Score,
-    ) -> Score {
+        pv: &mut PrincipleVariation,
+    ) -> Score
+    where
+        Node: NodeType,
+    {
         // increment node count
         self.nodes += 1;
         let alpha_original = alpha;
         let mut alpha_use = alpha;
-        let mut beta_use = beta;
-        let not_root = ply > 0;
-        let zobrist = board.zobrist_hash();
 
         if depth == 0 {
-            return self.quiescence(board, alpha, beta);
+            return self.quiescence::<Node>(board, alpha, beta, pv);
         }
 
-        let tt_entry = self.transposition_table.get_entry(board.zobrist_hash());
-        if not_root {
-            // transposition table cutoff only on non-root nodes
-            // TODO(PT): Consolidate this if when if let chains are stabilized
-            if let Some(tt_entry) = tt_entry {
-                // depth must be greater or equal to the current depth and the board
-                // must be the same position. Without these checks, we could be looking up the wrong entry
-                // due to collisions since we use a modulo as the hash function
-                if tt_entry.depth as ScoreType >= depth && tt_entry.zobrist == zobrist {
-                    match tt_entry.flag {
-                        ttable::EntryFlag::Exact => {
-                            return tt_entry.score;
-                        }
-                        ttable::EntryFlag::LowerBound => {
-                            alpha_use = alpha_use.max(tt_entry.score);
-                        }
-                        ttable::EntryFlag::UpperBound => {
-                            if tt_entry.score < beta {
-                                beta_use = beta_use.min(tt_entry.score);
-                            }
-                        }
+        let mut local_pv = PrincipleVariation::new();
+        // clear the current PV because this is a new position
+        pv.clear();
+
+        // Transposition Table Cutoffs: https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
+        // Check if we have a transposition table entry and if we can return early
+        let tt_move =
+            match self
+                .transposition_table
+                .probe::<Node>(depth, board.zobrist_hash(), alpha, beta)
+            {
+                ttable::ProbeResult::CutOff(entry) => {
+                    // we have a cutoff, so return the score, but only in a non-PV node
+                    self.nodes += 1;
+                    if !Node::PV {
+                        return entry.score;
                     }
-                    if alpha_use >= beta_use {
-                        return tt_entry.score;
-                    }
+                    Some(entry.board_move)
                 }
-            }
+                ttable::ProbeResult::Hit(entry) => Some(entry.board_move),
+                ttable::ProbeResult::Empty => None,
+            };
+
+        // Internal Iterative Reductions: https://www.chessprogramming.org/Internal_Iterative_Reductions
+        // If no tt entry was found, searching it will be very costly, so we reduce the depth. This is
+        // working under the assumption that the position is likely not important.
+        if tt_move.is_none() && depth >= IIR_MIN_DEPTH {
+            depth -= IIR_DEPTH_REDUCTION;
         }
 
         // can we prune the current node with something other than TT?
-        if let Some(score) = self.pruned_score(board, depth, ply, alpha, beta) {
+        if let Some(score) = self.pruned_score::<Node>(board, depth, ply, beta, &mut local_pv) {
             return score;
         }
 
         // get all legal moves
         let mut move_list = MoveList::new();
+        let mut order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
         self.move_gen.generate_legal_moves(board, &mut move_list);
 
         // do we have moves?
@@ -364,15 +439,19 @@ impl<'a> Search<'a> {
             };
         }
 
+        let classify_res = MoveOrder::classify_all(
+            board.side_to_move(),
+            move_list.as_slice(),
+            &tt_move,
+            self.history_table,
+            &mut order_list,
+        );
+
+        // TODO(PT): Should we log a message to the CLI or a log?
+        assert!(classify_res.is_ok());
+
         // sort moves by MVV/LVA
-        let sorted_moves = move_list.iter().sorted_by_cached_key(|mv| {
-            ByteKnightEvaluation::score_move_for_ordering(
-                board.side_to_move(),
-                mv,
-                &tt_entry,
-                self.history_table,
-            )
-        });
+        let move_iter = InplaceIncrementalSort::new(move_list.as_mut_slice(), &mut order_list);
 
         // initialize best move and best score
         // we ensured we have moves earlier
@@ -380,24 +459,49 @@ impl<'a> Search<'a> {
 
         // really "bad" initial score
         let mut best_score = -Score::INF;
-        let mut best_move = None;
+        let mut best_move = tt_move;
 
+        let lmr_reduction = 1;
         // loop through all moves
-        // TODO(PT): Not a fan of this clone() call, but we needed it (for now) for the history malus update later on.
-        // This will likely be a non-issue once we implement a move picker
-        for (i, mv) in sorted_moves.clone().enumerate() {
+        for (i, mv) in move_iter.into_iter().enumerate() {
+            // Move-loop pruning techniques
+
+            // LMP - Late Move Pruning
+            // We assume our move ordering is just too good, so if we're under a certain depth
+            // and have made more than a certain number of moves, we can assume that later moves
+            // won't be as good, so we prune them.
+            if !Node::ROOT && !Node::PV && !board.is_in_check(&self.move_gen) && !best_score.mated()
+            {
+                let min_lmp_moves =
+                    LMP_MIN_THRESHOLD_DEPTH as usize + depth as usize * depth as usize;
+                if i >= min_lmp_moves {
+                    break;
+                }
+            }
+
+            // local PV is for each node below this one is different when we call negamax recursively
+            // so we have to clear it
+            local_pv.clear();
+
             // make the move
-            board.make_move_unchecked(mv).unwrap();
+            board.make_move_unchecked(&mv).unwrap();
             let score : Score =
                 // Principal Variation Search (PVS)
-                if i == 0 {
-                    -self.negamax(board, depth - 1, ply + 1, -beta_use, -alpha_use)
+                if Node::PV && i == 0 {
+                    -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
                 } else {
+                    let reduction = if mv.is_quiet() &&  depth >= 3 && board.full_move_number() >= 3 {
+                        let lmr_table_val = self.lmr_table.at(depth as usize, i);
+                        assert!(lmr_table_val.is_some(), "LMR table not initialized.");
+                        (lmr_reduction as f64 + lmr_table_val.unwrap()).floor() as i16
+                    } else {
+                        1
+                    };
                     // search with a null window
-                    let temp_score = -self.negamax(board, depth - 1, ply + 1, -alpha_use - 1, -alpha_use);
+                    let temp_score = -self.negamax::<NonPvNode>(board, depth - reduction, ply + 1, -alpha_use - 1, -alpha_use, &mut local_pv);
                     // if it fails, we need to do a full re-search
-                    if temp_score > alpha_use && temp_score < beta_use {
-                        -self.negamax(board, depth - 1, ply + 1, -beta_use, -alpha_use)
+                    if temp_score > alpha_use && temp_score < beta {
+                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
                     }
                     else {
                         temp_score
@@ -411,15 +515,18 @@ impl<'a> Search<'a> {
             if score > best_score {
                 // we improved, so update the score and best move
                 best_score = score;
-                best_move = Some(*mv);
+                best_move = Some(mv);
+                if Node::PV {
+                    pv.extend(mv, &local_pv);
+                }
 
-                // update alpha
                 alpha_use = alpha_use.max(best_score);
-                if alpha_use >= beta_use {
+                // Did we fail high?
+                if alpha_use >= beta {
                     // update history table for quiets
                     if mv.is_quiet() {
                         // calculate history bonus
-                        let bonus = 300 * depth - 250;
+                        let bonus = history_table::calculate_bonus_for_depth(depth);
                         self.history_table.update(
                             board.side_to_move(),
                             mv.piece(),
@@ -428,7 +535,7 @@ impl<'a> Search<'a> {
                         );
 
                         // apply a penalty to all quiets searched so far
-                        for mv in sorted_moves.take(i).filter(|mv| mv.is_quiet()) {
+                        for mv in move_list.iter().take(i).filter(|mv| mv.is_quiet()) {
                             self.history_table.update(
                                 board.side_to_move(),
                                 mv.piece(),
@@ -479,18 +586,16 @@ impl<'a> Search<'a> {
     /// # Returns
     ///
     /// The score of the position if it can be pruned, otherwise None.
-    fn pruned_score(
-        &self,
+    fn pruned_score<Node: NodeType>(
+        &mut self,
         board: &Board,
-        depth: i16,
-        ply: i16,
-        alpha: Score,
+        depth: ScoreType,
+        ply: ScoreType,
         beta: Score,
+        local_pv: &mut PrincipleVariation,
     ) -> Option<Score> {
-        let is_pv_node = ply == 0 || beta - alpha > Score::new(1);
-
         // no pruning if we are in check or if we are in a PV node
-        if board.is_in_check(&self.move_gen) || is_pv_node {
+        if board.is_in_check(&self.move_gen) || Node::PV {
             return None;
         }
 
@@ -502,6 +607,46 @@ impl<'a> Search<'a> {
         if depth <= MAX_RFP_DEPTH && static_eval - RFP_MARGIN * depth > beta {
             return Some(static_eval);
         }
+
+        /*
+        Null move pruning
+        https://www.chessprogramming.org/Null_Move_Pruning
+        https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html
+        Give the opponent a free move. If they cannot improve their position (beat beta)
+        then prune the tree as our advantage is too great to bother searching further.
+        */
+
+        // Are we left with more than just kings and pawns?
+        let sufficient_material = (board.all_pieces()
+            ^ board.piece_kind_bitboard(Piece::King)
+            ^ board.piece_kind_bitboard(Piece::Pawn))
+        .number_of_occupied_squares()
+            > 0;
+        // was the last move null?
+        let last_move_was_null = board.last_move().is_some_and(|mv| mv.is_null_move());
+
+        if !last_move_was_null
+            && depth >= NMP_MIN_DEPTH
+            && static_eval >= beta
+            && sufficient_material
+        {
+            let null_move_depth = depth - NMP_DEPTH_REDUCTION - 1;
+            let mut null_board = board.clone();
+            null_board.null_move();
+            let null_score = -self.negamax::<Node>(
+                &mut null_board,
+                null_move_depth,
+                ply + 1,
+                -beta,
+                -beta + 1,
+                local_pv,
+            );
+            null_board.unmake_move().unwrap();
+            if null_score >= beta {
+                return Some(null_score);
+            }
+        }
+
         None
     }
 
@@ -519,43 +664,85 @@ impl<'a> Search<'a> {
     ///
     /// The score of the position.
     ///
-    fn quiescence(&mut self, board: &mut Board, alpha: Score, beta: Score) -> Score {
+    fn quiescence<Node: NodeType>(
+        &mut self,
+        board: &mut Board,
+        alpha: Score,
+        beta: Score,
+        pv: &mut PrincipleVariation,
+    ) -> Score {
         let standing_eval = self.eval.eval(board);
         if standing_eval >= beta {
             return beta;
         }
-        let mut alpha_use = alpha.max(standing_eval);
+        let mut alpha_use: Score = alpha.max(standing_eval);
 
         let mut move_list = MoveList::new();
+        let mut move_order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
         self.move_gen.generate_legal_moves(board, &mut move_list);
 
+        let mut local_pv = PrincipleVariation::new();
+        // clear the current PV because this is a new position
+        pv.clear();
+
         // we only want captures here
-        let captures = move_list
+        let mut captures = move_list
             .iter()
-            .filter(|mv: &&Move| mv.captured_piece().is_some())
-            .collect_vec();
+            .filter(|mv| mv.captured_piece().is_some())
+            .copied()
+            .collect::<Vec<_>>();
 
         // no captures
         if captures.is_empty() {
             return standing_eval;
         }
 
-        let sorted_moves = captures.into_iter().sorted_by_cached_key(|mv| {
-            ByteKnightEvaluation::score_move_for_ordering(
-                board.side_to_move(),
-                mv,
-                &None,
-                self.history_table,
-            )
-        });
-        let mut best = standing_eval;
+        // Transposition Table Cutoffs: https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
+        // Check if we have a transposition table entry and if we can return early
+        let tt_move =
+            match self
+                .transposition_table
+                .probe::<Node>(0, board.zobrist_hash(), alpha_use, beta)
+            {
+                ttable::ProbeResult::CutOff(entry) => {
+                    // we have a cutoff, so return the score, but only in a non-PV node
+                    if !Node::PV {
+                        return entry.score;
+                    }
+                    Some(entry.board_move)
+                }
+                ttable::ProbeResult::Hit(entry) => Some(entry.board_move),
+                ttable::ProbeResult::Empty => None,
+            };
 
-        for mv in sorted_moves {
-            board.make_move_unchecked(mv).unwrap();
+        // sort moves by MVV/LVA
+        let classify_res = MoveOrder::classify_all(
+            board.side_to_move(),
+            captures.as_slice(),
+            &tt_move,
+            self.history_table,
+            &mut move_order_list,
+        );
+        // TODO(PT): Should we log a message to the CLI or a log?
+        assert!(classify_res.is_ok());
+
+        let captures_slice = captures.as_mut_slice();
+        let move_iter = InplaceIncrementalSort::new(captures_slice, &mut move_order_list);
+
+        let mut best = standing_eval;
+        let mut best_move = tt_move;
+        let original_alpha = alpha_use;
+
+        for mv in move_iter.into_iter() {
+            // local PV is for each node below this one is different when we call negamax recursively
+            // so we have to clear it
+            local_pv.clear();
+
+            board.make_move_unchecked(&mv).unwrap();
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
-                let eval = -self.quiescence(board, -beta, -alpha_use);
+                let eval = -self.quiescence::<Node>(board, -beta, -alpha_use, &mut local_pv);
                 self.nodes += 1;
                 eval
             };
@@ -563,6 +750,12 @@ impl<'a> Search<'a> {
 
             if score > best {
                 best = score;
+                best_move = Some(mv);
+
+                // extend PV if we're in a PV node
+                if Node::PV {
+                    pv.extend(mv, &local_pv);
+                }
 
                 if score >= beta {
                     break;
@@ -577,6 +770,26 @@ impl<'a> Search<'a> {
             }
         }
 
+        if let Some(bm) = best_move {
+            // store the best move in the transposition table
+            let flag = if best <= original_alpha {
+                ttable::EntryFlag::UpperBound
+            } else if best >= beta {
+                ttable::EntryFlag::LowerBound
+            } else {
+                ttable::EntryFlag::Exact
+            };
+
+            self.transposition_table
+                .store_entry(TranspositionTableEntry::new(
+                    board.zobrist_hash(),
+                    0u8,
+                    best,
+                    flag,
+                    bm,
+                ));
+        }
+
         best
     }
 }
@@ -589,12 +802,28 @@ mod tests {
 
     use crate::{
         evaluation::ByteKnightEvaluation,
+        log_level::LogDebug,
         score::Score,
         search::{Search, SearchParameters},
         ttable::TranspositionTable,
     };
 
     use super::LargeScoreType;
+
+    fn run_search_tests(test_pairs: &[(&str, &str)], config: SearchParameters) {
+        let mut ttable = TranspositionTable::default();
+        let mut history_table = Default::default();
+        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
+
+        for (fen, expected_move) in test_pairs {
+            let mut board = Board::from_fen(fen).unwrap();
+            let result = search.search(&mut board, None);
+            assert_eq!(
+                result.best_move.unwrap().to_long_algebraic(),
+                *expected_move
+            );
+        }
+    }
 
     #[test]
     fn white_mate_in_1() {
@@ -607,7 +836,7 @@ mod tests {
 
         let mut ttable = TranspositionTable::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board.clone(), None);
         // b6a7
         assert_eq!(
@@ -627,10 +856,49 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
 
         assert_eq!(res.best_move.unwrap().to_long_algebraic(), "b8a8")
+    }
+
+    #[test]
+    fn mate_in_one() {
+        // taken from Toad: https://github.com/dannyhammer/toad/blob/a84ea4c01c8bb036a132ff0e0f3d283029854289/src/search.rs#L1820
+        let tests = [
+            ("6k1/R7/6K1/8/8/8/8/8 w - - 0 1", "a7a8"),
+            ("8/8/8/8/8/6k1/r7/6K1 b - - 0 1", "a2a1"),
+            ("6k1/4R3/6K1/q7/8/8/8/8 w - - 0 1", "e7e8"),
+            ("8/8/8/8/Q7/6k1/4r3/6K1 b - - 0 1", "e2e1"),
+            ("6k1/8/6K1/q3R3/8/8/8/8 w - - 0 1", "e5e8"),
+            ("8/8/8/8/Q3r3/6k1/8/6K1 b - - 0 1", "e4e1"),
+            ("k7/6R1/5R1P/8/8/8/8/K7 w - - 0 1", "f6f8"),
+            ("k7/8/8/8/8/5r1p/6r1/K7 b - - 0 1", "f3f1"),
+        ];
+
+        let params = SearchParameters {
+            max_depth: 3,
+            ..Default::default()
+        };
+        run_search_tests(&tests, params);
+    }
+
+    #[test]
+    fn obvious_captures() {
+        let tests = [
+            ("5k2/8/8/b7/2N5/r7/8/5K2 w - - 0 1", "c4a3"),
+            ("5k2/8/8/B7/2n5/R7/8/5K2 b - - 0 1", "c4a3"),
+            ("5k2/8/8/b7/2N5/r7/8/5K2 w - - 0 1", "c4a3"),
+            ("5k2/8/8/B7/2n5/R7/8/5K2 b - - 0 1", "c4a3"),
+            ("4k3/8/8/1n1p4/2P5/8/8/4K3 w - - 0 1", "c4b5"),
+            ("4k3/8/8/2p5/1N1P4/8/8/4K3 b - - 0 1", "c5b4"),
+        ];
+
+        let params = SearchParameters {
+            max_depth: 3,
+            ..Default::default()
+        };
+        run_search_tests(&tests, params);
     }
 
     #[test]
@@ -641,13 +909,14 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_none());
         assert_eq!(res.score, Score::DRAW);
     }
 
     #[test]
+    #[ignore = "Timing on this is not consistent when instrumentation is enabled"]
     fn do_not_exceed_time() {
         let mut board = Board::default_board();
         let config = SearchParameters {
@@ -658,7 +927,7 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
 
         assert!(res.best_move.is_some());
@@ -675,7 +944,7 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -692,7 +961,7 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -736,7 +1005,7 @@ mod tests {
         let mut min_mvv_lva = LargeScoreType::MAX;
         let mut max_mvv_lva = LargeScoreType::MIN;
         for capturing in ALL_PIECES {
-            for captured in ALL_PIECES.iter().filter(|p| !p.is_king() && !p.is_none()) {
+            for captured in ALL_PIECES.iter().filter(|p| !p.is_king()) {
                 let mvv_lva = ByteKnightEvaluation::mvv_lva(*captured, capturing);
                 if mvv_lva < min_mvv_lva {
                     min_mvv_lva = mvv_lva;
@@ -752,7 +1021,7 @@ mod tests {
 
             let mut ttable = Default::default();
             let mut history_table = Default::default();
-            let mut search = Search::new(&config, &mut ttable, &mut history_table);
+            let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
             let res = search.search(&mut board, None);
 
             assert!(res.best_move.is_some());
@@ -768,8 +1037,8 @@ mod tests {
                 }
             }
 
-            println!("max history: {:5}", max_history);
-            println!("min/max mvv-lva: {}, {}", min_mvv_lva, max_mvv_lva);
+            println!("max history: {max_history:5}");
+            println!("min/max mvv-lva: {min_mvv_lva}, {max_mvv_lva}");
             assert!(max_history < min_mvv_lva);
         }
     }

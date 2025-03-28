@@ -4,7 +4,7 @@
  * Created Date: Friday, November 15th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Dec 10 2024
+ * Last Modified: Thu Apr 17 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -24,6 +24,7 @@ use crate::{
     defs::About,
     history_table::HistoryTable,
     input_handler::{CommandProxy, EngineCommand, InputHandler},
+    log_level::{LogDebug, LogInfo, LogLevel},
     search::SearchParameters,
     search_thread::SearchThread,
     ttable::{self, TranspositionTable},
@@ -88,19 +89,19 @@ impl ByteKnight {
                         writeln!(stdout, "{}", UciResponse::<String>::ReadyOk).unwrap();
                     }
                     UciCommand::Uci => {
-                        let name = UciResponse::Name(About::NAME.to_string());
+                        let name = UciResponse::Name(format!("{} {}", About::NAME, About::VERSION));
                         let authors = UciResponse::Author(About::AUTHORS.to_string());
 
                         let options = vec![
                             UciOption::<&str, i32>::spin("Hash", 16, 1, 1024),
                             UciOption::<&str, i32>::spin("Threads", 1, 1, 1),
                         ];
-                        // TODO: Actually implement the hash option
+
                         for option in options {
                             writeln!(stdout, "{}", UciResponse::Option(option)).unwrap();
                         }
-                        writeln!(stdout, "{}", name).unwrap();
-                        writeln!(stdout, "{}", authors).unwrap();
+                        writeln!(stdout, "{name}").unwrap();
+                        writeln!(stdout, "{authors}").unwrap();
                         writeln!(stdout, "{}", UciResponse::<String>::UciOk).unwrap();
                     }
                     UciCommand::UciNewGame => {
@@ -133,37 +134,35 @@ impl ByteKnight {
 
                         // create the search parameters
                         let search_params = SearchParameters::new(search_options, &board);
-                        // send them and the current board to the search thread
-                        self.search_thread.start_search(
-                            &board,
-                            search_params,
-                            self.transposition_table.clone(),
-                            self.history_table.clone(),
-                        );
+                        if self.debug {
+                            self.start_search::<LogDebug>(board.clone(), search_params);
+                        } else {
+                            self.start_search::<LogInfo>(board.clone(), search_params);
+                        }
                     }
                     UciCommand::SetOption { name, value } => {
-                        if name.to_lowercase() == "hash" {
-                            if let Some(val) = value {
-                                // set the hash size, making sure it is within the bounds we have set.
-                                if let Ok(hash_size) = val.parse::<usize>() {
-                                    if hash_size < ttable::MIN_TABLE_SIZE_MB {
-                                        eprintln!(
-                                            "Hash size too small. Must be at least {} MB",
-                                            ttable::MIN_TABLE_SIZE_MB
-                                        );
-                                        continue;
-                                    } else if hash_size > ttable::MAX_TABLE_SIZE_MB {
-                                        eprintln!(
-                                            "Hash size too large. Must be at most {} MB",
-                                            ttable::MAX_TABLE_SIZE_MB
-                                        );
-                                        continue;
-                                    }
-
-                                    self.transposition_table = Arc::new(Mutex::new(
-                                        TranspositionTable::from_size_in_mb(hash_size),
-                                    ));
+                        if name.to_lowercase() == "hash"
+                            && let Some(val) = value
+                        {
+                            // set the hash size, making sure it is within the bounds we have set.
+                            if let Ok(hash_size) = val.parse::<usize>() {
+                                if hash_size < ttable::MIN_TABLE_SIZE_MB {
+                                    eprintln!(
+                                        "Hash size too small. Must be at least {} MB",
+                                        ttable::MIN_TABLE_SIZE_MB
+                                    );
+                                    continue;
+                                } else if hash_size > ttable::MAX_TABLE_SIZE_MB {
+                                    eprintln!(
+                                        "Hash size too large. Must be at most {} MB",
+                                        ttable::MAX_TABLE_SIZE_MB
+                                    );
+                                    continue;
                                 }
+
+                                self.transposition_table = Arc::new(Mutex::new(
+                                    TranspositionTable::from_size_in_mb(hash_size),
+                                ));
                             }
                         }
                     }
@@ -197,6 +196,16 @@ impl ByteKnight {
         }
 
         Ok(())
+    }
+
+    fn start_search<Log: LogLevel>(&self, board: Board, params: SearchParameters) {
+        // send them and the current board to the search thread
+        self.search_thread.start_search::<Log>(
+            &board,
+            params,
+            Arc::clone(&self.transposition_table),
+            Arc::clone(&self.history_table),
+        );
     }
 }
 

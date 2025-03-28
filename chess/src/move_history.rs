@@ -15,6 +15,7 @@
 use crate::{board_state::BoardState, definitions::MAX_MOVES};
 
 /// A struct that holds the history of the board states
+#[derive(Debug)]
 pub(crate) struct BoardHistory {
     board_states: Vec<BoardState>,
 }
@@ -45,7 +46,7 @@ impl BoardHistory {
     }
 
     /// Get an iterator to the board history
-    pub fn iter(&self) -> std::slice::Iter<BoardState> {
+    pub fn iter(&self) -> std::slice::Iter<'_, BoardState> {
         self.board_states.iter()
     }
 }

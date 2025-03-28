@@ -82,7 +82,7 @@ impl TryFrom<u8> for File {
             5 => Ok(Self::F),
             6 => Ok(Self::G),
             7 => Ok(Self::H),
-            _ => Err(anyhow::Error::msg(format!("Invalid file {}", value))),
+            _ => Err(anyhow::Error::msg(format!("Invalid file {value}"))),
         }
     }
 }
@@ -99,7 +99,7 @@ impl TryFrom<char> for File {
             'f' => Ok(Self::F),
             'g' => Ok(Self::G),
             'h' => Ok(Self::H),
-            _ => Err(anyhow::Error::msg(format!("Invalid file {}", value))),
+            _ => Err(anyhow::Error::msg(format!("Invalid file {value}"))),
         }
     }
 }
@@ -114,5 +114,49 @@ mod tests {
         assert_eq!(File::A.offset(-1), None);
         assert_eq!(File::H.offset(1), None);
         assert_eq!(File::H.offset(-1), Some(File::G));
+    }
+
+    #[test]
+    fn to_char() {
+        assert_eq!(File::A.to_char(), 'a');
+        assert_eq!(File::B.to_char(), 'b');
+        assert_eq!(File::C.to_char(), 'c');
+        assert_eq!(File::D.to_char(), 'd');
+        assert_eq!(File::E.to_char(), 'e');
+        assert_eq!(File::F.to_char(), 'f');
+        assert_eq!(File::G.to_char(), 'g');
+        assert_eq!(File::H.to_char(), 'h');
+    }
+
+    #[test]
+    fn from_char() {
+        assert_eq!(File::try_from('a').unwrap(), File::A);
+        assert_eq!(File::try_from('b').unwrap(), File::B);
+        assert_eq!(File::try_from('c').unwrap(), File::C);
+        assert_eq!(File::try_from('d').unwrap(), File::D);
+        assert_eq!(File::try_from('e').unwrap(), File::E);
+        assert_eq!(File::try_from('f').unwrap(), File::F);
+        assert_eq!(File::try_from('g').unwrap(), File::G);
+        assert_eq!(File::try_from('h').unwrap(), File::H);
+
+        for c in 'i'..='z' {
+            assert!(File::try_from(c).is_err());
+        }
+    }
+
+    #[test]
+    fn from_u8() {
+        assert_eq!(File::try_from(0).unwrap(), File::A);
+        assert_eq!(File::try_from(1).unwrap(), File::B);
+        assert_eq!(File::try_from(2).unwrap(), File::C);
+        assert_eq!(File::try_from(3).unwrap(), File::D);
+        assert_eq!(File::try_from(4).unwrap(), File::E);
+        assert_eq!(File::try_from(5).unwrap(), File::F);
+        assert_eq!(File::try_from(6).unwrap(), File::G);
+        assert_eq!(File::try_from(7).unwrap(), File::H);
+
+        for i in 8..=u8::MAX {
+            assert!(File::try_from(i).is_err());
+        }
     }
 }

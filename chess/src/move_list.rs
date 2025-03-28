@@ -4,7 +4,7 @@
  * Created Date: Monday, November 25th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 26 2024
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -51,10 +51,7 @@ impl MoveList {
     /// Push a move to the list. If the list is full, the program will panic.
     /// This is done to avoid the overhead of returning a Result.
     pub fn push(&mut self, mv: Move) {
-        let overflow = self.moves.try_push(mv);
-        if overflow.is_err() {
-            panic!("MoveList is full");
-        }
+        self.moves.push(mv);
     }
 
     /// Get an iterator to the moves in the list.
@@ -70,5 +67,73 @@ impl MoveList {
     /// Clear the list of moves.
     pub fn clear(&mut self) {
         self.moves.clear();
+    }
+
+    pub fn as_slice(&self) -> &[Move] {
+        self.moves.as_slice()
+    }
+
+    pub fn as_mut_slice(&mut self) -> &mut [Move] {
+        self.moves.as_mut_slice()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::square::Square;
+
+    use super::*;
+
+    #[test]
+    fn default() {
+        let move_list: MoveList = Default::default();
+        assert_eq!(move_list.len(), 0);
+        assert!(move_list.is_empty());
+    }
+
+    #[test]
+    fn push() {
+        let mut move_list = MoveList::new();
+        assert_eq!(move_list.len(), 0);
+        assert!(move_list.is_empty());
+
+        let mv = Move::new_king_move(
+            &Square::from_square_index(8),
+            &Square::from_square_index(16),
+            None,
+        );
+        move_list.push(mv);
+        assert_eq!(move_list.len(), 1);
+        assert!(!move_list.is_empty());
+
+        move_list.push(mv);
+        assert_eq!(move_list.len(), 2);
+    }
+
+    #[test]
+    #[should_panic]
+    fn push_with_overflow() {
+        let mut move_list = MoveList::new();
+        assert_eq!(move_list.len(), 0);
+        assert!(move_list.is_empty());
+
+        for _ in 0..MAX_MOVE_LIST_SIZE {
+            let mv = Move::new_king_move(
+                &Square::from_square_index(3_u8),
+                &Square::from_square_index(13_u8),
+                None,
+            );
+            move_list.push(mv);
+        }
+        assert_eq!(move_list.len(), MAX_MOVE_LIST_SIZE);
+        assert!(!move_list.is_empty());
+
+        // This will panic
+        let mv = Move::new_king_move(
+            &Square::from_square_index(0),
+            &Square::from_square_index(1),
+            None,
+        );
+        move_list.push(mv);
     }
 }

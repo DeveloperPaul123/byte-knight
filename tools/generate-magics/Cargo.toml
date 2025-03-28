@@ -1,0 +1,19 @@
+[package]
+name = "generate-magics"
+version = "0.1.0"
+edition = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+
+[dependencies]
+chess = { workspace = true }
+anyhow = { workspace = true }
+rand = { workspace = true, features = ["small_rng"] }
+rand_chacha = { workspace = true }
+thiserror = { workspace = true }
+
+[[bin]]
+name = "generate-magics"
+path = "src/main.rs"
+test = false

@@ -6,10 +6,13 @@ use chess::{
     side::Side,
     square,
 };
-use engine::hce_values::PSQTS;
+use engine::hce_values::{DOUBLED_PAWN_VALUES, ISOLATED_PAWN_VALUES, PASSED_PAWN_BONUS, PSQTS};
 
 use crate::{
-    math, offsets::PARAMETER_COUNT, tuner_score::TuningScore, tuning_position::TuningPosition,
+    math,
+    offsets::{Offsets, PARAMETER_COUNT},
+    tuner_score::TuningScore,
+    tuning_position::TuningPosition,
 };
 
 /// Set of parameters that serve as input for tuning.
@@ -24,7 +27,6 @@ fn piece_value(piece: Piece) -> f64 {
         Piece::Bishop => 300.,
         Piece::Knight => 200.,
         Piece::Pawn => 100.,
-        Piece::None => 0.,
     }
 }
 
@@ -48,6 +50,21 @@ impl Parameters {
                 params[64 * piece as usize + sq] = s;
             }
         }
+
+        // Add passed pawn bonuses
+        for (idx, val) in PASSED_PAWN_BONUS.iter().enumerate() {
+            params[Offsets::PASSED_PAWN as usize + idx] = (*val).into();
+        }
+
+        // Add doubled pawn values
+        for (idx, val) in DOUBLED_PAWN_VALUES.iter().enumerate() {
+            params[Offsets::DOUBLED_PAWN as usize + idx] = (*val).into();
+        }
+
+        for (idx, val) in ISOLATED_PAWN_VALUES.iter().enumerate() {
+            params[Offsets::ISOLATED_PAWN as usize + idx] = (*val).into();
+        }
+
         params
     }
 
@@ -60,6 +77,12 @@ impl Parameters {
                 params[64 * piece as usize + sq] = TuningScore::new(val, val);
             }
         }
+
+        // Add passed pawn bonuses
+        for (idx, val) in PASSED_PAWN_BONUS.iter().enumerate() {
+            params[Offsets::PASSED_PAWN as usize + idx] = (*val).into();
+        }
+
         params
     }
 

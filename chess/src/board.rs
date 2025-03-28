@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 26 2024
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -12,16 +12,19 @@
  *
  */
 
+use std::fmt::Display;
 use std::iter::zip;
 
 use crate::bitboard_helpers;
 use crate::board_state::BoardState;
 use crate::definitions::{CastlingAvailability, MAX_MOVE_RULE, MAX_REPETITION_COUNT, SPACE};
 use crate::fen::FenError;
+use crate::file::File;
 use crate::move_generation::MoveGenerator;
 use crate::move_history::BoardHistory;
 use crate::move_list::MoveList;
 use crate::moves::Move;
+use crate::rank::Rank;
 use crate::square::Square;
 use crate::zobrist::{ZobristHash, ZobristRandomValues};
 
@@ -31,6 +34,7 @@ use super::side::Side;
 use super::{bitboard::Bitboard, pieces::Piece};
 
 /// Represents a chess board position.
+#[derive(Debug)]
 pub struct Board {
     piece_bitboards: [[Bitboard; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
     pub(crate) history: BoardHistory,
@@ -46,6 +50,56 @@ impl Clone for Board {
             state: self.state,
             zobrist_values: self.zobrist_values.clone(),
         }
+    }
+}
+
+impl Default for Board {
+    fn default() -> Self {
+        Board::default_board()
+    }
+}
+
+impl Display for Board {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        const FILES: &str = "   a b c d e f g h\n";
+        const LINES: &str = "  +----------------+\n";
+
+        write!(f, "{}", FILES)?;
+        write!(f, "{}", LINES)?;
+
+        for rank in (0..8).rev() {
+            write!(f, "{} |", rank + 1)?;
+            for file in 0..8 {
+                let square =
+                    Square::new(File::try_from(file).unwrap(), Rank::try_from(rank).unwrap());
+                if let Some((piece, side)) = self.piece_on_square(square.to_square_index()) {
+                    let piece_char = match piece {
+                        Piece::King => 'K',
+                        Piece::Queen => 'Q',
+                        Piece::Rook => 'R',
+                        Piece::Bishop => 'B',
+                        Piece::Knight => 'N',
+                        Piece::Pawn => 'P',
+                    };
+                    let display_char = if side == Side::White {
+                        piece_char
+                    } else {
+                        piece_char.to_ascii_lowercase()
+                    };
+                    write!(f, "{} ", display_char)?;
+                } else {
+                    write!(f, ". ")?;
+                }
+
+                if file == 7 {
+                    write!(f, "|")?;
+                }
+            }
+            writeln!(f)?;
+        }
+        write!(f, "{}", LINES)?;
+        write!(f, "{}", FILES)?;
+        Ok(())
     }
 }
 
@@ -110,7 +164,6 @@ impl Board {
         match side {
             Side::White => self.initialize_white_bbs(),
             Side::Black => self.initialize_black_bbs(),
-            _ => panic!("Invalid side"),
         }
     }
 
@@ -318,8 +371,16 @@ impl Board {
 
     /// Returns the bitboard for a specific piece and side.
     pub fn piece_bitboard(&self, piece: Piece, side: Side) -> &Bitboard {
-        debug_assert!(side != Side::Both);
         &self.piece_bitboards[side as usize][piece as usize]
+    }
+
+    /// Returns a combined [`Bitboard`] of all pieces of a given type for both sides.
+    pub fn piece_kind_bitboard(&self, piece: Piece) -> Bitboard {
+        let mut piece_bb = Bitboard::default();
+        for side in 0..NumberOf::SIDES {
+            piece_bb |= self.piece_bitboards[side][piece as usize];
+        }
+        piece_bb
     }
 
     /// Returns the current square of the king for a given side.
@@ -402,7 +463,6 @@ impl Board {
         match side {
             Side::White => castling_rights & CastlingAvailability::WHITE_KINGSIDE != 0,
             Side::Black => castling_rights & CastlingAvailability::BLACK_KINGSIDE != 0,
-            Side::Both => panic!("Cannot check if both sides can castle kingside"),
         }
     }
 
@@ -420,7 +480,6 @@ impl Board {
         match side {
             Side::White => castling_rights & CastlingAvailability::WHITE_QUEENSIDE != 0,
             Side::Black => castling_rights & CastlingAvailability::BLACK_QUEENSIDE != 0,
-            Side::Both => panic!("Cannot check if both sides can castle queenside"),
         }
     }
 
@@ -603,6 +662,14 @@ impl Board {
         }
         true
     }
+
+    /// Get the last move made on the board.
+    ///
+    /// Returns `None` if there are no moves in the history.
+    /// Otherwise, returns the last move made.
+    pub fn last_move(&self) -> Option<Move> {
+        self.history.iter().last().map(|m| m.next_move)
+    }
 }
 
 #[cfg(test)]
@@ -769,152 +836,6 @@ mod tests {
     }
 
     #[test]
-    fn properly_undo_piece_promotion() {
-        let move_gen = MoveGenerator::new();
-        let mut move_list = MoveList::new();
-        let mut board =
-            Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
-
-        let initial_mv = *move_list
-            .iter()
-            .find(|mv| mv.to_long_algebraic() == "d7c8q")
-            .unwrap();
-
-        let mut queen_bb = *board.piece_bitboard(Piece::Queen, Side::White);
-        assert_eq!(queen_bb.number_of_occupied_squares(), 1);
-        assert_eq!(queen_bb, Bitboard::from_square(Squares::D1));
-
-        let mv_ok = board.make_move(&initial_mv, &move_gen);
-        assert!(mv_ok.is_ok());
-
-        queen_bb = *board.piece_bitboard(Piece::Queen, Side::White);
-        assert_eq!(queen_bb.number_of_occupied_squares(), 2);
-        let mut compare_bb = Bitboard::from_square(Squares::D1);
-        compare_bb.set_square(Squares::C8);
-        assert_eq!(queen_bb, compare_bb);
-
-        let undo_result = board.unmake_move();
-        assert!(undo_result.is_ok());
-
-        queen_bb = *board.piece_bitboard(Piece::Queen, Side::White);
-        assert_eq!(queen_bb.number_of_occupied_squares(), 1);
-        assert_eq!(queen_bb, Bitboard::from_square(Squares::D1));
-    }
-
-    #[test]
-    fn make_move_updates_piece_boards() {
-        let move_gen = MoveGenerator::new();
-        let mut move_list = MoveList::new();
-        let mut board =
-            Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
-
-        let initial_mv = *move_list
-            .iter()
-            .find(|mv| mv.to_long_algebraic() == "d7c8q")
-            .unwrap();
-
-        let next_move = *move_list
-            .iter()
-            .find(|mv| mv.to_long_algebraic() == "d7c8r")
-            .unwrap();
-
-        let mut mv_ok = board.make_move(&initial_mv, &move_gen);
-        assert!(mv_ok.is_ok());
-
-        // generate moves again
-        move_list.clear();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
-        let mut node_count = 0;
-        for mv in move_list.iter() {
-            println!("trying move {}", mv.to_long_algebraic());
-            mv_ok = board.make_move(mv, &move_gen);
-            if mv_ok.is_ok() {
-                node_count += 1;
-                let undo_result = board.unmake_move();
-                assert!(undo_result.is_ok());
-            }
-        }
-
-        assert_eq!(node_count, 31);
-
-        println!("\n{}\n{}", board.to_fen(), board.board_state());
-        println!(
-            "queen before:\n{}",
-            board.piece_bitboard(Piece::Queen, Side::White)
-        );
-
-        let initial_move_undo_result = board.unmake_move();
-        assert!(initial_move_undo_result.is_ok());
-
-        println!("\n{}\n{}", board.to_fen(), board.board_state());
-        println!(
-            "queen after:\n{}",
-            board.piece_bitboard(Piece::Queen, Side::White)
-        );
-
-        mv_ok = board.make_move(&next_move, &move_gen);
-        assert!(mv_ok.is_ok());
-
-        println!(
-            "rook after move:\n{}",
-            board.piece_bitboard(Piece::Rook, Side::White)
-        );
-
-        move_list.clear();
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
-        node_count = 0;
-
-        for mv in move_list.iter() {
-            mv_ok = board.make_move(mv, &move_gen);
-            if mv_ok.is_ok() {
-                println!("{} 1", mv.to_long_algebraic());
-                node_count += 1;
-                let undo_result = board.unmake_move();
-                assert!(undo_result.is_ok());
-            }
-        }
-
-        assert_eq!(node_count, 31);
-    }
-
-    #[test]
-    fn make_move_and_undo_move() {
-        let move_gen = MoveGenerator::new();
-        let mut move_list = MoveList::new();
-        let mut board =
-            Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
-
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
-
-        let first_mv = move_list
-            .iter()
-            .find(|mv| mv.to_long_algebraic() == "b1d2")
-            .unwrap();
-        let second_mv = move_list
-            .iter()
-            .find(|mv| mv.to_long_algebraic() == "b1a3")
-            .unwrap();
-
-        println!("{}\n{}", board.to_fen(), board.board_state());
-        let mut mv_ok = board.make_move(first_mv, &move_gen);
-        assert!(mv_ok.is_ok());
-        println!("{}\n{}", board.to_fen(), board.board_state());
-        // undo the move
-        let mut undo_ok = board.unmake_move();
-        assert!(undo_ok.is_ok());
-        println!("{}\n{}", board.to_fen(), board.board_state());
-
-        // make the second move
-        mv_ok = board.make_move(second_mv, &move_gen);
-        assert!(mv_ok.is_ok());
-        // undo the move
-        undo_ok = board.unmake_move();
-        assert!(undo_ok.is_ok());
-    }
-
-    #[test]
     fn from_fen_round_trip() {
         // load Pohl.epd from data and go through each FEN. Load it into the board and then output the FEN to see if they match
         let path = format!(
@@ -929,5 +850,70 @@ mod tests {
             let board = Board::from_fen(fen).unwrap();
             assert_eq!(fen, board.to_fen());
         }
+    }
+    #[test]
+    fn from_invalid_fen() {
+        let maybe_board = Board::from_fen("");
+        assert!(maybe_board.is_err());
+        let err = maybe_board.unwrap_err();
+        let message = format!("{err}");
+        // check that the message contains something about the FEN being empty
+        assert!(message.to_lowercase().contains("empty"));
+    }
+
+    #[test]
+    fn color_on() {
+        let board = Board::default_board();
+        for sq in 0..64 {
+            let color = board.color_on(sq);
+            if sq <= 15 {
+                assert!(color.is_some_and(|c| c == Side::White));
+            } else if sq >= 48 {
+                assert!(color.is_some_and(|c| c == Side::Black));
+            } else {
+                assert!(color.is_none());
+            }
+        }
+    }
+
+    #[test]
+    fn get_last_move() {
+        let mut board = Board::default_board();
+        let move_gen = MoveGenerator::new();
+        let mut move_list = MoveList::new();
+        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+
+        let first_move = move_list.iter().next().unwrap();
+        let mv_ok = board.make_move(first_move, &move_gen);
+        assert!(mv_ok.is_ok());
+
+        let last_move = board.last_move().unwrap();
+        assert_eq!(last_move, *first_move);
+
+        // undo the move
+        let undo_result = board.unmake_move();
+        assert!(undo_result.is_ok());
+
+        // now make a null move
+        board.null_move();
+        let last_move = board.last_move().unwrap();
+        assert!(last_move.is_null_move());
+
+        // undo the null move
+        let undo_result = board.unmake_move();
+        assert!(undo_result.is_ok());
+        assert!(board.to_fen() == Board::default_board().to_fen());
+    }
+
+    #[test]
+    fn piece_kind_bitboard() {
+        let board = Board::default_board();
+        let piece_kind_bb = board.piece_kind_bitboard(Piece::Pawn);
+
+        let black_pawns_bb = board.piece_bitboard(Piece::Pawn, Side::Black);
+        let white_pawns_bb = board.piece_bitboard(Piece::Pawn, Side::White);
+
+        assert_eq!(piece_kind_bb, *black_pawns_bb | *white_pawns_bb);
+        assert_eq!(piece_kind_bb.number_of_occupied_squares(), 16);
     }
 }

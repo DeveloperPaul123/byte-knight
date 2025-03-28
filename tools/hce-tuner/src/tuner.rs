@@ -32,7 +32,7 @@ impl<'a> Tuner<'a> {
     pub(crate) fn tune(&mut self) -> &Parameters {
         println!("Computing optimal K value...");
         let computed_k: f64 = self.compute_k();
-        println!("Optimal K value: {:.8}", computed_k);
+        println!("Optimal K value: {computed_k:.8}");
         println!("Using {} positions", self.positions.len());
 
         for epoch in 1..=self.max_epochs {
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn offsets() {
-        assert_eq!(Offsets::END, 384);
+        assert_eq!(Offsets::END, 406);
     }
 
     #[test]

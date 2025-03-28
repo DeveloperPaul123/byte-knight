@@ -20,7 +20,7 @@ jobs:
             artifact_name: byte-knight
             extension: ""
           - os: macos-latest
-            target: x86_64-apple-darwin
+            target: aarch64-apple-darwin
             artifact_name: byte-knight
             extension: ""
           - os: windows-latest
@@ -31,7 +31,7 @@ jobs:
       contents: write
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
 
       - name: Install rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -44,7 +44,7 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: byte-knight-${{ matrix.target }}${{ matrix.extension }}
           path: ./target/${{ matrix.target }}/release/${{ matrix.artifact_name }}

@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Mar 24 2025
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -12,15 +12,14 @@
  *
  */
 
-use chess::{bitboard_helpers, board::Board, moves::Move, pieces::Piece, side::Side};
+use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
 
 use crate::{
-    hce_values::{ByteKnightValues, GAME_PHASE_MAX, GAMEPHASE_INC},
-    history_table,
+    hce_values::{ByteKnightValues, GAME_PHASE_INC, GAME_PHASE_MAX},
+    pawn_structure::PawnEvaluator,
     phased_score::{PhaseType, PhasedScore},
     score::{LargeScoreType, Score, ScoreType},
     traits::{Eval, EvalValues},
-    ttable::TranspositionTableEntry,
 };
 
 /// Provides static evaluation of a given chess position.
@@ -29,11 +28,15 @@ where
     Values: EvalValues,
 {
     values: Values,
+    pawn_evaluator: PawnEvaluator,
 }
 
 impl<Values: EvalValues> Evaluation<Values> {
     pub fn new(values: Values) -> Self {
-        Evaluation { values }
+        Evaluation {
+            values,
+            pawn_evaluator: PawnEvaluator::new(),
+        }
     }
 
     pub fn values(&self) -> &Values {
@@ -44,44 +47,8 @@ impl<Values: EvalValues> Evaluation<Values> {
         &mut self.values
     }
 
-    /// Scores a move for ordering. This will return the _negative_ score of
-    /// the move so that if you sort moves by their score, the best move will
-    /// be first (at index 0).
-    ///
-    /// # Arguments
-    ///
-    /// - `mv`: The move to score.
-    /// - `tt_entry`: The transposition table entry for the current position.
-    ///
-    /// # Returns
-    ///
-    /// The score of the move.
-    pub(crate) fn score_move_for_ordering(
-        stm: Side,
-        mv: &Move,
-        tt_entry: &Option<TranspositionTableEntry>,
-        history_table: &history_table::HistoryTable,
-    ) -> LargeScoreType {
-        if tt_entry.is_some_and(|tt| *mv == tt.board_move) {
-            return LargeScoreType::MIN;
-        }
-
-        let mut score = 0;
-        if mv.is_quiet() {
-            //history heuristic
-            score += history_table.get(stm, mv.piece(), mv.to());
-        } else if mv.is_capture() {
-            // mvv-lva for captures
-            // safe to unwrap the captured piece because we already checked
-            score += Self::mvv_lva(mv.captured_piece().unwrap(), mv.piece());
-        }
-
-        // negate the score to get the best move first
-        -score
-    }
-
     pub(crate) fn mvv_lva(captured: Piece, capturing: Piece) -> LargeScoreType {
-        let can_capture = captured != Piece::King && captured != Piece::None;
+        let can_capture = captured != Piece::King;
         ((can_capture as LargeScoreType)
             * (25 * Self::piece_value(captured) - Self::piece_value(capturing)))
             << 16
@@ -95,7 +62,6 @@ impl<Values: EvalValues> Evaluation<Values> {
             Piece::Bishop => 3,
             Piece::Knight => 2,
             Piece::Pawn => 1,
-            Piece::None => 0,
         }
     }
 }
@@ -112,19 +78,42 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         let mut eg: [i32; 2] = [0; 2];
         let mut game_phase = 0_i32;
 
+        let pawn_structure = self.pawn_evaluator.detect_pawn_structure(board);
+
         let mut occupancy = board.all_pieces();
         // loop through occupied squares
         while occupancy.as_number() > 0 {
             let sq = bitboard_helpers::next_bit(&mut occupancy);
             let maybe_piece = board.piece_on_square(sq as u8);
             if let Some((piece, side)) = maybe_piece {
+                if piece == Piece::Pawn {
+                    // add passed pawn bonus if applicable
+                    let passed_pawn_bonus = self.values.passed_pawn_bonus(sq as u8, side);
+                    if pawn_structure.passed_pawns[side as usize].is_square_occupied(sq as u8) {
+                        mg[side as usize] += passed_pawn_bonus.mg() as i32;
+                        eg[side as usize] += passed_pawn_bonus.eg() as i32;
+                    }
+
+                    let doubled_pawn_value = self.values.doubled_pawn_value(sq as u8, side);
+                    if pawn_structure.doubled_pawns[side as usize].is_square_occupied(sq as u8) {
+                        mg[side as usize] += doubled_pawn_value.mg() as i32;
+                        eg[side as usize] += doubled_pawn_value.eg() as i32;
+                    }
+
+                    let isolated_pawn_value = self.values.isolated_pawn_value(sq as u8, side);
+                    if pawn_structure.isolated_pawns[side as usize].is_square_occupied(sq as u8) {
+                        mg[side as usize] += isolated_pawn_value.mg() as i32;
+                        eg[side as usize] += isolated_pawn_value.eg() as i32;
+                    }
+                }
                 let phased_score: PhasedScore = self.values.psqt(sq as u8, piece, side);
                 mg[side as usize] += phased_score.mg() as i32;
                 eg[side as usize] += phased_score.eg() as i32;
 
-                game_phase += GAMEPHASE_INC[piece as usize] as i32;
+                game_phase += GAME_PHASE_INC[piece as usize] as i32;
             }
         }
+
         let stm_idx = side_to_move as usize;
         let opposite = Side::opposite(side_to_move) as usize;
         let mg_score = mg[stm_idx] - mg[opposite];
@@ -148,10 +137,7 @@ impl Default for ByteKnightEvaluation {
 mod tests {
     use chess::{
         board::Board,
-        moves::{self, Move},
-        pieces::{ALL_PIECES, PIECE_SHORT_NAMES, Piece},
-        side::Side,
-        square::Square,
+        pieces::{ALL_PIECES, PIECE_SHORT_NAMES},
     };
 
     use crate::{
@@ -177,58 +163,10 @@ mod tests {
     }
 
     #[test]
-    fn score_moves() {
-        let from = Square::from_square_index(0);
-        let to = Square::from_square_index(1);
-        let mut mv = Move::new(
-            &from,
-            &to,
-            moves::MoveDescriptor::None,
-            Piece::Pawn,
-            Some(Piece::Queen),
-            None,
-        );
-        let side = Side::Black;
-        let history_table = Default::default();
-        // note that these scores are for ordering, so they are negated
-        assert_eq!(
-            -ByteKnightEvaluation::score_move_for_ordering(side, &mv, &None, &history_table),
-            ByteKnightEvaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
-        );
-
-        mv = Move::new(
-            &from,
-            &to,
-            moves::MoveDescriptor::None,
-            Piece::Bishop,
-            Some(Piece::Rook),
-            None,
-        );
-
-        assert_eq!(
-            -ByteKnightEvaluation::score_move_for_ordering(side, &mv, &None, &history_table),
-            ByteKnightEvaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
-        );
-
-        mv = Move::new(
-            &from,
-            &to,
-            moves::MoveDescriptor::None,
-            Piece::Knight,
-            Some(Piece::Pawn),
-            None,
-        );
-
-        assert_eq!(
-            -ByteKnightEvaluation::score_move_for_ordering(side, &mv, &None, &history_table),
-            ByteKnightEvaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
-        );
-    }
-
-    #[test]
     fn score_stability() {
         // These values were determined empirically by running this test and manually copy/pasting the results.
-        // If any changes are made to the evaluation function, these values will need to be updated or the test will need to be augmented with the new evaluation values.
+        // If any changes are made to the evaluation function, these values will need to be updated or the test
+        // will need to be augmented with the new evaluation values.
 
         // standard EPD suite FEN positions
         let positions = [
@@ -363,19 +301,19 @@ mod tests {
         ];
 
         let scores: [ScoreType; 128] = [
-            0, 34, 589, 597, -589, -597, 1142, -1142, 512, 538, -512, -538, 0, 7, 15, 12, -7, -15,
-            -12, -589, -597, 589, 597, -1142, 1142, -512, -538, 512, 538, 0, -7, -15, -12, 7, 15,
-            12, 2, 0, 0, -397, 476, -2, 0, 5, 397, -476, -22, -43, 718, -744, 27, 43, -718, 744, 0,
-            -6, 0, 6, -1094, -1192, -37, 1072, -1192, 37, 204, 222, -204, -222, 90, -204, -222,
-            204, 222, -90, 23, 23, 0, 0, 0, 15, -15, -13, 0, 0, 0, -15, 15, 13, -15, 15, 8, 9, -8,
-            -9, -214, -7, 15, -15, -8, -9, 8, 9, 214, 7, -3, 2, 3, -2, 7, -7, 0, 3, -2, -3, 2, -7,
-            7, 0, -11, 9, 31, 53, 11, -9, -31, -53, 41, 25,
+            0, 19, 649, 657, -649, -657, 1255, -1255, 568, 594, -568, -594, 0, 8, 17, 15, -8, -17,
+            -15, -649, -657, 649, 657, -1255, 1255, -568, -594, 568, 594, 0, -8, -17, -15, 8, 17,
+            15, 2, -2, 0, -431, 523, -2, 2, 7, 431, -523, -23, -42, 793, -825, 30, 42, -793, 825,
+            0, -7, 0, 7, -1206, -1315, -46, 1180, -1315, 46, 207, 236, -207, -236, -12, -207, -236,
+            207, 236, 12, -4, -4, 0, 0, 0, 20, -20, -8, 0, 0, 0, -20, 20, 8, -11, 7, 2, 1, -2, -1,
+            -291, 2, 11, -7, -2, -1, 2, 1, 291, -2, -6, -4, 6, 4, -2, 2, 0, 6, 4, -6, -4, 2, -2, 0,
+            -12, 12, 40, 65, 12, -12, -40, -65, 2, 27,
         ];
 
         let eval = ByteKnightEvaluation::default();
 
         for (i, fen) in positions.iter().enumerate() {
-            println!("Position {}: {}", i, fen);
+            println!("Position {i}: {fen}");
             let board = Board::from_fen(fen).unwrap();
             let score = eval.eval(&board);
             println!("{},", score.0);

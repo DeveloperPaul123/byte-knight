@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 14th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Nov 21 2024
+ * Last Modified: Fri Apr 11 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -33,7 +33,7 @@ struct Options {
 enum Command {
     #[command(about = "Run fixed depth search")]
     Bench {
-        #[arg(short, long, default_value = "6")]
+        #[arg(short, long, default_value = "8")]
         depth: u8,
 
         #[arg(short, long)]
@@ -47,7 +47,7 @@ fn run_uci() {
     match engine_run_result {
         Ok(_) => (),
         Err(e) => {
-            eprintln!("Error running engine: {}", e);
+            eprintln!("Error running engine: {e}");
             exit(1);
         }
     }

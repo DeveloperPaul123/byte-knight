@@ -61,6 +61,11 @@ impl Bitboard {
         Bitboard { data: 1 << square }
     }
 
+    /// Create a filled Bitboard.
+    pub const fn filled() -> Self {
+        Bitboard { data: u64::MAX }
+    }
+
     /// Check if a square is occupied.
     pub fn is_square_occupied(&self, square: u8) -> bool {
         self.data & (1 << square) != 0
@@ -297,7 +302,7 @@ impl Display for Bitboard {
             for file in (0..8).rev() {
                 let mask = 1u64 << (LAST_BIT - (rank * 8) - file);
                 let symbol = if self.data & mask != 0 { 'x' } else { '-' };
-                write!(f, "{} ", symbol)?;
+                write!(f, "{symbol} ")?;
             }
             writeln!(f)?;
         }
@@ -315,7 +320,7 @@ mod tests {
     fn bitboard_new() {
         let bb = Bitboard::new(0x8000000000000001);
         assert_eq!(bb.data, 0x8000000000000001);
-        println!("{}", bb);
+        println!("{bb}");
     }
 
     #[test]
@@ -353,16 +358,49 @@ mod tests {
         let bb2 = Bitboard::new(0x0F0F0F0F0F0F0F0F);
 
         // AND
-        assert_eq!((bb1 & bb2).data, 0);
+        assert_eq!((bb1 & bb2), 0);
 
         // OR
-        assert_eq!((bb1 | bb2).data, 0xFFFFFFFFFFFFFFFF);
+        assert_eq!((bb1 | bb2), 0xFFFFFFFFFFFFFFFF);
 
         // XOR
-        assert_eq!((bb1 ^ bb2).data, 0xFFFFFFFFFFFFFFFF);
+        assert_eq!((bb1 ^ bb2), 0xFFFFFFFFFFFFFFFF);
+        assert_eq!(bb1 ^ 0x0F0F0F0F0F0F0F0F, 0xFFFFFFFFFFFFFFFF);
+        let mut bb_xor = bb1;
+        bb_xor ^= bb2;
+        assert_eq!(bb_xor, 0xFFFFFFFFFFFFFFFF);
 
         // NOT
         assert_eq!((!bb1), 0x0F0F0F0F0F0F0F0F);
+    }
+
+    #[test]
+    fn shifts() {
+        let bb = Bitboard::new(0x8000000000000001);
+
+        assert_eq!(bb << 1, Bitboard::new(0x2));
+        assert_eq!(bb << 2, Bitboard::new(0x4));
+        assert_eq!(bb << Bitboard::new(1), Bitboard::new(0x2));
+        assert_eq!(bb << Bitboard::new(2), Bitboard::new(0x4));
+
+        assert_eq!(bb >> 1, Bitboard::new(0x4000000000000000));
+        assert_eq!(bb >> 2, Bitboard::new(0x2000000000000000));
+        assert_eq!(bb >> Bitboard::new(1), Bitboard::new(0x4000000000000000));
+        assert_eq!(bb >> Bitboard::new(2), Bitboard::new(0x2000000000000000));
+
+        let mut bb_left = bb;
+        bb_left <<= 1;
+        assert_eq!(bb_left, Bitboard::new(0x2));
+        bb_left = bb;
+        bb_left <<= Bitboard::new(1);
+        assert_eq!(bb_left, Bitboard::new(0x2));
+
+        let mut bb_right = bb;
+        bb_right >>= 1;
+        assert_eq!(bb_right, Bitboard::new(0x4000000000000000));
+        bb_right = bb;
+        bb_right >>= Bitboard::new(1);
+        assert_eq!(bb_right, Bitboard::new(0x4000000000000000));
     }
 
     #[test]
@@ -383,7 +421,7 @@ mod tests {
         let mut bb = Bitboard::from_square(Squares::B4);
         let mut bb_front = bb << 8;
         let mut bb_back = bb >> 8;
-        println!("{}\n{}\n{}", bb, bb_front, bb_back);
+        println!("{bb}\n{bb_front}\n{bb_back}");
 
         let original_square = bitboard_helpers::next_bit(&mut bb) as u8;
         let front_square = bitboard_helpers::next_bit(&mut bb_front) as u8;
@@ -392,5 +430,26 @@ mod tests {
         assert_eq!(original_square, Squares::B4);
         assert_eq!(front_square, Squares::B5);
         assert_eq!(back_square, Squares::B3);
+    }
+
+    #[test]
+    fn hash() {
+        use std::collections::hash_map::HashMap;
+        let mut map = HashMap::new();
+        for sq in 0..64 {
+            let bb = Bitboard::from_square(sq);
+            map.insert(bb, sq);
+        }
+
+        for sq in 0..64 {
+            let bb = Bitboard::from_square(sq);
+            assert_eq!(map.get(&bb), Some(&sq));
+        }
+    }
+
+    #[test]
+    fn filled() {
+        let bb = Bitboard::filled();
+        assert_eq!(bb.data, u64::MAX);
     }
 }

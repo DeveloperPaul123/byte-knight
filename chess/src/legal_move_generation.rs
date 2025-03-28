@@ -4,7 +4,7 @@
  * Created Date: Tuesday, November 26th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 26 2024
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -12,8 +12,8 @@
  *
  */
 
+use crate::definitions::RANK_BITBOARDS;
 use crate::move_generation::NORTH;
-use crate::move_generation::RANK_BITBOARDS;
 use crate::move_generation::SOUTH;
 use crate::move_list::MoveList;
 use crate::square;
@@ -180,7 +180,6 @@ impl MoveGenerator {
                     capture_mask |= en_passant_bb;
                 }
             }
-            Side::Both => panic!("Both side not allowed"),
         }
 
         (
@@ -268,7 +267,6 @@ impl MoveGenerator {
                 let captured_sq = match board.side_to_move() {
                     Side::White => sq - SOUTH as u8,
                     Side::Black => sq + NORTH as u8,
-                    Side::Both => panic!("Both side not allowed"),
                 };
                 occupancy &= !(Bitboard::from_square(captured_sq));
                 // get the squares attacked by the sliding pieces
@@ -337,7 +335,6 @@ impl MoveGenerator {
         let direction = match us {
             Side::White => NORTH as u8,
             Side::Black => SOUTH as u8,
-            Side::Both => panic!("Both side not allowed"),
         };
         let from_square = square.to_square_index();
         let to_square = match us {
@@ -355,7 +352,6 @@ impl MoveGenerator {
                     false => Some(result),
                 }
             }
-            Side::Both => panic!("Both side not allowed"),
         };
 
         let mut pushes: Bitboard = match to_square {
@@ -369,7 +365,6 @@ impl MoveGenerator {
         let can_double_push = match us {
             Side::White => square::is_square_on_rank(from_square, Rank::R2 as u8),
             Side::Black => square::is_square_on_rank(from_square, Rank::R7 as u8),
-            Side::Both => panic!("Both side not allowed"),
         };
 
         // if single push is obstructed, we can't double push
@@ -389,7 +384,6 @@ impl MoveGenerator {
                         false => Some(result),
                     }
                 }
-                Side::Both => panic!("Both side not allowed"),
             };
 
             if let Some(to) = double_push_sq {
@@ -559,7 +553,6 @@ impl MoveGenerator {
         let king_sq = match us {
             Side::White => Squares::E1,
             Side::Black => Squares::E8,
-            Side::Both => panic!("Both side not allowed"),
         };
 
         // sanity check
@@ -572,7 +565,6 @@ impl MoveGenerator {
             let king_side_rook = match us {
                 Side::White => Squares::H1,
                 Side::Black => Squares::H8,
-                Side::Both => panic!("Both side not allowed"),
             };
             // sanity check for the rook placement
             let maybe_rook = board.piece_on_square(king_side_rook);
@@ -588,13 +580,11 @@ impl MoveGenerator {
                 Side::Black => {
                     Bitboard::from_square(Squares::F8) | Bitboard::from_square(Squares::G8)
                 }
-                Side::Both => panic!("Both side not allowed"),
             };
 
             let king_side_target_sq = match us {
                 Side::White => Squares::G1,
                 Side::Black => Squares::G8,
-                Side::Both => panic!("Both side not allowed"),
             };
 
             let is_king_ray_empty = king_side_empty & occupancy == Bitboard::default();
@@ -608,7 +598,6 @@ impl MoveGenerator {
             let queen_side_rook = match us {
                 Side::White => Squares::A1,
                 Side::Black => Squares::A8,
-                Side::Both => panic!("Both side not allowed"),
             };
             // sanity check for the rook placement
             let maybe_rook = board.piece_on_square(queen_side_rook);
@@ -624,18 +613,15 @@ impl MoveGenerator {
                 Side::Black => {
                     Bitboard::from_square(Squares::C8) | Bitboard::from_square(Squares::D8)
                 }
-                Side::Both => panic!("Both side not allowed"),
             };
             let queen_side_empty = match us {
                 Side::White => queen_side_no_attack | Bitboard::from_square(Squares::B1),
                 Side::Black => queen_side_no_attack | Bitboard::from_square(Squares::B8),
-                Side::Both => panic!("Both side not allowed"),
             };
 
             let queen_side_target_sq = match us {
                 Side::White => Squares::C1,
                 Side::Black => Squares::C8,
-                Side::Both => panic!("Both side not allowed"),
             };
 
             let is_king_ray_empty = queen_side_empty & occupancy == Bitboard::default();
@@ -909,8 +895,8 @@ mod tests {
             move_gen.calculate_check_and_pin_metadata(&board);
 
         assert_eq!(pinned_pieces.number_of_occupied_squares(), 2);
-        println!("horizontal pin rays:\n{}", horizontal_pin_rays);
-        println!("diagonal pin rays:\n{}", diagonal_pin_rays);
+        println!("horizontal pin rays:\n{horizontal_pin_rays}");
+        println!("diagonal pin rays:\n{diagonal_pin_rays}");
 
         assert!(pinned_pieces.intersects(Bitboard::from_square(Squares::C5)));
         assert!(pinned_pieces.intersects(Bitboard::from_square(Squares::D2)));
@@ -923,17 +909,17 @@ mod tests {
             Board::from_fen("rnQq1k1r/pp2bppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R b KQ - 0 8").unwrap();
         let (checkers, capture_mask, push_mask, pinned, orthogonal_rays, diagonal_rays) =
             move_gen.calculate_check_and_pin_metadata(&board);
-        println!("checkers:\n{}", checkers);
-        println!("check mask:\n{}", capture_mask);
-        println!("push mask:\n{}", push_mask);
-        println!("pinned:\n{}", pinned);
-        println!("orthogonal rays:\n{}", orthogonal_rays);
-        println!("diagonal rays:\n{}", diagonal_rays);
+        println!("checkers:\n{checkers}");
+        println!("check mask:\n{capture_mask}");
+        println!("push mask:\n{push_mask}");
+        println!("pinned:\n{pinned}");
+        println!("orthogonal rays:\n{orthogonal_rays}");
+        println!("diagonal rays:\n{diagonal_rays}");
 
         assert_eq!(checkers, 0);
         assert_eq!(pinned, Bitboard::from_square(Squares::D8));
-        println!("capture mask:\n{}", capture_mask);
-        println!("push mask:\n{}", push_mask);
+        println!("capture mask:\n{capture_mask}");
+        println!("push mask:\n{push_mask}");
     }
 
     #[test]
@@ -942,12 +928,12 @@ mod tests {
         let board = Board::from_fen("4B1r1/2q2p2/QP4k1/3P2p1/7B/8/6K1/7R b - - 3 59").unwrap();
         let (checkers, capture_mask, push_mask, pinned, orthogonal_rays, diagonal_rays) =
             move_gen.calculate_check_and_pin_metadata(&board);
-        println!("checkers:\n{}", checkers);
-        println!("check mask:\n{}", capture_mask);
-        println!("push mask:\n{}", push_mask);
-        println!("pinned:\n{}", pinned);
-        println!("orthogonal rays:\n{}", orthogonal_rays);
-        println!("diagonal rays:\n{}", diagonal_rays);
+        println!("checkers:\n{checkers}");
+        println!("check mask:\n{capture_mask}");
+        println!("push mask:\n{push_mask}");
+        println!("pinned:\n{pinned}");
+        println!("orthogonal rays:\n{orthogonal_rays}");
+        println!("diagonal rays:\n{diagonal_rays}");
 
         assert_eq!(checkers, 0);
         assert_eq!(pinned, Bitboard::from_square(Squares::F7));
@@ -963,7 +949,7 @@ mod tests {
         move_gen.generate_legal_moves(&board, &mut move_list);
 
         for mv in move_list.iter() {
-            println!("{}", mv);
+            println!("{mv}");
         }
 
         assert_eq!(move_list.len(), 6);
@@ -997,7 +983,7 @@ mod tests {
         move_gen.generate_legal_moves(&board, &mut move_list);
 
         for mv in move_list.iter() {
-            println!("{}", mv);
+            println!("{mv}");
         }
 
         assert_eq!(move_list.len(), 9);
@@ -1016,7 +1002,7 @@ mod tests {
             | Bitboard::from_square(Squares::E5)
             | Bitboard::from_square(Squares::F6)
             | Bitboard::from_square(Squares::G7);
-        println!("{}", rays);
+        println!("{rays}");
         assert_eq!(rays, expected);
 
         let from = Square::from_square_index(Squares::H1);

@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::{Result, anyhow};
 use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
-use engine::{hce_values::GAME_PHASE_MAX, hce_values::GAMEPHASE_INC};
+use engine::{hce_values::GAME_PHASE_INC, hce_values::GAME_PHASE_MAX};
 
 use crate::{offsets::Offsets, tuning_position::TuningPosition};
 
@@ -51,6 +51,7 @@ fn process_epd_line(line: &str) -> Result<(Board, f64)> {
 
 fn parse_epd_line(line: &str) -> Result<TuningPosition> {
     let (board, game_result) = process_epd_line(line)?;
+
     let mut w_indexes = Vec::new();
     let mut b_indexes = Vec::new();
     // loop through all pieces on the board and calculate the index into the parameter array
@@ -61,8 +62,8 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         let mut b_bb = *board.piece_bitboard(piece, Side::Black);
 
         // update game phase
-        phase += w_bb.as_number().count_ones() as usize * GAMEPHASE_INC[piece as usize] as usize;
-        phase += b_bb.as_number().count_ones() as usize * GAMEPHASE_INC[piece as usize] as usize;
+        phase += w_bb.as_number().count_ones() as usize * GAME_PHASE_INC[piece as usize] as usize;
+        phase += b_bb.as_number().count_ones() as usize * GAME_PHASE_INC[piece as usize] as usize;
         while w_bb.as_number() > 0 {
             let sq = bitboard_helpers::next_bit(&mut w_bb);
             // note we still have to flip the square for the white side
@@ -85,9 +86,57 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         match board.side_to_move() {
             Side::White => game_result,
             Side::Black => 1.0 - game_result,
-            Side::Both => panic!("Side to move cannot be both."),
         }
     };
+
+    // detect passed pawns
+    let pawn_eval = engine::pawn_structure::PawnEvaluator::new();
+    let pawn_structure = pawn_eval.detect_pawn_structure(&board);
+    let mut white_pawns_bb = pawn_structure.passed_pawns[Side::White as usize];
+    let mut black_pawns_bb = pawn_structure.passed_pawns[Side::Black as usize];
+
+    while white_pawns_bb.as_number() > 0 {
+        let white_pawn_idx = bitboard_helpers::next_bit(&mut white_pawns_bb);
+        let index = Offsets::offset_for_passed_pawn(white_pawn_idx, Side::White);
+        w_indexes.push(index);
+    }
+
+    while black_pawns_bb.as_number() > 0 {
+        let black_pawn_idx = bitboard_helpers::next_bit(&mut black_pawns_bb);
+        let index = Offsets::offset_for_passed_pawn(black_pawn_idx, Side::Black);
+        b_indexes.push(index);
+    }
+
+    // detect doubled pawns
+    let mut white_doubled_bb = pawn_structure.doubled_pawns[Side::White as usize];
+    let mut black_doubled_bb = pawn_structure.doubled_pawns[Side::Black as usize];
+
+    while white_doubled_bb.as_number() > 0 {
+        let white_doubled_idx = bitboard_helpers::next_bit(&mut white_doubled_bb);
+        let index = Offsets::offset_for_doubled_pawn(white_doubled_idx, Side::White);
+        w_indexes.push(index);
+    }
+
+    while black_doubled_bb.as_number() > 0 {
+        let black_doubled_idx = bitboard_helpers::next_bit(&mut black_doubled_bb);
+        let index = Offsets::offset_for_doubled_pawn(black_doubled_idx, Side::Black);
+        b_indexes.push(index);
+    }
+
+    let mut isolated_white_bb = pawn_structure.isolated_pawns[Side::White as usize];
+    let mut isolated_black_bb = pawn_structure.isolated_pawns[Side::Black as usize];
+
+    while isolated_white_bb.as_number() > 0 {
+        let isolated_white_idx = bitboard_helpers::next_bit(&mut isolated_white_bb);
+        let index = Offsets::offset_for_isolated_pawn(isolated_white_idx, Side::White);
+        w_indexes.push(index);
+    }
+
+    while isolated_black_bb.as_number() > 0 {
+        let isolated_black_idx = bitboard_helpers::next_bit(&mut isolated_black_bb);
+        let index = Offsets::offset_for_isolated_pawn(isolated_black_idx, Side::Black);
+        b_indexes.push(index);
+    }
 
     let scaled_phase = phase as f64 / (GAME_PHASE_MAX as f64);
     let tuning_pos = TuningPosition::new(w_indexes, b_indexes, scaled_phase, result);
@@ -172,15 +221,15 @@ mod tests {
     fn test_epd_lines(lines: &[&str]) -> Vec<(TuningPosition, Board, f64)> {
         let mut results = Vec::new();
         for line in lines.iter() {
-            let position = super::parse_epd_line(line);
+            let position: Result<TuningPosition, anyhow::Error> = super::parse_epd_line(line);
             assert!(position.is_ok());
             let pos = position.unwrap();
             let (board, result) = process_epd_line(line).unwrap();
             let total_piece_count = board.all_pieces().as_number().count_ones();
-            assert_eq!(
+            assert!(
                 pos.parameter_indexes[Side::White as usize].len()
-                    + pos.parameter_indexes[Side::Black as usize].len(),
-                total_piece_count as usize
+                    + pos.parameter_indexes[Side::Black as usize].len()
+                    >= total_piece_count as usize
             );
             results.push((pos, board, result));
         }
@@ -225,10 +274,9 @@ mod tests {
             let val = match board.side_to_move() {
                 Side::White => position.evaluate(&params),
                 Side::Black => -position.evaluate(&params),
-                Side::Both => panic!("Side to move cannot be both."),
             };
 
-            println!("{} // {}", expected_value, val);
+            println!("{expected_value} // {val}");
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
     }
@@ -265,7 +313,6 @@ mod tests {
             let expected_game_result: f64 = match board.side_to_move() {
                 Side::Black => 1.0 - EXPECTED_PARSED_GAME_RESULTS[i],
                 Side::White => EXPECTED_PARSED_GAME_RESULTS[i],
-                Side::Both => panic!("Side to move cannot be both."),
             };
 
             assert_eq!(position.game_result, expected_game_result);
@@ -276,9 +323,8 @@ mod tests {
             let val = match board.side_to_move() {
                 Side::White => position.evaluate(&params),
                 Side::Black => -position.evaluate(&params),
-                Side::Both => panic!("Side to move cannot be both."),
             };
-            println!("{} // {}", expected_value, val);
+            println!("{expected_value} // {val}");
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
     }
@@ -315,9 +361,10 @@ mod tests {
             let val = match board.side_to_move() {
                 Side::White => position.evaluate(&params),
                 Side::Black => -position.evaluate(&params),
-                Side::Both => panic!("Side to move cannot be both."),
             };
-            println!("{} // {}", expected_value, val);
+
+            println!("pos: {}\n{}", board.to_fen(), board);
+            println!("{expected_value} // {val}");
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
     }

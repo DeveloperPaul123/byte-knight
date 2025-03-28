@@ -10,6 +10,8 @@ use textplots::{Chart, Plot, Shape};
 use tuner::Tuner;
 use tuner_score::TuningScore;
 use tuning_position::TuningPosition;
+
+use crate::offsets::Offsets;
 mod epd_parser;
 mod math;
 mod offsets;
@@ -67,7 +69,7 @@ fn print_table(indent: usize, table: &[TuningScore]) {
                 print!("{:indent$}", "", indent = indent);
             }
             let val = table[idx];
-            print!("{:?}, ", val);
+            print!("{val:?}, ");
             if file == 7 {
                 println!();
             }
@@ -88,6 +90,43 @@ fn print_params(params: &Parameters) {
         print_table(8, table);
         println!("    ],");
     }
+    println!("];");
+    println!();
+
+    // Print out the passed pawn bonus value
+    println!("pub const PASSED_PAWN_BONUS: [PhasedScore; NumberOf::PASSED_PAWN_RANKS] = [",);
+
+    for rank in 0..NumberOf::PASSED_PAWN_RANKS {
+        let idx = Offsets::PASSED_PAWN as usize + rank;
+        let val = params.as_slice()[idx];
+        println!("    {val:?}, ");
+    }
+
+    println!("];");
+
+    println!();
+
+    // Print out the doubled pawn penalty values
+    println!("pub const DOUBLED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [");
+
+    for file in 0..NumberOf::FILES {
+        let idx = Offsets::DOUBLED_PAWN as usize + file;
+        let val = params.as_slice()[idx];
+        println!("    {val:?}, ");
+    }
+
+    println!("];");
+
+    println!();
+
+    println!("pub const ISOLATED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [");
+
+    for file in 0..NumberOf::FILES {
+        let idx = Offsets::ISOLATED_PAWN as usize + file;
+        let val = params.as_slice()[idx];
+        println!("    {val:?}, ");
+    }
+
     println!("];");
 }
 
@@ -112,7 +151,7 @@ fn plot_k(tuner: &Tuner) {
 }
 
 fn parse_data(input_data: &str) -> Vec<TuningPosition> {
-    println!("Reading data from: {}", input_data);
+    println!("Reading data from: {input_data}");
     let positions = epd_parser::parse_epd_file(input_data);
     // let positions = get_positions();
     println!("Read {} positions", positions.len());
@@ -134,10 +173,7 @@ fn main() {
                 ParameterStartType::PieceValues => Parameters::create_from_piece_values(),
             };
             let epchs = epochs.unwrap_or(10_000);
-            println!(
-                "Tuning parameters from {:?} for {} epochs",
-                param_start_type, epchs
-            );
+            println!("Tuning parameters from {param_start_type:?} for {epchs} epochs",);
             let mut tuner = tuner::Tuner::new(parameters, &positions, epchs);
             let tuned_results = tuner.tune();
             print_params(tuned_results);
@@ -153,7 +189,7 @@ fn main() {
             let parameters = Parameters::create_from_engine_values();
             let tuner = tuner::Tuner::new(parameters, &positions, 10_000);
             let error = tuner.mean_square_error(k);
-            println!("Error for k {:.8}: {:.8}", k, error);
+            println!("Error for k {k:.8}: {error:.8}");
         }
     }
 }

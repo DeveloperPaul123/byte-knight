@@ -1,6 +1,10 @@
 <center><h1> byte-knight </h1></center>
 
+[![codecov](https://codecov.io/gh/DeveloperPaul123/byte-knight/graph/badge.svg?token=USEPKU8K4G)](https://codecov.io/gh/DeveloperPaul123/byte-knight)
+
 `byte-knight` is a UCI compliant chess engine written in Rust. It started as a port of the chess engine I submitted for Sebatian Lague's [Chess Engine Challenge](https://github.com/DeveloperPaul123/Leonidas) where it placed in the top 32 out of 600+ entries.
+
+You can challenge `byte-knight` yourself on [Lichess](https://lichess.org/@/byte-knight)!
 
 # Overview
 
@@ -10,29 +14,45 @@
 
 New features are tested via my [OpenBench](https://github.com/AndyGrant/OpenBench) [intance](https://developerpaul123.pythonanywhere.com) using [SPRT](https://github.com/jw1912/SPRT/blob/main/SPRT.md#how-sprt-actually-works) testing.
 
+# Strength
+
+| Version | [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/) | [CCRL Blitz](https://computerchess.org.uk/ccrl/404/) |
+| ------- | --------------- | --------------- |
+| [3.0.0](https://github.com/DeveloperPaul123/byte-knight/releases/v3.0.0) | 2386 | 2307 |
+
 # Features
 
 ## Board/Game Representation
 
 - Bitboard board representation
-- Magic bitboards for sliding piece attacks
+- "Magic" bitboards or PEXT for sliding piece attacks
 - Zobrist hashing with board state history
-- Legal move generator
+- Legal and pseudo-legal move generator
 
 ## Search
 
 - [Iterative deepening](https://www.chessprogramming.org/Iterative_Deepening)
-- Negamax with alpha/beta pruning
-- Quiescence search
-- Transposition Table
+- [Negamax](https://www.chessprogramming.org/Negamax) with alpha/beta pruning
+- [Quiescence search](https://www.chessprogramming.org/Quiescence_Search)
+- [Transposition Table](https://www.chessprogramming.org/Transposition_Table)
+- [Principle variation search](https://www.chessprogramming.org/Principal_Variation_Search)
+- [Aspiration windows](https://www.chessprogramming.org/Aspiration_Windows)
+- [Reverse futility pruning](https://www.chessprogramming.org/Reverse_Futility_Pruning)
+- [Late Move Reductions](https://www.chessprogramming.org/Late_Move_Reductions)
+- [Internal Iterative Reductions](https://www.chessprogramming.org/Internal_Iterative_Reductions)
+- [Null Move Pruning](https://www.chessprogramming.org/Null_Move_Pruning)
+- [Late Move Pruning](https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html)
 - [Time control](https://www.chessprogramming.org/Time_Management)
   - Basic hard/soft limits
 - Move ordering
+  - [TT Moves](https://www.chessprogramming.org/Transposition_Table#Priority_by_Move_Ordering_Position)
   - [MVV/LVA](https://www.chessprogramming.org/MVV-LVA) with transposition table priority
+  - [History heuristic](https://www.chessprogramming.org/History_Heuristic) with history gravity
 
 ## Evaluation
 
 - Piece square tables with tapered evaluation using [PeSTO](https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function) values.
+  - Project includes an HCE tuner based on [jw1912/hce-tuner](https://github.com/jw1912/hce-tuner)
 
 ## UCI
 
@@ -76,6 +96,15 @@ Clone the repo and run:
 cargo run --release
 ```
 
+# Development Dependencies
+
+To run the full suite of supported tests, benchmarks and other development dependencies, you will need the following tools (in addition to Rust and Cargo):
+- [just](https://github.com/casey/just)
+- Rust llvm-profdata component
+  - Install with `rustup component add llvm-tools-preview`
+- [grcov](https://github.com/mozilla/grcov) (Used to generate code coverage reports)
+- [lcov](https://github.com/linux-test-project/lcov) (Required for `genhtml` to create HTML reports from `lcov` data)
+
 # License
 
 The project is licensed under the GPL license. See [LICENSE](LICENSE) for more details.
@@ -90,6 +119,7 @@ Thanks/acknowledgement for those who have inspired and helped with this project:
 - Many members of the Engine Programming discord for helping see how little I really know.
 - [Danny Hammer](https://github.com/dannyhammer/toad) for providing feedback, for helping me with troubleshooting my engine and for writing the `chessie` and `uci-parser` crates. Thanks for inspiring some of the techniques and methods used in `byte-knight`.
 - [Marcel Vanthoor](https://github.com/mvanthoor/rustic) for his Rustic engine and associated [book](https://rustic-chess.org).
+- Everyone at [pyrobench](https://pyronomy.pythonanywhere.com) for donating CPU time as well as helping me when I get stuck.
 
 # Author
 
