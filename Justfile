@@ -10,11 +10,11 @@ test config="debug":
     echo "Running tests..."
     cargo test --workspace --all-features {{ if config=="release" {"--release"} else {""} }} -- --include-ignored
 
-export RUSTFLAGS:="-Cinstrument-coverage"
 export LLVM_PROFILE_FILE:="./target/coverage/byte_knight-%p-%m.profraw"
 coverage: (build "debug")
     echo "Running tests with coverage..."
     mkdir -p target/coverage
+    RUSTFLAGS="-Cinstrument-coverage" \
     cargo test --workspace -- --skip "perft"
     grcov target/coverage engine/target/coverage chess/target/coverage -s . \
         --binary-path ./target/debug/ --output-types lcov -o ./target/coverage/byte-knight.lcov \
