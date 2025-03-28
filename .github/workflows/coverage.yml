@@ -24,7 +24,7 @@ jobs:
         run: |
           sudo apt update
           sudo apt upgrade -y
-          ssudo apt install -y grcov
+          sudo apt install -y grcov
       - name: Install just
         uses: extractions/setup-just@v2
       - name: Generate coverage
