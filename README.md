@@ -24,17 +24,22 @@ New features are tested via my [OpenBench](https://github.com/AndyGrant/OpenBenc
 ## Search
 
 - [Iterative deepening](https://www.chessprogramming.org/Iterative_Deepening)
-- Negamax with alpha/beta pruning
-- Quiescence search
-- Transposition Table
+- [Negamax](https://www.chessprogramming.org/Negamax) with alpha/beta pruning
+- [Quiescence search](https://www.chessprogramming.org/Quiescence_Search)
+- [Transposition Table](https://www.chessprogramming.org/Transposition_Table)
+- [Principle variation search](https://www.chessprogramming.org/Principal_Variation_Search)
+- [Aspiration windows](https://www.chessprogramming.org/Aspiration_Windows)
+- [Reverse futility pruning](https://www.chessprogramming.org/Reverse_Futility_Pruning)
 - [Time control](https://www.chessprogramming.org/Time_Management)
   - Basic hard/soft limits
 - Move ordering
   - [MVV/LVA](https://www.chessprogramming.org/MVV-LVA) with transposition table priority
+  - [History heuristic](https://www.chessprogramming.org/History_Heuristic) with history gravity
 
 ## Evaluation
 
 - Piece square tables with tapered evaluation using [PeSTO](https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function) values.
+  - Project includes an HCE tuner based on [jw1912/hce-tuner](https://github.com/jw1912/hce-tuner)
 
 ## UCI
 
@@ -92,6 +97,7 @@ Thanks/acknowledgement for those who have inspired and helped with this project:
 - Many members of the Engine Programming discord for helping see how little I really know.
 - [Danny Hammer](https://github.com/dannyhammer/toad) for providing feedback, for helping me with troubleshooting my engine and for writing the `chessie` and `uci-parser` crates. Thanks for inspiring some of the techniques and methods used in `byte-knight`.
 - [Marcel Vanthoor](https://github.com/mvanthoor/rustic) for his Rustic engine and associated [book](https://rustic-chess.org).
+- Everyone at [pyrobench](https://pyronomy.pythonanywhere.com) for donating CPU time as well as helping me when I get stuck.
 
 # Author
 
