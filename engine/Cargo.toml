@@ -1,6 +1,6 @@
 [package]
 name = "engine"
-version = "1.0.0"
+version = "2.0.0"
 # 2024 isn't stable yet
 edition = "2024"
 
