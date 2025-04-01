@@ -23,6 +23,10 @@ jobs:
             target: x86_64-apple-darwin
             artifact_name: byte-knight
             extension: ""
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: byte-knight
+            extension: ""
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: byte-knight.exe
