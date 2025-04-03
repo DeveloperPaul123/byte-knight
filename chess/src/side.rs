@@ -86,3 +86,57 @@ impl TryFrom<u8> for Side {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn side_default() {
+        let side: Side = Default::default();
+        assert_eq!(side, Side::White);
+    }
+    
+    #[test]
+    fn side_from_u8() {
+        assert_eq!(Side::try_from(0), Ok(Side::White));
+        assert_eq!(Side::try_from(1), Ok(Side::Black));
+        assert_eq!(Side::try_from(2), Ok(Side::Both));
+        assert_eq!(Side::try_from(3), Err(()));
+    }
+
+    #[test]
+    fn display_side() {
+        assert_eq!(Side::White.to_string(), "W");
+        assert_eq!(Side::Black.to_string(), "B");
+        assert_eq!(Side::Both.to_string(), "W|B");
+    }
+
+    #[test]
+    fn opposite() {
+        assert_eq!(Side::opposite(Side::White), Side::Black);
+        assert_eq!(Side::opposite(Side::Black), Side::White);
+        assert_eq!(Side::opposite(Side::Both), Side::Both);
+    }
+
+    #[test]
+    fn is_white() {
+        assert!(Side::White.is_white());
+        assert!(!Side::Black.is_white());
+        assert!(!Side::Both.is_white());
+    }
+
+    #[test]
+    fn is_black() {
+        assert!(!Side::White.is_black());
+        assert!(Side::Black.is_black());
+        assert!(!Side::Both.is_black());
+    }
+
+    #[test]
+    fn is_both() {
+        assert!(!Side::White.is_both());
+        assert!(!Side::Black.is_both());
+        assert!(Side::Both.is_both());
+    }
+}
