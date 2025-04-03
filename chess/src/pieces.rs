@@ -186,3 +186,119 @@ impl TryFrom<char> for Piece {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn piece_default() {
+        let piece: Piece = Default::default();
+        assert_eq!(piece, Piece::None);
+    }
+
+    #[test]
+    fn piece_from_u8() {
+        assert_eq!(Piece::try_from(0), Ok(Piece::King));
+        assert_eq!(Piece::try_from(1), Ok(Piece::Queen));
+        assert_eq!(Piece::try_from(2), Ok(Piece::Rook));
+        assert_eq!(Piece::try_from(3), Ok(Piece::Bishop));
+        assert_eq!(Piece::try_from(4), Ok(Piece::Knight));
+        assert_eq!(Piece::try_from(5), Ok(Piece::Pawn));
+        assert_eq!(Piece::try_from(6), Ok(Piece::None));
+        assert_eq!(Piece::try_from(7), Err(()));
+    }
+
+    #[test]
+    fn piece_from_char() {
+        assert_eq!(Piece::try_from('K'), Ok(Piece::King));
+        assert_eq!(Piece::try_from('Q'), Ok(Piece::Queen));
+        assert_eq!(Piece::try_from('R'), Ok(Piece::Rook));
+        assert_eq!(Piece::try_from('B'), Ok(Piece::Bishop));
+        assert_eq!(Piece::try_from('N'), Ok(Piece::Knight));
+        assert_eq!(Piece::try_from('P'), Ok(Piece::Pawn));
+        assert_eq!(Piece::try_from(' '), Err(()));
+    }
+
+    #[test]
+    fn piece_display() {
+        assert_eq!(Piece::King.to_string(), "King");
+        assert_eq!(Piece::Queen.to_string(), "Queen");
+        assert_eq!(Piece::Rook.to_string(), "Rook");
+        assert_eq!(Piece::Bishop.to_string(), "Bishop");
+        assert_eq!(Piece::Knight.to_string(), "Knight");
+        assert_eq!(Piece::Pawn.to_string(), "Pawn");
+        assert_eq!(Piece::None.to_string(), "None");
+    }
+
+    #[test]
+    fn as_char() {
+        assert_eq!(Piece::King.as_char(), 'k');
+        assert_eq!(Piece::Queen.as_char(), 'q');
+        assert_eq!(Piece::Rook.as_char(), 'r');
+        assert_eq!(Piece::Bishop.as_char(), 'b');
+        assert_eq!(Piece::Knight.as_char(), 'n');
+        assert_eq!(Piece::Pawn.as_char(), 'p');
+        assert_eq!(Piece::None.as_char(), ' ');
+    }
+
+    #[test]
+    fn char_roundtrip() {
+        for piece in Piece::iter() {
+            let c = piece.as_char();
+            let piece2 = Piece::try_from(c).unwrap();
+            assert_eq!(piece, piece2);
+        }
+    }
+
+    #[test]
+    fn is_functions() {
+        assert!(Piece::King.is_king());
+        assert!(!Piece::King.is_queen());
+        assert!(!Piece::King.is_rook());
+        assert!(!Piece::King.is_bishop());
+        assert!(!Piece::King.is_knight());
+        assert!(!Piece::King.is_pawn());
+        assert!(!Piece::King.is_none());
+
+        assert!(Piece::Queen.is_queen());
+        assert!(!Piece::Queen.is_king());
+        assert!(!Piece::Queen.is_rook());
+        assert!(!Piece::Queen.is_bishop());
+        assert!(!Piece::Queen.is_knight());
+        assert!(!Piece::Queen.is_pawn());
+        assert!(!Piece::Queen.is_none());
+
+        assert!(Piece::Bishop.is_bishop());
+        assert!(!Piece::Bishop.is_king());
+        assert!(!Piece::Bishop.is_queen());
+        assert!(!Piece::Bishop.is_rook());
+        assert!(!Piece::Bishop.is_knight());
+        assert!(!Piece::Bishop.is_pawn());
+        assert!(!Piece::Bishop.is_none());
+
+        assert!(Piece::Knight.is_knight());
+        assert!(!Piece::Knight.is_king());
+        assert!(!Piece::Knight.is_queen());
+        assert!(!Piece::Knight.is_rook());
+        assert!(!Piece::Knight.is_bishop());
+        assert!(!Piece::Knight.is_pawn());
+        assert!(!Piece::Knight.is_none());
+
+        assert!(Piece::Rook.is_rook());
+        assert!(!Piece::Rook.is_king());
+        assert!(!Piece::Rook.is_queen());
+        assert!(!Piece::Rook.is_bishop());
+        assert!(!Piece::Rook.is_knight());
+        assert!(!Piece::Rook.is_pawn());
+        assert!(!Piece::Rook.is_none());
+
+        assert!(Piece::Pawn.is_pawn());
+        assert!(!Piece::Pawn.is_king());
+        assert!(!Piece::Pawn.is_queen());
+        assert!(!Piece::Pawn.is_rook());
+        assert!(!Piece::Pawn.is_bishop());
+        assert!(!Piece::Pawn.is_knight());
+        assert!(!Piece::Pawn.is_none());
+    }
+}
