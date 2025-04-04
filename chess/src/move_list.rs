@@ -97,11 +97,11 @@ mod tests {
             &Square::from_square_index(16),
             None,
         );
-        move_list.push(mv.clone());
+        move_list.push(mv);
         assert_eq!(move_list.len(), 1);
         assert!(!move_list.is_empty());
 
-        move_list.push(mv.clone());
+        move_list.push(mv);
         assert_eq!(move_list.len(), 2);
     }
 
@@ -112,10 +112,10 @@ mod tests {
         assert_eq!(move_list.len(), 0);
         assert!(move_list.is_empty());
 
-        for i in 0..MAX_MOVE_LIST_SIZE {
+        for _ in 0..MAX_MOVE_LIST_SIZE {
             let mv = Move::new_king_move(
-                &Square::from_square_index(3 as u8),
-                &Square::from_square_index(13 as u8),
+                &Square::from_square_index(3_u8),
+                &Square::from_square_index(13_u8),
                 None,
             );
             move_list.push(mv);
