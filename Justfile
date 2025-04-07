@@ -1,5 +1,12 @@
 set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
 
+make_dir := if os_family() == "windows" {
+    "New-Item -ItemType Directory -Force"
+} else {
+    "mkdir -p"
+}
+env_var_prefix := if os_family() == "windows" { "$env:" } else { "" }
+
 default: (build)
 
 [group('dev')]
@@ -20,8 +27,8 @@ export LLVM_PROFILE_FILE:="./target/coverage/byte_knight-%p-%m.profraw"
 [doc('Generate test coverage')]
 coverage: (build "debug")
     echo "Running tests with coverage..."
-    mkdir -p target/coverage
-    RUSTFLAGS="-Cinstrument-coverage" \
+    {{ make_dir }} target/coverage
+    {{env_var_prefix}}RUSTFLAGS="-Cinstrument-coverage"; \
     cargo test --workspace -- --skip "perft"
     grcov target/coverage engine/target/coverage chess/target/coverage -s . \
         --binary-path ./target/debug/ --output-types lcov -o ./target/coverage/byte-knight.lcov \
