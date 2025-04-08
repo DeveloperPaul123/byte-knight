@@ -49,6 +49,12 @@ impl Clone for Board {
     }
 }
 
+impl Default for Board {
+    fn default() -> Self {
+        Board::default_board()
+    }
+}
+
 // Private methods
 impl Board {
     /// Create a new board in the default, *uninitialized*, state.
