@@ -1,4 +1,5 @@
 set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+set shell := ["bash", "-c"]
 
 make_dir := if os_family() == "windows" {
     "New-Item -ItemType Directory -Force"
@@ -6,7 +7,7 @@ make_dir := if os_family() == "windows" {
     "mkdir -p"
 }
 env_var_prefix := if os_family() == "windows" { "$env:" } else { "" }
-
+env_var_postfix := if os_family() == "windows" { ";" } else { "" }
 default: (build)
 
 [group('dev')]
@@ -28,7 +29,7 @@ export LLVM_PROFILE_FILE:="./target/coverage/byte_knight-%p-%m.profraw"
 coverage: (build "debug")
     echo "Running tests with coverage..."
     {{ make_dir }} target/coverage
-    {{env_var_prefix}}RUSTFLAGS="-Cinstrument-coverage"; \
+    {{env_var_prefix}}RUSTFLAGS="-Cinstrument-coverage"{{env_var_postfix}} \
     cargo test --workspace -- --skip "perft"
     grcov target/coverage engine/target/coverage chess/target/coverage -s . \
         --binary-path ./target/debug/ --output-types lcov -o ./target/coverage/byte-knight.lcov \
@@ -45,6 +46,15 @@ purge-coverage:
     rm -rf engine/target
     rm -rf chess/*.profraw
     rm -rf engine/*.profraw
+
+[group('dev')]
+[doc('Create HTML report from coverage data')]
+coverage-report:
+    echo "Generating HTML report..."
+    genhtml \
+        --branch \
+        -o ./target/coverage/html \
+        ./target/coverage/byte-knight.lcov
 
 [group('dev')]
 [doc('Run clippy')]
