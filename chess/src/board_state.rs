@@ -66,3 +66,28 @@ impl Display for BoardState {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::moves::Move;
+
+    #[test]
+    fn default_board_state() {
+        let board_state = BoardState::default();
+        assert_eq!(board_state.half_move_clock, 0);
+        assert_eq!(board_state.full_move_number, 1);
+        assert_eq!(board_state.side_to_move, Side::White);
+        assert_eq!(board_state.en_passant_square, None);
+        assert_eq!(board_state.castling_rights, CastlingAvailability::NONE);
+        assert_eq!(board_state.zobrist_hash, 0);
+        assert_eq!(board_state.next_move, Move::default());
+    }
+
+    #[test]
+    fn display_board_state() {
+        let board_state = BoardState::new();
+        let expected = "state { half_move_clock: 0, full_move_number: 1, side_to_move: White, en_passant_square: None, castling_rights: 0, zobrist_hash: 0, next_move: a1a1 }";
+        assert_eq!(board_state.to_string(), expected);
+    }
+}
