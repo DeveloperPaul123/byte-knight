@@ -31,6 +31,7 @@ use super::side::Side;
 use super::{bitboard::Bitboard, pieces::Piece};
 
 /// Represents a chess board position.
+#[derive(Debug)]
 pub struct Board {
     piece_bitboards: [[Bitboard; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
     pub(crate) history: BoardHistory,
@@ -934,6 +935,30 @@ mod tests {
         for fen in lines.lines() {
             let board = Board::from_fen(fen).unwrap();
             assert_eq!(fen, board.to_fen());
+        }
+    }
+    #[test]
+    fn from_invalid_fen() {
+        let maybe_board = Board::from_fen("");
+        assert!(maybe_board.is_err());
+        let err = maybe_board.unwrap_err();
+        let message = format!("{}", err);
+        // check that the message contains something about the FEN being empty
+        assert!(message.to_lowercase().contains("empty"));
+    }
+
+    #[test]
+    fn color_on() {
+        let board = Board::default_board();
+        for sq in 0..64 {
+            let color = board.color_on(sq);
+            if sq <= 15 {
+                assert!(color.is_some_and(|c| c == Side::White));
+            } else if sq >= 48 {
+                assert!(color.is_some_and(|c| c == Side::Black));
+            } else {
+                assert!(color.is_none());
+            }
         }
     }
 }
