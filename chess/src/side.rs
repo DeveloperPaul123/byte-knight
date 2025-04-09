@@ -96,7 +96,7 @@ mod tests {
         let side: Side = Default::default();
         assert_eq!(side, Side::White);
     }
-    
+
     #[test]
     fn side_from_u8() {
         assert_eq!(Side::try_from(0), Ok(Side::White));
