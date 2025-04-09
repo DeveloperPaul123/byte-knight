@@ -12,7 +12,10 @@
  *
  */
 
-use std::fmt::{Display, Formatter};
+use std::{
+    fmt::{Display, Formatter},
+    vec,
+};
 
 use thiserror::Error;
 
@@ -25,7 +28,7 @@ use crate::{
 };
 
 /// Represents the 6 parts of a FEN string.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum FenPart {
     PiecePlacement = 1,
     ActiveColor = 2,
@@ -137,10 +140,10 @@ fn parse_piece_placement(board: &mut Board, part: &str) -> FenResult {
         match c {
             '/' => {
                 if rank == 0 {
-                    return Err(FenError::new(&format!(
-                        "Extra / found in FEN part {}",
-                        FenPart::PiecePlacement,
-                    )));
+                    return Err(FenError::with_offending_parts(
+                        &format!("Extra / found in FEN part {}", FenPart::PiecePlacement,),
+                        vec![FenPart::PiecePlacement],
+                    ));
                 }
                 rank -= 1;
                 file = 0;
@@ -171,11 +174,14 @@ fn parse_piece_placement(board: &mut Board, part: &str) -> FenResult {
                 file += 1;
             }
             _ => {
-                return Err(FenError::new(&format!(
-                    "Invalid character {} in FEN part {}",
-                    c,
-                    FenPart::PiecePlacement,
-                )));
+                return Err(FenError::with_offending_parts(
+                    &format!(
+                        "Invalid character {} in FEN part {}",
+                        c,
+                        FenPart::PiecePlacement,
+                    ),
+                    vec![FenPart::PiecePlacement],
+                ));
             }
         }
     }
@@ -387,4 +393,91 @@ fn parse_fullmove_number(board: &mut Board, part: &str) -> FenResult {
 /// Converts the fullmove number of a board to a FEN string.
 pub(crate) fn fullmove_number_to_fen(board: &Board) -> String {
     board.full_move_number().to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::board::Board;
+
+    #[test]
+    fn format_fen_part() {
+        for part in [
+            FenPart::PiecePlacement,
+            FenPart::ActiveColor,
+            FenPart::CastlingAvailability,
+            FenPart::EnPassantTargetSquare,
+            FenPart::HalfmoveClock,
+            FenPart::FullmoveNumber,
+        ] {
+            assert_eq!(format!("{}", part), part.to_string());
+        }
+    }
+
+    #[test]
+    fn create_fen_error() {
+        let error = FenError::new("Test error");
+        assert_eq!(error.message, "Test error");
+        assert!(error.offending_parts.is_none());
+    }
+
+    #[test]
+    fn create_fen_error_with_offending_parts() {
+        let error = FenError::with_offending_parts("Test error", vec![FenPart::PiecePlacement]);
+        assert_eq!(error.message, "Test error");
+        assert!(error.offending_parts.is_some());
+        assert!(
+            error
+                .offending_parts
+                .is_some_and(|parts| parts.len() == 1 && parts[0] == FenPart::PiecePlacement),
+        );
+    }
+
+    #[test]
+    fn display_fen_error() {
+        let error = FenError::new("Test error");
+        assert_eq!(format!("{}", error), "Test error".to_string());
+
+        let error_with_parts = FenError::with_offending_parts(
+            "Test error",
+            vec![FenPart::PiecePlacement, FenPart::ActiveColor],
+        );
+        assert_eq!(
+            format!("{}", error_with_parts),
+            "Test error Offending parts: Piece Placement Active Color ".to_string()
+        );
+    }
+
+    #[test]
+    fn split_empty_fen() {
+        let result = split_fen_string("");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().message, "FEN string is empty");
+    }
+
+    #[test]
+    fn split_invalid_fen() {
+        // only 3 parts
+        let result = split_fen_string("rnbqkb1r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKB1R w KQkq");
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert!(error.offending_parts.is_none());
+    }
+
+    #[test]
+    fn test_parse_piece_placement() {
+        let result = split_fen_string("rnbqkb1r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKB1R w KQkq -");
+        assert!(result.is_ok());
+        let parts = result.unwrap();
+        assert_eq!(parts.len(), 6);
+
+        let mut board: Board = Default::default();
+        let piece_placement_part = parts[0].clone() + "//";
+        println!("Piece placement part: {}", piece_placement_part);
+        let result = parse_piece_placement(&mut board, &piece_placement_part);
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert!(error.offending_parts.is_some());
+        assert_eq!(error.offending_parts.unwrap()[0], FenPart::PiecePlacement);
+    }
 }
