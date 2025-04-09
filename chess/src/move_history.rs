@@ -15,6 +15,7 @@
 use crate::{board_state::BoardState, definitions::MAX_MOVES};
 
 /// A struct that holds the history of the board states
+#[derive(Debug)]
 pub(crate) struct BoardHistory {
     board_states: Vec<BoardState>,
 }
