@@ -87,6 +87,18 @@ impl TryFrom<u8> for Side {
     }
 }
 
+impl TryFrom<char> for Side {
+    type Error = ();
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            'w' => Ok(Self::White),
+            'b' => Ok(Self::Black),
+            _ => Err(()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -103,6 +115,16 @@ mod tests {
         assert_eq!(Side::try_from(1), Ok(Side::Black));
         assert_eq!(Side::try_from(2), Ok(Side::Both));
         assert_eq!(Side::try_from(3), Err(()));
+    }
+
+    #[test]
+    fn side_from_char() {
+        assert_eq!(Side::try_from('w'), Ok(Side::White));
+        assert_eq!(Side::try_from('b'), Ok(Side::Black));
+
+        for char in ('a'..'z').filter(|val| *val != 'w' && *val != 'b') {
+            assert!(Side::try_from(char).is_err());
+        }
     }
 
     #[test]
