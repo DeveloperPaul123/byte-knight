@@ -122,7 +122,7 @@ mod tests {
         assert_eq!(Side::try_from('w'), Ok(Side::White));
         assert_eq!(Side::try_from('b'), Ok(Side::Black));
 
-        for char in ('a'..'z').filter(|val| *val != 'w' && *val != 'b') {
+        for char in ('a'..='z').filter(|val| *val != 'w' && *val != 'b') {
             assert!(Side::try_from(char).is_err());
         }
     }
