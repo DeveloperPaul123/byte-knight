@@ -15,7 +15,7 @@ pub(crate) struct PvNode;
 pub(crate) struct NonPvNode;
 
 impl NodeType for RootNode {
-    const PV: bool = false;
+    const PV: bool = true;
     const ROOT: bool = true;
 }
 
