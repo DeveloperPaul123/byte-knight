@@ -1,5 +1,13 @@
 set windows-shell := ["pwsh.exe", "-NoLogo", "-Command"]
+set shell := ["bash", "-c"]
 
+make_dir := if os_family() == "windows" {
+    "New-Item -ItemType Directory -Force"
+} else {
+    "mkdir -p"
+}
+env_var_prefix := if os_family() == "windows" { "$env:" } else { "" }
+env_var_postfix := if os_family() == "windows" { ";" } else { "" }
 default: (build)
 
 [group('dev')]
@@ -20,8 +28,8 @@ export LLVM_PROFILE_FILE:="./target/coverage/byte_knight-%p-%m.profraw"
 [doc('Generate test coverage')]
 coverage: (build "debug")
     echo "Running tests with coverage..."
-    mkdir -p target/coverage
-    RUSTFLAGS="-Cinstrument-coverage" \
+    {{ make_dir }} target/coverage
+    {{env_var_prefix}}RUSTFLAGS="-Cinstrument-coverage"{{env_var_postfix}} \
     cargo test --workspace -- --skip "perft"
     grcov target/coverage engine/target/coverage chess/target/coverage -s . \
         --binary-path ./target/debug/ --output-types lcov -o ./target/coverage/byte-knight.lcov \
@@ -38,6 +46,15 @@ purge-coverage:
     rm -rf engine/target
     rm -rf chess/*.profraw
     rm -rf engine/*.profraw
+
+[group('dev')]
+[doc('Create HTML report from coverage data')]
+coverage-report:
+    echo "Generating HTML report..."
+    genhtml \
+        --branch \
+        -o ./target/coverage/html \
+        ./target/coverage/byte-knight.lcov
 
 [group('dev')]
 [doc('Run clippy')]
@@ -101,3 +118,8 @@ cache-main: (build "release")
 compare-to-main engine1: (build "release")
     echo "Comparing {{ engine1 }} to bk-main"
     fastchess -engine cmd="{{ engine1 }}" name="dev" -engine cmd="./bk-main" name="bk-main" -openings file="./data/Pohl.epd" format=epd order=random -each tc=10+0.1 -rounds 200 -repeat -concurrency 8 -sprt elo0=0 elo1=5 alpha=0.05 beta=0.1 model=normalized -output format=cutechess
+
+[group('dev')]
+[doc('Format all Rust code')]
+format:
+    cargo fmt --all

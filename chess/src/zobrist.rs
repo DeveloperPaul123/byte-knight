@@ -20,7 +20,8 @@ use crate::definitions::NumberOf;
 /// A Zobrist hash value.
 pub type ZobristHash = u64;
 
-pub struct ZobristRandomValues {
+#[derive(Debug)]
+pub(crate) struct ZobristRandomValues {
     pub piece_values: [[[u64; NumberOf::SQUARES]; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
     pub castling_values: [u64; NumberOf::CASTLING_OPTIONS],
     pub en_passant_values: [u64; NumberOf::SQUARES + 1],

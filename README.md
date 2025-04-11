@@ -83,6 +83,15 @@ Clone the repo and run:
 cargo run --release
 ```
 
+# Development Dependencies
+
+To run the full suite of supported tests, benchmarks and other development dependencies, you will need the following tools (in addition to Rust and Cargo):
+- [just](https://github.com/casey/just)
+- Rust llvm-profdata component
+  - Install with `rustup component add llvm-tools-preview`
+- [grcov](https://github.com/mozilla/grcov) (Used to generate code coverage reports)
+- [lcov](https://github.com/linux-test-project/lcov) (Required for `genhtml` to create HTML reports from `lcov` data)
+
 # License
 
 The project is licensed under the GPL license. See [LICENSE](LICENSE) for more details.

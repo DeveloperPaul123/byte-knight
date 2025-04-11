@@ -86,3 +86,79 @@ impl TryFrom<u8> for Side {
         }
     }
 }
+
+impl TryFrom<char> for Side {
+    type Error = ();
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            'w' => Ok(Self::White),
+            'b' => Ok(Self::Black),
+            _ => Err(()),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn side_default() {
+        let side: Side = Default::default();
+        assert_eq!(side, Side::White);
+    }
+
+    #[test]
+    fn side_from_u8() {
+        assert_eq!(Side::try_from(0), Ok(Side::White));
+        assert_eq!(Side::try_from(1), Ok(Side::Black));
+        assert_eq!(Side::try_from(2), Ok(Side::Both));
+        assert_eq!(Side::try_from(3), Err(()));
+    }
+
+    #[test]
+    fn side_from_char() {
+        assert_eq!(Side::try_from('w'), Ok(Side::White));
+        assert_eq!(Side::try_from('b'), Ok(Side::Black));
+
+        for char in ('a'..='z').filter(|val| *val != 'w' && *val != 'b') {
+            assert!(Side::try_from(char).is_err());
+        }
+    }
+
+    #[test]
+    fn display_side() {
+        assert_eq!(Side::White.to_string(), "W");
+        assert_eq!(Side::Black.to_string(), "B");
+        assert_eq!(Side::Both.to_string(), "W|B");
+    }
+
+    #[test]
+    fn opposite() {
+        assert_eq!(Side::opposite(Side::White), Side::Black);
+        assert_eq!(Side::opposite(Side::Black), Side::White);
+        assert_eq!(Side::opposite(Side::Both), Side::Both);
+    }
+
+    #[test]
+    fn is_white() {
+        assert!(Side::White.is_white());
+        assert!(!Side::Black.is_white());
+        assert!(!Side::Both.is_white());
+    }
+
+    #[test]
+    fn is_black() {
+        assert!(!Side::White.is_black());
+        assert!(Side::Black.is_black());
+        assert!(!Side::Both.is_black());
+    }
+
+    #[test]
+    fn is_both() {
+        assert!(!Side::White.is_both());
+        assert!(!Side::Black.is_both());
+        assert!(Side::Both.is_both());
+    }
+}

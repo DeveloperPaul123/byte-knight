@@ -12,7 +12,10 @@
  *
  */
 
-use std::fmt::{Display, Formatter};
+use std::{
+    fmt::{Display, Formatter},
+    vec,
+};
 
 use thiserror::Error;
 
@@ -25,7 +28,7 @@ use crate::{
 };
 
 /// Represents the 6 parts of a FEN string.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum FenPart {
     PiecePlacement = 1,
     ActiveColor = 2,
@@ -137,10 +140,10 @@ fn parse_piece_placement(board: &mut Board, part: &str) -> FenResult {
         match c {
             '/' => {
                 if rank == 0 {
-                    return Err(FenError::new(&format!(
-                        "Extra / found in FEN part {}",
-                        FenPart::PiecePlacement,
-                    )));
+                    return Err(FenError::with_offending_parts(
+                        &format!("Extra / found in FEN part {}", FenPart::PiecePlacement,),
+                        vec![FenPart::PiecePlacement],
+                    ));
                 }
                 rank -= 1;
                 file = 0;
@@ -149,15 +152,14 @@ fn parse_piece_placement(board: &mut Board, part: &str) -> FenResult {
                 file += c.to_digit(10).unwrap() as usize;
             }
             'P' | 'N' | 'B' | 'R' | 'Q' | 'K' | 'p' | 'n' | 'b' | 'r' | 'q' | 'k' => {
-                let piece = match c.to_ascii_lowercase() {
-                    'p' => Piece::Pawn,
-                    'n' => Piece::Knight,
-                    'b' => Piece::Bishop,
-                    'r' => Piece::Rook,
-                    'q' => Piece::Queen,
-                    'k' => Piece::King,
-                    _ => unreachable!(),
-                };
+                let piece_res = Piece::try_from(c);
+                if piece_res.is_err() {
+                    return Err(FenError::with_offending_parts(
+                        &format!("Could not parse piece from char {}", c),
+                        vec![FenPart::PiecePlacement],
+                    ));
+                }
+                let piece = piece_res.unwrap();
 
                 let side = if c.is_ascii_uppercase() {
                     Side::White
@@ -171,11 +173,14 @@ fn parse_piece_placement(board: &mut Board, part: &str) -> FenResult {
                 file += 1;
             }
             _ => {
-                return Err(FenError::new(&format!(
-                    "Invalid character {} in FEN part {}",
-                    c,
-                    FenPart::PiecePlacement,
-                )));
+                return Err(FenError::with_offending_parts(
+                    &format!(
+                        "Invalid character {} in FEN part {}",
+                        c,
+                        FenPart::PiecePlacement,
+                    ),
+                    vec![FenPart::PiecePlacement],
+                ));
             }
         }
     }
@@ -231,28 +236,32 @@ pub(crate) fn piece_placement_to_fen(board: &Board) -> String {
 /// Parses the active color part of a FEN string and updates the board accordingly.
 fn parse_active_color(board: &mut Board, part: &str) -> FenResult {
     if part.len() != 1 {
-        return Err(FenError::new(&format!(
-            "Active color length is invalid in FEN part {}",
-            FenPart::ActiveColor,
-        )));
-    }
-    if !['w', 'b'].contains(&part.chars().next().unwrap()) {
-        return Err(FenError::new(&format!(
-            "Invalid active color found in FEN part {}",
-            FenPart::ActiveColor,
-        )));
+        return Err(FenError::with_offending_parts(
+            &format!(
+                "Active color length is invalid in FEN part {}",
+                FenPart::ActiveColor,
+            ),
+            vec![FenPart::ActiveColor],
+        ));
     }
 
-    match part.trim() {
-        "w" => board.set_side_to_move(Side::White),
-        "b" => board.set_side_to_move(Side::Black),
-        _ => {
-            return Err(FenError::new(&format!(
-                "Invalid active color found in FEN part {}",
-                FenPart::ActiveColor,
-            )));
+    // we have validated that the string has a length of 1
+    if let Some(val) = part.trim().chars().next() {
+        if let Ok(side) = Side::try_from(val) {
+            board.set_side_to_move(side);
+        } else {
+            return Err(FenError::with_offending_parts(
+                &format!("Could not parse side from char {}", val),
+                vec![FenPart::ActiveColor],
+            ));
         }
+    } else {
+        return Err(FenError::with_offending_parts(
+            &format!("Invalid active color string: {}", part),
+            vec![FenPart::ActiveColor],
+        ));
     }
+
     Ok(())
 }
 
@@ -309,10 +318,13 @@ pub(crate) fn en_passant_target_square_to_fen(board: &Board) -> String {
 /// Parses the castling availability part of a FEN string and updates the board accordingly.
 fn parse_castling_availability(board: &mut Board, part: &str) -> FenResult {
     if part.is_empty() {
-        return Err(FenError::new(&format!(
-            "Empty castling availability found in FEN part {}",
-            FenPart::CastlingAvailability,
-        )));
+        return Err(FenError::with_offending_parts(
+            &format!(
+                "Empty castling availability found in FEN part {}",
+                FenPart::CastlingAvailability,
+            ),
+            vec![FenPart::CastlingAvailability],
+        ));
     }
 
     if part.len() == 1 && part.trim().chars().next().unwrap() == DASH {
@@ -328,10 +340,13 @@ fn parse_castling_availability(board: &mut Board, part: &str) -> FenResult {
             'k' => castle_rights |= CastlingAvailability::BLACK_KINGSIDE,
             'q' => castle_rights |= CastlingAvailability::BLACK_QUEENSIDE,
             _ => {
-                return Err(FenError::new(&format!(
-                    "Invalid castling availability found in FEN part {}",
-                    FenPart::CastlingAvailability,
-                )));
+                return Err(FenError::with_offending_parts(
+                    &format!(
+                        "Invalid castling availability found in FEN part {}",
+                        FenPart::CastlingAvailability,
+                    ),
+                    vec![FenPart::CastlingAvailability],
+                ));
             }
         }
     }
@@ -387,4 +402,185 @@ fn parse_fullmove_number(board: &mut Board, part: &str) -> FenResult {
 /// Converts the fullmove number of a board to a FEN string.
 pub(crate) fn fullmove_number_to_fen(board: &Board) -> String {
     board.full_move_number().to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{board::Board, file::File, rank::Rank, square::Square};
+
+    #[test]
+    fn format_fen_part() {
+        for part in [
+            FenPart::PiecePlacement,
+            FenPart::ActiveColor,
+            FenPart::CastlingAvailability,
+            FenPart::EnPassantTargetSquare,
+            FenPart::HalfmoveClock,
+            FenPart::FullmoveNumber,
+        ] {
+            assert_eq!(format!("{}", part), part.to_string());
+        }
+    }
+
+    #[test]
+    fn create_fen_error() {
+        let error = FenError::new("Test error");
+        assert_eq!(error.message, "Test error");
+        assert!(error.offending_parts.is_none());
+    }
+
+    #[test]
+    fn create_fen_error_with_offending_parts() {
+        let error = FenError::with_offending_parts("Test error", vec![FenPart::PiecePlacement]);
+        assert_eq!(error.message, "Test error");
+        assert!(error.offending_parts.is_some());
+        assert!(
+            error
+                .offending_parts
+                .is_some_and(|parts| parts.len() == 1 && parts[0] == FenPart::PiecePlacement),
+        );
+    }
+
+    #[test]
+    fn display_fen_error() {
+        let error = FenError::new("Test error");
+        assert_eq!(format!("{}", error), "Test error".to_string());
+
+        let error_with_parts = FenError::with_offending_parts(
+            "Test error",
+            vec![FenPart::PiecePlacement, FenPart::ActiveColor],
+        );
+        assert_eq!(
+            format!("{}", error_with_parts),
+            "Test error Offending parts: Piece Placement Active Color ".to_string()
+        );
+    }
+
+    #[test]
+    fn split_empty_fen() {
+        let result = split_fen_string("");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().message, "FEN string is empty");
+    }
+
+    #[test]
+    fn split_invalid_fen() {
+        // only 3 parts
+        let result = split_fen_string("rnbqkb1r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKB1R w KQkq");
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert!(error.offending_parts.is_none());
+    }
+
+    #[test]
+    fn test_parse_piece_placement() {
+        let result = split_fen_string("rnbqkb1r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKB1R w KQkq -");
+        assert!(result.is_ok());
+        let parts = result.unwrap();
+        assert_eq!(parts.len(), 6);
+
+        let is_valid_error = |error: &FenError| -> bool {
+            error
+                .offending_parts
+                .as_ref()
+                .is_some_and(|parts| !parts.is_empty() && parts[0] == FenPart::PiecePlacement)
+        };
+
+        let mut board: Board = Default::default();
+        let piece_placement_part = parts[0].clone() + "//";
+        let result = parse_piece_placement(&mut board, &piece_placement_part);
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        assert!(is_valid_error(&error));
+
+        // invalid chars
+        let result =
+            parse_piece_placement(&mut board, "rnbqkb1r/pppppppp/8/8/8/8/PPPPPPPP/RNBQKB1R//");
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(is_valid_error(&err));
+
+        let result =
+            parse_piece_placement(&mut board, "rnbqkb1r/pppppppp/8/8/8/8/PPPPPPPP/RNZQKB1R");
+        let err = result.unwrap_err();
+        assert!(is_valid_error(&err));
+    }
+
+    #[test]
+    fn test_parse_en_passant_square() {
+        let sample_ep_square = "e3";
+        let mut board: Board = Default::default();
+        let result = parse_en_passant_target_square(&mut board, sample_ep_square);
+        assert!(result.is_ok());
+
+        let ep_square = board.en_passant_square();
+        assert!(ep_square.is_some());
+        let expected_sq = Square::from_file_rank(File::E.to_char(), Rank::R3.as_number())
+            .unwrap()
+            .to_square_index();
+        assert_eq!(ep_square.unwrap(), expected_sq);
+
+        let bad_eq_square = "e99";
+        let result = parse_en_passant_target_square(&mut board, bad_eq_square);
+        assert!(result.is_err());
+
+        let bad_eq_square2 = "z1";
+        let result = parse_en_passant_target_square(&mut board, bad_eq_square2);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_castling() {
+        // empty
+        let mut board = Board::default_board();
+        let mut result = parse_castling_availability(&mut board, "");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.offending_parts
+                .is_some_and(|parts| !parts.is_empty() && parts[0] == FenPart::CastlingAvailability)
+        );
+
+        // invalid chars
+        let castling_part = "KQkz";
+        result = parse_castling_availability(&mut board, castling_part);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.offending_parts
+                .is_some_and(|parts| !parts.is_empty() && parts[0] == FenPart::CastlingAvailability)
+        );
+    }
+
+    #[test]
+    fn test_parse_active_color() {
+        let mut board = Board::default_board();
+
+        let validate_errors = |error: &FenError| -> bool {
+            error
+                .offending_parts
+                .as_ref()
+                .is_some_and(|parts| !parts.is_empty() && parts[0] == FenPart::ActiveColor)
+        };
+
+        // empty string
+        let mut result = parse_active_color(&mut board, "");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(validate_errors(&err));
+
+        // invalid string (wrong size)
+        result = parse_active_color(&mut board, "wb");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(validate_errors(&err));
+
+        // valid string length but invalid content
+        result = parse_active_color(&mut board, "q");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(validate_errors(&err));
+    }
 }

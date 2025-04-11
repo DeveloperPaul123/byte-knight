@@ -224,4 +224,36 @@ mod tests {
             indexes.push(index);
         }
     }
+
+    #[test]
+    fn magic_number_display() {
+        // test a1 for the rook
+        let relevant_bits = MoveGenerator::relevant_rook_bits(Squares::A1);
+        let magic_value = 684547693657194778;
+        let magic = MagicNumber::new(
+            relevant_bits,
+            (64 - relevant_bits.as_number().count_ones()) as u8,
+            0,
+            magic_value,
+        );
+
+        assert_eq!(
+            format!("{}", magic),
+            "bb          282578800148862 shift   52 offset      0 magic       684547693657194778"
+        );
+
+        // test c4 for the bishop
+        let relevant_bits = MoveGenerator::relevant_bishop_bits(Squares::C4);
+        let magic_value = BISHOP_MAGIC_VALUES[Squares::C4 as usize];
+        let magic = MagicNumber::new(
+            relevant_bits,
+            (64 - relevant_bits.as_number().count_ones()) as u8,
+            0,
+            magic_value,
+        );
+        assert_eq!(
+            format!("{}", magic),
+            "bb         9024834391117824 shift   57 offset      0 magic       153265359544132100"
+        );
+    }
 }
