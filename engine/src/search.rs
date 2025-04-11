@@ -30,6 +30,7 @@ use crate::{
     defs::MAX_DEPTH,
     evaluation::ByteKnightEvaluation,
     history_table::HistoryTable,
+    node_types::{NodeType, NonPvNode, PvNode, RootNode},
     score::{LargeScoreType, Score, ScoreType},
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
@@ -242,7 +243,7 @@ impl<'a> Search<'a> {
             let mut score: Score;
             'aspiration_window: loop {
                 // search the tree, starting at the current depth (starts at 1)
-                score = self.negamax(
+                score = self.negamax::<RootNode>(
                     board,
                     best_result.depth as ScoreType,
                     0,
@@ -297,20 +298,22 @@ impl<'a> Search<'a> {
         best_result
     }
 
-    fn negamax(
+    fn negamax<Node>(
         &mut self,
         board: &mut Board,
         depth: ScoreType,
         ply: ScoreType,
         alpha: Score,
         beta: Score,
-    ) -> Score {
+    ) -> Score
+    where
+        Node: NodeType,
+    {
         // increment node count
         self.nodes += 1;
         let alpha_original = alpha;
         let mut alpha_use = alpha;
         let mut beta_use = beta;
-        let not_root = ply > 0;
         let zobrist = board.zobrist_hash();
 
         if depth == 0 {
@@ -318,7 +321,7 @@ impl<'a> Search<'a> {
         }
 
         let tt_entry = self.transposition_table.get_entry(board.zobrist_hash());
-        if not_root {
+        if !Node::ROOT {
             // transposition table cutoff only on non-root nodes
             // TODO(PT): Consolidate this if when if let chains are stabilized
             if let Some(tt_entry) = tt_entry {
@@ -347,7 +350,7 @@ impl<'a> Search<'a> {
         }
 
         // can we prune the current node with something other than TT?
-        if let Some(score) = self.pruned_score(board, depth, ply, alpha, beta) {
+        if let Some(score) = self.pruned_score::<Node>(board, depth, beta) {
             return score;
         }
 
@@ -390,14 +393,14 @@ impl<'a> Search<'a> {
             board.make_move_unchecked(mv).unwrap();
             let score : Score =
                 // Principal Variation Search (PVS)
-                if i == 0 {
-                    -self.negamax(board, depth - 1, ply + 1, -beta_use, -alpha_use)
+                if Node::PV && i == 0 {
+                    -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta_use, -alpha_use)
                 } else {
                     // search with a null window
-                    let temp_score = -self.negamax(board, depth - 1, ply + 1, -alpha_use - 1, -alpha_use);
+                    let temp_score = -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -alpha_use - 1, -alpha_use);
                     // if it fails, we need to do a full re-search
                     if temp_score > alpha_use && temp_score < beta_use {
-                        -self.negamax(board, depth - 1, ply + 1, -beta_use, -alpha_use)
+                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -beta_use, -alpha_use)
                     }
                     else {
                         temp_score
@@ -479,18 +482,14 @@ impl<'a> Search<'a> {
     /// # Returns
     ///
     /// The score of the position if it can be pruned, otherwise None.
-    fn pruned_score(
+    fn pruned_score<Node: NodeType>(
         &self,
         board: &Board,
         depth: i16,
-        ply: i16,
-        alpha: Score,
         beta: Score,
     ) -> Option<Score> {
-        let is_pv_node = ply == 0 || beta - alpha > Score::new(1);
-
         // no pruning if we are in check or if we are in a PV node
-        if board.is_in_check(&self.move_gen) || is_pv_node {
+        if board.is_in_check(&self.move_gen) || Node::PV {
             return None;
         }
 
