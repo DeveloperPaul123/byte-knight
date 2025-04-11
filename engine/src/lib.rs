@@ -5,6 +5,7 @@ pub mod evaluation;
 pub mod hce_values;
 pub mod history_table;
 pub mod input_handler;
+pub(crate) mod node_types;
 pub mod phased_score;
 pub mod score;
 pub mod search;
