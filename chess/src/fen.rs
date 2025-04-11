@@ -246,7 +246,7 @@ fn parse_active_color(board: &mut Board, part: &str) -> FenResult {
     }
 
     // we have validated that the string has a length of 1
-    if let Some(val) = part.trim().chars().nth(0) {
+    if let Some(val) = part.trim().chars().next() {
         if let Ok(side) = Side::try_from(val) {
             board.set_side_to_move(side);
         } else {
@@ -484,12 +484,11 @@ mod tests {
             error
                 .offending_parts
                 .as_ref()
-                .is_some_and(|parts| parts.len() > 0 && parts[0] == FenPart::PiecePlacement)
+                .is_some_and(|parts| !parts.is_empty() && parts[0] == FenPart::PiecePlacement)
         };
 
         let mut board: Board = Default::default();
         let piece_placement_part = parts[0].clone() + "//";
-        println!("Piece placement part: {}", piece_placement_part);
         let result = parse_piece_placement(&mut board, &piece_placement_part);
         assert!(result.is_err());
         let error = result.unwrap_err();
@@ -520,7 +519,7 @@ mod tests {
         assert!(ep_square.is_some());
         let expected_sq = Square::from_file_rank(File::E.to_char(), Rank::R3.as_number())
             .unwrap()
-            .to_square_index() as u8;
+            .to_square_index();
         assert_eq!(ep_square.unwrap(), expected_sq);
 
         let bad_eq_square = "e99";
@@ -541,7 +540,7 @@ mod tests {
         let err = result.unwrap_err();
         assert!(
             err.offending_parts
-                .is_some_and(|parts| parts.len() > 0 && parts[0] == FenPart::CastlingAvailability)
+                .is_some_and(|parts| !parts.is_empty() && parts[0] == FenPart::CastlingAvailability)
         );
 
         // invalid chars
@@ -551,7 +550,7 @@ mod tests {
         let err = result.unwrap_err();
         assert!(
             err.offending_parts
-                .is_some_and(|parts| parts.len() > 0 && parts[0] == FenPart::CastlingAvailability)
+                .is_some_and(|parts| !parts.is_empty() && parts[0] == FenPart::CastlingAvailability)
         );
     }
 
@@ -563,7 +562,7 @@ mod tests {
             error
                 .offending_parts
                 .as_ref()
-                .is_some_and(|parts| parts.len() > 0 && parts[0] == FenPart::ActiveColor)
+                .is_some_and(|parts| !parts.is_empty() && parts[0] == FenPart::ActiveColor)
         };
 
         // empty string
