@@ -314,40 +314,35 @@ impl<'a> Search<'a> {
         let alpha_original = alpha;
         let mut alpha_use = alpha;
         let mut beta_use = beta;
-        let zobrist = board.zobrist_hash();
+        
 
         if depth == 0 {
             return self.quiescence(board, alpha, beta);
         }
 
-        let tt_entry = self.transposition_table.get_entry(board.zobrist_hash());
-        if !Node::ROOT {
-            // transposition table cutoff only on non-root nodes
-            // TODO(PT): Consolidate this if when if let chains are stabilized
-            if let Some(tt_entry) = tt_entry {
-                // depth must be greater or equal to the current depth and the board
-                // must be the same position. Without these checks, we could be looking up the wrong entry
-                // due to collisions since we use a modulo as the hash function
-                if tt_entry.depth as ScoreType >= depth && tt_entry.zobrist == zobrist {
-                    match tt_entry.flag {
-                        ttable::EntryFlag::Exact => {
-                            return tt_entry.score;
-                        }
-                        ttable::EntryFlag::LowerBound => {
-                            alpha_use = alpha_use.max(tt_entry.score);
-                        }
-                        ttable::EntryFlag::UpperBound => {
-                            if tt_entry.score < beta {
-                                beta_use = beta_use.min(tt_entry.score);
-                            }
-                        }
+        // Transpositoin Table Cutoffs: https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
+        // Check if we have a transposition table entry and if we can return early
+        let tt_move =
+            match self
+                .transposition_table
+                .probe::<Node>(depth, board.zobrist_hash(), alpha, beta)
+            {
+                ttable::ProbeResult::CutOff(entry) => {
+                    // we have a cutoff, so return the score, but only in a non-PV node
+                    self.nodes += 1;
+                    if !Node::PV {
+                        return entry.score;
                     }
-                    if alpha_use >= beta_use {
-                        return tt_entry.score;
-                    }
+                    Some(entry.board_move)
                 }
-            }
-        }
+                ttable::ProbeResult::Hit(entry) => {
+                    // we have a hit, so update alpha and beta
+                    alpha_use = alpha_use.max(entry.score);
+                    beta_use = beta_use.min(entry.score);
+                    Some(entry.board_move)
+                }
+                ttable::ProbeResult::Empty => None,
+            };
 
         // can we prune the current node with something other than TT?
         if let Some(score) = self.pruned_score::<Node>(board, depth, beta) {
@@ -372,7 +367,7 @@ impl<'a> Search<'a> {
             ByteKnightEvaluation::score_move_for_ordering(
                 board.side_to_move(),
                 mv,
-                &tt_entry,
+                &tt_move,
                 self.history_table,
             )
         });

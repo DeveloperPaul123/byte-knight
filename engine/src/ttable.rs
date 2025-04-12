@@ -14,11 +14,11 @@
 
 use chess::moves::Move;
 
-use crate::score::Score;
+use crate::{node_types::NodeType, score::Score};
 
 const BYTES_PER_MB: usize = 1024 * 1024;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EntryFlag {
     Exact,
     LowerBound,
@@ -26,7 +26,7 @@ pub enum EntryFlag {
 }
 
 /// A transposition table entry.
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub(crate) struct TranspositionTableEntry {
     pub zobrist: u64,
     pub score: Score,
@@ -79,6 +79,13 @@ const fn fast_range_64(word: u64, p: u64) -> u64 {
     ((word as u128 * p as u128) >> 64) as u64
 }
 
+#[derive(Debug, Clone)]
+pub(crate) enum ProbeResult {
+    CutOff(TranspositionTableEntry),
+    Hit(TranspositionTableEntry),
+    Empty,
+}
+
 impl TranspositionTable {
     pub(crate) fn from_capacity(capacity: usize) -> Self {
         Self {
@@ -98,7 +105,7 @@ impl TranspositionTable {
         fast_range_64(zobrist, self.table.len() as u64) as usize
     }
 
-    pub(crate) fn get_entry(&mut self, zobrist: u64) -> Option<TranspositionTableEntry> {
+    pub(crate) fn get_entry(&self, zobrist: u64) -> Option<TranspositionTableEntry> {
         let index = self.get_index(zobrist);
         self.table[index]
     }
@@ -127,12 +134,38 @@ impl TranspositionTable {
     pub(crate) fn size(&self) -> usize {
         self.table.len()
     }
+
+    pub(crate) fn probe<Node: NodeType>(
+        &mut self,
+        depth: i16,
+        zobrist: u64,
+        alpha: Score,
+        beta: Score,
+    ) -> ProbeResult {
+        if let Some(entry) = self.get_entry(zobrist) {
+            self.accesses += 1;
+            if entry.depth >= depth as u8 {
+                self.hits += 1;
+                // can we cut off?
+                if entry.flag == EntryFlag::Exact
+                    || (entry.flag == EntryFlag::LowerBound && entry.score >= beta)
+                    || (entry.flag == EntryFlag::UpperBound && entry.score <= alpha)
+                {
+                    return ProbeResult::CutOff(entry);
+                }
+            }
+
+            return ProbeResult::Hit(entry);
+        }
+
+        ProbeResult::Empty
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{EntryFlag, TranspositionTable, TranspositionTableEntry};
-    use crate::score::Score;
+    use crate::{node_types::NodeType, score::Score};
     use chess::{
         moves::{Move, MoveDescriptor},
         pieces::Piece,

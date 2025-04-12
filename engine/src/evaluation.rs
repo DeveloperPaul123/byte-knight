@@ -59,10 +59,10 @@ impl<Values: EvalValues> Evaluation<Values> {
     pub(crate) fn score_move_for_ordering(
         stm: Side,
         mv: &Move,
-        tt_entry: &Option<TranspositionTableEntry>,
+        tt_move: &Option<Move>,
         history_table: &history_table::HistoryTable,
     ) -> LargeScoreType {
-        if tt_entry.is_some_and(|tt| *mv == tt.board_move) {
+        if tt_move.is_some_and(|tt| *mv == tt) {
             return LargeScoreType::MIN;
         }
 
