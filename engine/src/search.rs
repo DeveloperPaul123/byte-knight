@@ -313,8 +313,6 @@ impl<'a> Search<'a> {
         self.nodes += 1;
         let alpha_original = alpha;
         let mut alpha_use = alpha;
-        let mut beta_use = beta;
-        
 
         if depth == 0 {
             return self.quiescence(board, alpha, beta);
@@ -335,12 +333,7 @@ impl<'a> Search<'a> {
                     }
                     Some(entry.board_move)
                 }
-                ttable::ProbeResult::Hit(entry) => {
-                    // we have a hit, so update alpha and beta
-                    alpha_use = alpha_use.max(entry.score);
-                    beta_use = beta_use.min(entry.score);
-                    Some(entry.board_move)
-                }
+                ttable::ProbeResult::Hit(entry) => Some(entry.board_move),
                 ttable::ProbeResult::Empty => None,
             };
 
@@ -389,13 +382,13 @@ impl<'a> Search<'a> {
             let score : Score =
                 // Principal Variation Search (PVS)
                 if Node::PV && i == 0 {
-                    -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta_use, -alpha_use)
+                    -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use)
                 } else {
                     // search with a null window
                     let temp_score = -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -alpha_use - 1, -alpha_use);
                     // if it fails, we need to do a full re-search
-                    if temp_score > alpha_use && temp_score < beta_use {
-                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -beta_use, -alpha_use)
+                    if temp_score > alpha_use && temp_score < beta {
+                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -beta, -alpha_use)
                     }
                     else {
                         temp_score
@@ -413,7 +406,7 @@ impl<'a> Search<'a> {
 
                 // update alpha
                 alpha_use = alpha_use.max(best_score);
-                if alpha_use >= beta_use {
+                if alpha_use >= beta {
                     // update history table for quiets
                     if mv.is_quiet() {
                         // calculate history bonus

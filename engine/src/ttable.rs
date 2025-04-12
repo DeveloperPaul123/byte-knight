@@ -135,6 +135,18 @@ impl TranspositionTable {
         self.table.len()
     }
 
+    /// Probes the transposition table for a potential entry/cutoff.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `depth` - The depth of the search.
+    /// - `zobrist` - The zobrist hash of the position.
+    /// - `alpha` - The alpha value of the search.
+    /// - `beta` - The beta value of the search.
+    /// 
+    /// # Returns
+    /// 
+    /// - `ProbeResult` - The result of the probe.
     pub(crate) fn probe<Node: NodeType>(
         &mut self,
         depth: i16,
@@ -144,18 +156,29 @@ impl TranspositionTable {
     ) -> ProbeResult {
         if let Some(entry) = self.get_entry(zobrist) {
             self.accesses += 1;
-            if entry.depth >= depth as u8 {
+            // verify the zobrist hash as we could have collisions due to using modulo as a hash function
+            // and the fact that we are using a fixed size table.
+            if entry.zobrist == zobrist {
                 self.hits += 1;
-                // can we cut off?
-                if entry.flag == EntryFlag::Exact
-                    || (entry.flag == EntryFlag::LowerBound && entry.score >= beta)
-                    || (entry.flag == EntryFlag::UpperBound && entry.score <= alpha)
-                {
-                    return ProbeResult::CutOff(entry);
+                if entry.depth >= depth as u8 {
+                    // can we cut off?
+                    // cutoff can only happen if the entry depth >= current depth and 1 of the following:
+                    // - the entry type is exact
+                    // - the entry type is lower bound and the score >= beta
+                    // - the entry type is upper bound and the score <= alpha
+                    // see https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
+                    if entry.flag == EntryFlag::Exact
+                        || ((entry.flag == EntryFlag::LowerBound && entry.score >= beta)
+                            || (entry.flag == EntryFlag::UpperBound && entry.score <= alpha))
+                    {
+                        return ProbeResult::CutOff(entry);
+                    }
                 }
+                return ProbeResult::Hit(entry);
+            } else {
+                // collision
+                self.collisions += 1;
             }
-
-            return ProbeResult::Hit(entry);
         }
 
         ProbeResult::Empty
