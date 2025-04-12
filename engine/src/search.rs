@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Mar 25 2025
+ * Last Modified: Sat Apr 12 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -318,7 +318,7 @@ impl<'a> Search<'a> {
             return self.quiescence(board, alpha, beta);
         }
 
-        // Transpositoin Table Cutoffs: https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
+        // Transposition Table Cutoffs: https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
         // Check if we have a transposition table entry and if we can return early
         let tt_move =
             match self
