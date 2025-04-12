@@ -20,7 +20,6 @@ use crate::{
     phased_score::{PhaseType, PhasedScore},
     score::{LargeScoreType, Score, ScoreType},
     traits::{Eval, EvalValues},
-    ttable::TranspositionTableEntry,
 };
 
 /// Provides static evaluation of a given chess position.
