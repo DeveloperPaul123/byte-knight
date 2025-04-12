@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Dec 02 2024
+ * Last Modified: Sat Apr 12 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -136,16 +136,16 @@ impl TranspositionTable {
     }
 
     /// Probes the transposition table for a potential entry/cutoff.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// - `depth` - The depth of the search.
     /// - `zobrist` - The zobrist hash of the position.
     /// - `alpha` - The alpha value of the search.
     /// - `beta` - The beta value of the search.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// - `ProbeResult` - The result of the probe.
     pub(crate) fn probe<Node: NodeType>(
         &mut self,
@@ -188,7 +188,7 @@ impl TranspositionTable {
 #[cfg(test)]
 mod tests {
     use super::{EntryFlag, TranspositionTable, TranspositionTableEntry};
-    use crate::{node_types::NodeType, score::Score};
+    use crate::score::Score;
     use chess::{
         moves::{Move, MoveDescriptor},
         pieces::Piece,
