@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Mar 25 2025
+ * Last Modified: Sat Apr 12 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -313,41 +313,29 @@ impl<'a> Search<'a> {
         self.nodes += 1;
         let alpha_original = alpha;
         let mut alpha_use = alpha;
-        let mut beta_use = beta;
-        let zobrist = board.zobrist_hash();
 
         if depth == 0 {
             return self.quiescence(board, alpha, beta);
         }
 
-        let tt_entry = self.transposition_table.get_entry(board.zobrist_hash());
-        if !Node::ROOT {
-            // transposition table cutoff only on non-root nodes
-            // TODO(PT): Consolidate this if when if let chains are stabilized
-            if let Some(tt_entry) = tt_entry {
-                // depth must be greater or equal to the current depth and the board
-                // must be the same position. Without these checks, we could be looking up the wrong entry
-                // due to collisions since we use a modulo as the hash function
-                if tt_entry.depth as ScoreType >= depth && tt_entry.zobrist == zobrist {
-                    match tt_entry.flag {
-                        ttable::EntryFlag::Exact => {
-                            return tt_entry.score;
-                        }
-                        ttable::EntryFlag::LowerBound => {
-                            alpha_use = alpha_use.max(tt_entry.score);
-                        }
-                        ttable::EntryFlag::UpperBound => {
-                            if tt_entry.score < beta {
-                                beta_use = beta_use.min(tt_entry.score);
-                            }
-                        }
+        // Transposition Table Cutoffs: https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
+        // Check if we have a transposition table entry and if we can return early
+        let tt_move =
+            match self
+                .transposition_table
+                .probe::<Node>(depth, board.zobrist_hash(), alpha, beta)
+            {
+                ttable::ProbeResult::CutOff(entry) => {
+                    // we have a cutoff, so return the score, but only in a non-PV node
+                    self.nodes += 1;
+                    if !Node::PV {
+                        return entry.score;
                     }
-                    if alpha_use >= beta_use {
-                        return tt_entry.score;
-                    }
+                    Some(entry.board_move)
                 }
-            }
-        }
+                ttable::ProbeResult::Hit(entry) => Some(entry.board_move),
+                ttable::ProbeResult::Empty => None,
+            };
 
         // can we prune the current node with something other than TT?
         if let Some(score) = self.pruned_score::<Node>(board, depth, beta) {
@@ -372,7 +360,7 @@ impl<'a> Search<'a> {
             ByteKnightEvaluation::score_move_for_ordering(
                 board.side_to_move(),
                 mv,
-                &tt_entry,
+                &tt_move,
                 self.history_table,
             )
         });
@@ -394,13 +382,13 @@ impl<'a> Search<'a> {
             let score : Score =
                 // Principal Variation Search (PVS)
                 if Node::PV && i == 0 {
-                    -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta_use, -alpha_use)
+                    -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use)
                 } else {
                     // search with a null window
                     let temp_score = -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -alpha_use - 1, -alpha_use);
                     // if it fails, we need to do a full re-search
-                    if temp_score > alpha_use && temp_score < beta_use {
-                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -beta_use, -alpha_use)
+                    if temp_score > alpha_use && temp_score < beta {
+                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -beta, -alpha_use)
                     }
                     else {
                         temp_score
@@ -418,7 +406,7 @@ impl<'a> Search<'a> {
 
                 // update alpha
                 alpha_use = alpha_use.max(best_score);
-                if alpha_use >= beta_use {
+                if alpha_use >= beta {
                     // update history table for quiets
                     if mv.is_quiet() {
                         // calculate history bonus
