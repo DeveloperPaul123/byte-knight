@@ -34,7 +34,7 @@ use crate::{
     score::{LargeScoreType, Score, ScoreType},
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
-    tuneable::{MAX_RFP_DEPTH, RFP_MARGIN},
+    tuneable::{IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, MAX_RFP_DEPTH, RFP_MARGIN},
 };
 use ttable::TranspositionTable;
 
@@ -301,7 +301,7 @@ impl<'a> Search<'a> {
     fn negamax<Node>(
         &mut self,
         board: &mut Board,
-        depth: ScoreType,
+        mut depth: ScoreType,
         ply: ScoreType,
         alpha: Score,
         beta: Score,
@@ -336,6 +336,13 @@ impl<'a> Search<'a> {
                 ttable::ProbeResult::Hit(entry) => Some(entry.board_move),
                 ttable::ProbeResult::Empty => None,
             };
+
+        // Internal Iterative Reductions: https://www.chessprogramming.org/Internal_Iterative_Reductions
+        // If no tt entry was found, searching it will be very costly, so we reduce the depth. This is
+        // working under the assumption that the position is likely not important.
+        if tt_move.is_none() && depth >= IIR_MIN_DEPTH {
+            depth -= IIR_DEPTH_REDUCTION;
+        }
 
         // can we prune the current node with something other than TT?
         if let Some(score) = self.pruned_score::<Node>(board, depth, beta) {

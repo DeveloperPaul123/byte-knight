@@ -4,7 +4,7 @@
  * Created Date: Wednesday, December 11th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Mar 25 2025
+ * Last Modified: Sat Apr 12 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -19,3 +19,6 @@ pub(crate) const ASPIRATION_WINDOW: ScoreType = 50;
 
 pub(crate) const MAX_RFP_DEPTH: ScoreType = 4;
 pub(crate) const RFP_MARGIN: ScoreType = 82;
+
+pub(crate) const IIR_MIN_DEPTH: ScoreType = 4;
+pub(crate) const IIR_DEPTH_REDUCTION: ScoreType = 1;
