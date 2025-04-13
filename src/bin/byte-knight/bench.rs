@@ -16,7 +16,7 @@ use chess::board::Board;
 use engine::search::{Search, SearchParameters};
 
 const BENCHMARKS: [&str; 56] = [
-    // From [Stormphrax](https://github.com/Ciekce/Stormphrax/blob/correct_ep_handling/src/bench.cpp#L29) and 
+    // From [Stormphrax](https://github.com/Ciekce/Stormphrax/blob/correct_ep_handling/src/bench.cpp#L29) and
     // [toad](https://github.com/dannyhammer/toad/blob/a5b4a5a5300a15e30e582217b5694f5fa6f2276e/src/utils.rs#L58)
     "q5k1/5ppp/1r3bn1/1B6/P1N2P2/BQ2P1P1/5K1P/8 b - - 2 34",
     "6r1/5k2/p1b1r2p/1pB1p1p1/1Pp3PP/2P1R1K1/2P2P2/3R4 w - - 1 36",
