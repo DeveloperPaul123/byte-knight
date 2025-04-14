@@ -529,7 +529,7 @@ impl<'a> Search<'a> {
             let mut null_board = board.clone();
             null_board.null_move();
             let null_score =
-                self.negamax::<Node>(&mut null_board, null_move_depth, ply, -beta, -beta + 1);
+                -self.negamax::<Node>(&mut null_board, null_move_depth, ply + 1, -beta, -beta + 1);
             null_board.unmake_move().unwrap();
             if null_score >= beta {
                 return Some(null_score);
