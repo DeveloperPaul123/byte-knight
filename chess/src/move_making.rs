@@ -715,34 +715,71 @@ mod tests {
     fn make_move_and_undo_move() {
         let move_gen = MoveGenerator::new();
         let mut move_list = MoveList::new();
-        let mut board =
-            Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
+        {
+            let mut board =
+                Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
+                    .unwrap();
 
-        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+            move_gen.generate_moves(&board, &mut move_list, MoveType::All);
 
-        let first_mv = move_list
-            .iter()
-            .find(|mv| mv.to_long_algebraic() == "b1d2")
-            .unwrap();
-        let second_mv = move_list
-            .iter()
-            .find(|mv| mv.to_long_algebraic() == "b1a3")
-            .unwrap();
+            let first_mv = move_list
+                .iter()
+                .find(|mv| mv.to_long_algebraic() == "b1d2")
+                .unwrap();
+            let second_mv = move_list
+                .iter()
+                .find(|mv| mv.to_long_algebraic() == "b1a3")
+                .unwrap();
 
-        println!("{}\n{}", board.to_fen(), board.board_state());
-        let mut mv_ok = board.make_move(first_mv, &move_gen);
-        assert!(mv_ok.is_ok());
-        println!("{}\n{}", board.to_fen(), board.board_state());
-        // undo the move
-        let mut undo_ok = board.unmake_move();
-        assert!(undo_ok.is_ok());
-        println!("{}\n{}", board.to_fen(), board.board_state());
+            println!("{}\n{}", board.to_fen(), board.board_state());
+            let mut mv_ok = board.make_move(first_mv, &move_gen);
+            assert!(mv_ok.is_ok());
+            println!("{}\n{}", board.to_fen(), board.board_state());
+            // undo the move
+            let mut undo_ok = board.unmake_move();
+            assert!(undo_ok.is_ok());
+            println!("{}\n{}", board.to_fen(), board.board_state());
 
-        // make the second move
-        mv_ok = board.make_move(second_mv, &move_gen);
-        assert!(mv_ok.is_ok());
-        // undo the move
-        undo_ok = board.unmake_move();
-        assert!(undo_ok.is_ok());
+            // make the second move
+            mv_ok = board.make_move(second_mv, &move_gen);
+            assert!(mv_ok.is_ok());
+            // undo the move
+            undo_ok = board.unmake_move();
+            assert!(undo_ok.is_ok());
+        }
+
+        {
+            // start with default board
+            let mut board = Board::default_board();
+
+            move_gen.generate_legal_moves(&board, &mut move_list);
+            // only move pawns and do 2 up move
+            let first_mv = move_list
+                .iter()
+                .find(|mv| mv.to_long_algebraic() == "e2e4")
+                .unwrap();
+
+            // make the move
+            let mv_ok = board.make_move(first_mv, &move_gen);
+            assert!(mv_ok.is_ok());
+            // check the en passant square
+            assert_eq!(board.en_passant_square(), Some(Squares::E3));
+            assert_eq!(board.side_to_move(), Side::Black);
+            // make a null move
+            board.null_move();
+            // check the en passant square
+            assert_eq!(board.en_passant_square(), None);
+            assert!(board.last_move().is_some_and(|mv| mv.is_null_move()));
+            // check side to move
+            assert_eq!(board.side_to_move(), Side::White);
+
+            // undo the move
+            let undo_ok = board.unmake_move();
+            assert!(undo_ok.is_ok());
+            // check the en passant square
+            assert_eq!(board.en_passant_square(), Some(Squares::E3));
+            // check side to move
+            assert_eq!(board.side_to_move(), Side::Black);
+        }
     }
 }
