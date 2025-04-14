@@ -606,8 +606,6 @@ impl<'a> Search<'a> {
             )
         });
         let mut best = standing_eval;
-        let mut best_move = tt_move;
-        let original_alpha = alpha_use;
 
         for mv in sorted_moves {
             board.make_move_unchecked(mv).unwrap();
@@ -622,7 +620,6 @@ impl<'a> Search<'a> {
 
             if score > best {
                 best = score;
-                best_move = Some(*mv);
 
                 if score >= beta {
                     break;
@@ -635,26 +632,6 @@ impl<'a> Search<'a> {
             if self.should_stop_searching() {
                 break;
             }
-        }
-
-        if best_move.is_some() {
-            // store the best move in the transposition table
-            let flag = if best <= original_alpha {
-                ttable::EntryFlag::UpperBound
-            } else if best >= beta {
-                ttable::EntryFlag::LowerBound
-            } else {
-                ttable::EntryFlag::Exact
-            };
-
-            self.transposition_table
-                .store_entry(TranspositionTableEntry::new(
-                    board.zobrist_hash(),
-                    0u8,
-                    best,
-                    flag,
-                    best_move.unwrap(),
-                ));
         }
 
         best
