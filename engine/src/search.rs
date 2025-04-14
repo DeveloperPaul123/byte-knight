@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Sat Apr 12 2025
+ * Last Modified: Mon Apr 14 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -21,7 +21,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
+use chess::{
+    board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move, pieces::Piece,
+};
 use itertools::Itertools;
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
@@ -34,7 +36,10 @@ use crate::{
     score::{LargeScoreType, Score, ScoreType},
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
-    tuneable::{IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, MAX_RFP_DEPTH, RFP_MARGIN},
+    tuneable::{
+        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, MAX_RFP_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH,
+        RFP_MARGIN,
+    },
 };
 use ttable::TranspositionTable;
 
@@ -345,7 +350,7 @@ impl<'a> Search<'a> {
         }
 
         // can we prune the current node with something other than TT?
-        if let Some(score) = self.pruned_score::<Node>(board, depth, beta) {
+        if let Some(score) = self.pruned_score::<Node>(board, depth, ply, beta) {
             return score;
         }
 
@@ -478,9 +483,10 @@ impl<'a> Search<'a> {
     ///
     /// The score of the position if it can be pruned, otherwise None.
     fn pruned_score<Node: NodeType>(
-        &self,
+        &mut self,
         board: &Board,
-        depth: i16,
+        depth: ScoreType,
+        ply: ScoreType,
         beta: Score,
     ) -> Option<Score> {
         // no pruning if we are in check or if we are in a PV node
@@ -496,6 +502,40 @@ impl<'a> Search<'a> {
         if depth <= MAX_RFP_DEPTH && static_eval - RFP_MARGIN * depth > beta {
             return Some(static_eval);
         }
+
+        /*
+        Null move pruning
+        https://www.chessprogramming.org/Null_Move_Pruning
+        https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html
+        Give the opponent a free move. If they cannot improve their position (beat beta)
+        then prune the tree as our advantage is too great to bother searching further.
+        */
+
+        // Are we left with more than just kings and pawns?
+        let sufficient_material = (board.all_pieces()
+            ^ board.piece_kind_bitboard(Piece::King)
+            ^ board.piece_kind_bitboard(Piece::Pawn))
+        .number_of_occupied_squares()
+            > 0;
+        // was the last move null?
+        let last_move_was_null = board.last_move().is_some_and(|mv| mv.is_null_move());
+
+        if !last_move_was_null
+            && depth >= NMP_MIN_DEPTH
+            && static_eval >= beta
+            && sufficient_material
+        {
+            let null_move_depth = depth - NMP_DEPTH_REDUCTION;
+            let mut null_board = board.clone();
+            null_board.null_move();
+            let null_score =
+                self.negamax::<Node>(&mut null_board, null_move_depth, ply, -beta, -beta + 1);
+            null_board.unmake_move().unwrap();
+            if null_score >= beta {
+                return Some(null_score);
+            }
+        }
+
         None
     }
 
