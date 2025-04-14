@@ -525,7 +525,7 @@ impl<'a> Search<'a> {
             && static_eval >= beta
             && sufficient_material
         {
-            let null_move_depth = depth - NMP_DEPTH_REDUCTION;
+            let null_move_depth = depth - NMP_DEPTH_REDUCTION - 1;
             let mut null_board = board.clone();
             null_board.null_move();
             let null_score =
