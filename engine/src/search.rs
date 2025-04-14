@@ -320,7 +320,7 @@ impl<'a> Search<'a> {
         let mut alpha_use = alpha;
 
         if depth == 0 {
-            return self.quiescence(board, alpha, beta);
+            return self.quiescence::<Node>(board, alpha, beta);
         }
 
         // Transposition Table Cutoffs: https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
@@ -553,12 +553,17 @@ impl<'a> Search<'a> {
     ///
     /// The score of the position.
     ///
-    fn quiescence(&mut self, board: &mut Board, alpha: Score, beta: Score) -> Score {
+    fn quiescence<Node: NodeType>(
+        &mut self,
+        board: &mut Board,
+        alpha: Score,
+        beta: Score,
+    ) -> Score {
         let standing_eval = self.eval.eval(board);
         if standing_eval >= beta {
             return beta;
         }
-        let mut alpha_use = alpha.max(standing_eval);
+        let mut alpha_use: Score = alpha.max(standing_eval);
 
         let mut move_list = MoveList::new();
         self.move_gen.generate_legal_moves(board, &mut move_list);
@@ -574,22 +579,42 @@ impl<'a> Search<'a> {
             return standing_eval;
         }
 
+        // Transposition Table Cutoffs: https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
+        // Check if we have a transposition table entry and if we can return early
+        let tt_move =
+            match self
+                .transposition_table
+                .probe::<Node>(0, board.zobrist_hash(), alpha, beta)
+            {
+                ttable::ProbeResult::CutOff(entry) => {
+                    // we have a cutoff, so return the score, but only in a non-PV node
+                    if !Node::PV {
+                        return entry.score;
+                    }
+                    Some(entry.board_move)
+                }
+                ttable::ProbeResult::Hit(entry) => Some(entry.board_move),
+                ttable::ProbeResult::Empty => None,
+            };
+
         let sorted_moves = captures.into_iter().sorted_by_cached_key(|mv| {
             ByteKnightEvaluation::score_move_for_ordering(
                 board.side_to_move(),
                 mv,
-                &None,
+                &tt_move,
                 self.history_table,
             )
         });
         let mut best = standing_eval;
+        let mut best_move = tt_move;
+        let original_alpha = alpha_use;
 
         for mv in sorted_moves {
             board.make_move_unchecked(mv).unwrap();
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
-                let eval = -self.quiescence(board, -beta, -alpha_use);
+                let eval = -self.quiescence::<Node>(board, -beta, -alpha_use);
                 self.nodes += 1;
                 eval
             };
@@ -597,6 +622,7 @@ impl<'a> Search<'a> {
 
             if score > best {
                 best = score;
+                best_move = Some(*mv);
 
                 if score >= beta {
                     break;
@@ -609,6 +635,26 @@ impl<'a> Search<'a> {
             if self.should_stop_searching() {
                 break;
             }
+        }
+
+        if best_move.is_some() {
+            // store the best move in the transposition table
+            let flag = if best <= original_alpha {
+                ttable::EntryFlag::UpperBound
+            } else if best >= beta {
+                ttable::EntryFlag::LowerBound
+            } else {
+                ttable::EntryFlag::Exact
+            };
+
+            self.transposition_table
+                .store_entry(TranspositionTableEntry::new(
+                    board.zobrist_hash(),
+                    0u8,
+                    best,
+                    flag,
+                    best_move.unwrap(),
+                ));
         }
 
         best
