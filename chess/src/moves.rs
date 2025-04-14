@@ -4,7 +4,7 @@
  * Created Date: Monday, August 19th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Dec 10 2024
+ * Last Modified: Sun Apr 13 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -80,9 +80,9 @@ pub enum MoveType {
 #[derive(Default, Debug, Clone, Copy)]
 pub struct Move {
     /// The move information, from LSB to MSB:
-    /// The first 2 bits represent the move descriptor
-    /// The next 1 bit tells us if the move is a promotion or not
-    /// The next 2 bits represent the promotion descriptor
+    /// The first 2 bits represent the move descriptor.
+    /// The next 1 bit tells us if the move is a promotion or not.
+    /// The next 2 bits represent the promotion descriptor.
     /// The next 6 bits represent the to square.
     /// The next 6 bits represent the from square.
     /// The next 3 bits represent the piece doing the move.
@@ -307,7 +307,7 @@ impl Move {
     }
 
     /// Return true if the move is a null move
-    pub(crate) fn is_null_move(&self) -> bool {
+    pub fn is_null_move(&self) -> bool {
         // this is the default value, and should be interpreted as a null move
         // the reason for this is that a move at a minimum should always have a to and from square
         // and a piece. So if there is no information about the move, it is a null move

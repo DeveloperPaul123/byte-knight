@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Mar 17 2025
+ * Last Modified: Mon Apr 14 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -227,18 +227,25 @@ impl Board {
             self.add_piece(us, piece_to_add, to, update_zobrist_hash);
 
             if mv.is_en_passant_capture() {
-                // remove the "captured" pawn
-                // this pawn should be either one rank above or below the destination square
-                // depending on the side to move
-                // if white, the pawn is one rank below the destination square
-                // if black, the pawn is one rank above the destination square
+                // Remove the "captured" pawn.
+                // This pawn should be either one rank above or below the destination square
+                // depending on the side to move.
+                // If white, the pawn is one rank below the destination square.
+                // If black, the pawn is one rank above the destination square.
                 let en_passant_pawn_location = if us == Side::White {
                     to - 8u8
                 } else {
                     to + 8u8
                 };
                 let pawns = self.piece_bitboard(Piece::Pawn, them);
-                debug_assert!(pawns.is_square_occupied(en_passant_pawn_location));
+                debug_assert!(
+                    pawns.is_square_occupied(en_passant_pawn_location),
+                    "En passant pawn not on square {} for move {}\n{}",
+                    SQUARE_NAME[en_passant_pawn_location as usize],
+                    mv.to_long_algebraic(),
+                    pawns
+                );
+
                 self.remove_piece(
                     them,
                     Piece::Pawn,
@@ -448,6 +455,9 @@ impl Board {
         self.history.push(current_state);
 
         self.switch_side();
+        if self.en_passant_square().is_some() {
+            self.set_en_passant_square(None);
+        }
     }
 
     /// Undo a move on the board. Passthrough call to [`Board::remove_piece`] and [`Board::add_piece`].
@@ -543,7 +553,8 @@ fn get_castling_right_to_remove(us: Side, from: u8) -> u8 {
 #[cfg(test)]
 mod tests {
     use crate::{
-        board::Board, definitions::Squares, move_generation::MoveGenerator, move_list::MoveList,
+        bitboard::Bitboard, board::Board, definitions::Squares, move_generation::MoveGenerator,
+        move_list::MoveList, moves::MoveType, pieces::Piece, side::Side,
     };
 
     #[test]
@@ -587,5 +598,188 @@ mod tests {
 
         let expected_fen = "3rr3/p2b4/1p4Rp/4k3/2B1pPP1/2K1B2P/P7/4R3 b - f3 0 31";
         assert_eq!(board.to_fen(), expected_fen);
+    }
+
+    #[test]
+    fn properly_undo_piece_promotion() {
+        let move_gen = MoveGenerator::new();
+        let mut move_list = MoveList::new();
+        let mut board =
+            Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
+        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+
+        let initial_mv = *move_list
+            .iter()
+            .find(|mv| mv.to_long_algebraic() == "d7c8q")
+            .unwrap();
+
+        let mut queen_bb = *board.piece_bitboard(Piece::Queen, Side::White);
+        assert_eq!(queen_bb.number_of_occupied_squares(), 1);
+        assert_eq!(queen_bb, Bitboard::from_square(Squares::D1));
+
+        let mv_ok = board.make_move(&initial_mv, &move_gen);
+        assert!(mv_ok.is_ok());
+
+        queen_bb = *board.piece_bitboard(Piece::Queen, Side::White);
+        assert_eq!(queen_bb.number_of_occupied_squares(), 2);
+        let mut compare_bb = Bitboard::from_square(Squares::D1);
+        compare_bb.set_square(Squares::C8);
+        assert_eq!(queen_bb, compare_bb);
+
+        let undo_result = board.unmake_move();
+        assert!(undo_result.is_ok());
+
+        queen_bb = *board.piece_bitboard(Piece::Queen, Side::White);
+        assert_eq!(queen_bb.number_of_occupied_squares(), 1);
+        assert_eq!(queen_bb, Bitboard::from_square(Squares::D1));
+    }
+
+    #[test]
+    fn make_move_updates_piece_boards() {
+        let move_gen = MoveGenerator::new();
+        let mut move_list = MoveList::new();
+        let mut board =
+            Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8").unwrap();
+        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+
+        let initial_mv = *move_list
+            .iter()
+            .find(|mv| mv.to_long_algebraic() == "d7c8q")
+            .unwrap();
+
+        let next_move = *move_list
+            .iter()
+            .find(|mv| mv.to_long_algebraic() == "d7c8r")
+            .unwrap();
+
+        let mut mv_ok = board.make_move(&initial_mv, &move_gen);
+        assert!(mv_ok.is_ok());
+
+        // generate moves again
+        move_list.clear();
+        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        let mut node_count = 0;
+        for mv in move_list.iter() {
+            println!("trying move {}", mv.to_long_algebraic());
+            mv_ok = board.make_move(mv, &move_gen);
+            if mv_ok.is_ok() {
+                node_count += 1;
+                let undo_result = board.unmake_move();
+                assert!(undo_result.is_ok());
+            }
+        }
+
+        assert_eq!(node_count, 31);
+
+        println!("\n{}\n{}", board.to_fen(), board.board_state());
+        println!(
+            "queen before:\n{}",
+            board.piece_bitboard(Piece::Queen, Side::White)
+        );
+
+        let initial_move_undo_result = board.unmake_move();
+        assert!(initial_move_undo_result.is_ok());
+
+        println!("\n{}\n{}", board.to_fen(), board.board_state());
+        println!(
+            "queen after:\n{}",
+            board.piece_bitboard(Piece::Queen, Side::White)
+        );
+
+        mv_ok = board.make_move(&next_move, &move_gen);
+        assert!(mv_ok.is_ok());
+
+        println!(
+            "rook after move:\n{}",
+            board.piece_bitboard(Piece::Rook, Side::White)
+        );
+
+        move_list.clear();
+        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+        node_count = 0;
+
+        for mv in move_list.iter() {
+            mv_ok = board.make_move(mv, &move_gen);
+            if mv_ok.is_ok() {
+                println!("{} 1", mv.to_long_algebraic());
+                node_count += 1;
+                let undo_result = board.unmake_move();
+                assert!(undo_result.is_ok());
+            }
+        }
+
+        assert_eq!(node_count, 31);
+    }
+
+    #[test]
+    fn make_move_and_undo_move() {
+        let move_gen = MoveGenerator::new();
+        let mut move_list = MoveList::new();
+        {
+            let mut board =
+                Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
+                    .unwrap();
+
+            move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+
+            let first_mv = move_list
+                .iter()
+                .find(|mv| mv.to_long_algebraic() == "b1d2")
+                .unwrap();
+            let second_mv = move_list
+                .iter()
+                .find(|mv| mv.to_long_algebraic() == "b1a3")
+                .unwrap();
+
+            println!("{}\n{}", board.to_fen(), board.board_state());
+            let mut mv_ok = board.make_move(first_mv, &move_gen);
+            assert!(mv_ok.is_ok());
+            println!("{}\n{}", board.to_fen(), board.board_state());
+            // undo the move
+            let mut undo_ok = board.unmake_move();
+            assert!(undo_ok.is_ok());
+            println!("{}\n{}", board.to_fen(), board.board_state());
+
+            // make the second move
+            mv_ok = board.make_move(second_mv, &move_gen);
+            assert!(mv_ok.is_ok());
+            // undo the move
+            undo_ok = board.unmake_move();
+            assert!(undo_ok.is_ok());
+        }
+
+        {
+            // start with default board
+            let mut board = Board::default_board();
+
+            move_gen.generate_legal_moves(&board, &mut move_list);
+            // only move pawns and do 2 up move
+            let first_mv = move_list
+                .iter()
+                .find(|mv| mv.to_long_algebraic() == "e2e4")
+                .unwrap();
+
+            // make the move
+            let mv_ok = board.make_move(first_mv, &move_gen);
+            assert!(mv_ok.is_ok());
+            // check the en passant square
+            assert_eq!(board.en_passant_square(), Some(Squares::E3));
+            assert_eq!(board.side_to_move(), Side::Black);
+            // make a null move
+            board.null_move();
+            // check the en passant square
+            assert_eq!(board.en_passant_square(), None);
+            assert!(board.last_move().is_some_and(|mv| mv.is_null_move()));
+            // check side to move
+            assert_eq!(board.side_to_move(), Side::White);
+
+            // undo the move
+            let undo_ok = board.unmake_move();
+            assert!(undo_ok.is_ok());
+            // check the en passant square
+            assert_eq!(board.en_passant_square(), Some(Squares::E3));
+            // check side to move
+            assert_eq!(board.side_to_move(), Side::Black);
+        }
     }
 }
