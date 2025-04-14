@@ -584,7 +584,7 @@ impl<'a> Search<'a> {
         let tt_move =
             match self
                 .transposition_table
-                .probe::<Node>(0, board.zobrist_hash(), alpha, beta)
+                .probe::<Node>(0, board.zobrist_hash(), alpha_use, beta)
             {
                 ttable::ProbeResult::CutOff(entry) => {
                     // we have a cutoff, so return the score, but only in a non-PV node
