@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 26 2024
+ * Last Modified: Mon Apr 14 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -329,6 +329,15 @@ impl Board {
         &self.piece_bitboards[side as usize][piece as usize]
     }
 
+    /// Returns a combined [`Bitboard`] of all pieces of a given type for both sides.
+    pub fn piece_kind_bitboard(&self, piece: Piece) -> Bitboard {
+        let mut piece_bb = Bitboard::default();
+        for side in 0..NumberOf::SIDES {
+            piece_bb |= self.piece_bitboards[side][piece as usize];
+        }
+        piece_bb
+    }
+
     /// Returns the current square of the king for a given side.
     pub fn king_square(&self, side: Side) -> u8 {
         let king_bb = self.piece_bitboard(Piece::King, side);
@@ -609,6 +618,14 @@ impl Board {
             }
         }
         true
+    }
+
+    /// Get the last move made on the board.
+    ///
+    /// Returns `None` if there are no moves in the history.
+    /// Otherwise, returns the last move made.
+    pub fn last_move(&self) -> Option<Move> {
+        self.history.iter().last().map(|m| m.next_move)
     }
 }
 
@@ -960,5 +977,46 @@ mod tests {
                 assert!(color.is_none());
             }
         }
+    }
+
+    #[test]
+    fn get_last_move() {
+        let mut board = Board::default_board();
+        let move_gen = MoveGenerator::new();
+        let mut move_list = MoveList::new();
+        move_gen.generate_moves(&board, &mut move_list, MoveType::All);
+
+        let first_move = move_list.iter().next().unwrap();
+        let mv_ok = board.make_move(first_move, &move_gen);
+        assert!(mv_ok.is_ok());
+
+        let last_move = board.last_move().unwrap();
+        assert_eq!(last_move, *first_move);
+
+        // undo the move
+        let undo_result = board.unmake_move();
+        assert!(undo_result.is_ok());
+
+        // now make a null move
+        board.null_move();
+        let last_move = board.last_move().unwrap();
+        assert!(last_move.is_null_move());
+
+        // undo the null move
+        let undo_result = board.unmake_move();
+        assert!(undo_result.is_ok());
+        assert!(board.to_fen() == Board::default_board().to_fen());
+    }
+
+    #[test]
+    fn piece_kind_bitboard() {
+        let board = Board::default_board();
+        let piece_kind_bb = board.piece_kind_bitboard(Piece::Pawn);
+
+        let black_pawns_bb = board.piece_bitboard(Piece::Pawn, Side::Black);
+        let white_pawns_bb = board.piece_bitboard(Piece::Pawn, Side::White);
+
+        assert_eq!(piece_kind_bb, *black_pawns_bb | *white_pawns_bb);
+        assert_eq!(piece_kind_bb.number_of_occupied_squares(), 16);
     }
 }
