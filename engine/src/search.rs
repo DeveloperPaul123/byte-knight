@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Apr 15 2025
+ * Last Modified: Wed Apr 16 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -369,7 +369,7 @@ impl<'a> Search<'a> {
         }
 
         // sort moves by MVV/LVA
-        let sorted_moves = move_list.iter().sorted_by_key(|mv| {
+        let sorted_moves = move_list.iter().sorted_by_cached_key(|mv| {
             MoveOrder::classify(board.side_to_move(), &mv, &tt_move, &self.history_table)
         });
 
@@ -593,10 +593,10 @@ impl<'a> Search<'a> {
                 ttable::ProbeResult::Empty => None,
             };
 
-        let sorted_moves = captures.into_iter().sorted_by_key(|mv| {
+        let sorted_moves = captures.into_iter().sorted_by_cached_key(|mv| {
             MoveOrder::classify(board.side_to_move(), mv, &tt_move, self.history_table)
         });
-        
+
         let mut best = standing_eval;
         let mut best_move = tt_move;
         let original_alpha = alpha_use;
