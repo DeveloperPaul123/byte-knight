@@ -13,3 +13,4 @@ pub mod search_thread;
 pub mod traits;
 pub mod ttable;
 pub mod tuneable;
+mod move_order;
