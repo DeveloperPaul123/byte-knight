@@ -369,9 +369,16 @@ impl<'a> Search<'a> {
         }
 
         // sort moves by MVV/LVA
-        let sorted_moves = move_list.iter().sorted_by_cached_key(|mv| {
-            MoveOrder::classify(board.side_to_move(), &mv, &tt_move, &self.history_table)
-        });
+        let mut sorted_moves = move_list
+            .iter()
+            .map(|mv| {
+                (
+                    mv,
+                    MoveOrder::classify(board.side_to_move(), &mv, &tt_move, &self.history_table),
+                )
+            })
+            .collect::<Vec<(&Move, MoveOrder)>>();
+        sorted_moves.sort_by_key(|(_, order)| *order);
 
         // initialize best move and best score
         // we ensured we have moves earlier
@@ -384,7 +391,7 @@ impl<'a> Search<'a> {
         // loop through all moves
         // TODO(PT): Not a fan of this clone() call, but we needed it (for now) for the history malus update later on.
         // This will likely be a non-issue once we implement a move picker
-        for (i, mv) in sorted_moves.clone().enumerate() {
+        for (i, (mv, _)) in sorted_moves.clone().into_iter().enumerate() {
             // make the move
             board.make_move_unchecked(mv).unwrap();
             let score : Score =
@@ -427,7 +434,7 @@ impl<'a> Search<'a> {
                         );
 
                         // apply a penalty to all quiets searched so far
-                        for mv in sorted_moves.take(i).filter(|mv| mv.is_quiet()) {
+                        for (mv, _) in sorted_moves.iter().take(i).filter(|(mv, _)| mv.is_quiet()) {
                             self.history_table.update(
                                 board.side_to_move(),
                                 mv.piece(),
@@ -593,15 +600,23 @@ impl<'a> Search<'a> {
                 ttable::ProbeResult::Empty => None,
             };
 
-        let sorted_moves = captures.into_iter().sorted_by_cached_key(|mv| {
-            MoveOrder::classify(board.side_to_move(), mv, &tt_move, self.history_table)
-        });
+        // sort moves by MVV/LVA
+        let mut sorted_moves = captures
+            .into_iter()
+            .map(|mv| {
+                (
+                    mv,
+                    MoveOrder::classify(board.side_to_move(), &mv, &tt_move, &self.history_table),
+                )
+            })
+            .collect::<Vec<(&Move, MoveOrder)>>();
+        sorted_moves.sort_by_key(|(_, order)| *order);
 
         let mut best = standing_eval;
         let mut best_move = tt_move;
         let original_alpha = alpha_use;
 
-        for mv in sorted_moves {
+        for (mv, _) in sorted_moves {
             board.make_move_unchecked(mv).unwrap();
             let score = if board.is_draw() {
                 Score::DRAW
