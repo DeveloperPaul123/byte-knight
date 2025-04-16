@@ -32,6 +32,7 @@ use crate::{
     defs::MAX_DEPTH,
     evaluation::ByteKnightEvaluation,
     history_table::HistoryTable,
+    incremental_sort::IncrementalSort,
     move_order::MoveOrder,
     node_types::{NodeType, NonPvNode, PvNode, RootNode},
     score::{LargeScoreType, Score, ScoreType},
@@ -369,16 +370,16 @@ impl<'a> Search<'a> {
         }
 
         // sort moves by MVV/LVA
-        let mut sorted_moves = move_list
+        let sorted_moves = move_list
             .iter()
             .map(|mv| {
                 (
-                    mv,
                     MoveOrder::classify(board.side_to_move(), &mv, &tt_move, &self.history_table),
+                    *mv,
                 )
             })
-            .collect::<Vec<(&Move, MoveOrder)>>();
-        sorted_moves.sort_by_key(|(_, order)| *order);
+            .collect::<Vec<(MoveOrder, Move)>>();
+        let move_iter = IncrementalSort::new(sorted_moves.clone());
 
         // initialize best move and best score
         // we ensured we have moves earlier
@@ -391,9 +392,9 @@ impl<'a> Search<'a> {
         // loop through all moves
         // TODO(PT): Not a fan of this clone() call, but we needed it (for now) for the history malus update later on.
         // This will likely be a non-issue once we implement a move picker
-        for (i, (mv, _)) in sorted_moves.clone().into_iter().enumerate() {
+        for (i, mv) in move_iter.into_iter().enumerate() {
             // make the move
-            board.make_move_unchecked(mv).unwrap();
+            board.make_move_unchecked(&mv).unwrap();
             let score : Score =
                 // Principal Variation Search (PVS)
                 if Node::PV && i == 0 {
@@ -417,7 +418,7 @@ impl<'a> Search<'a> {
             if score > best_score {
                 // we improved, so update the score and best move
                 best_score = score;
-                best_move = Some(*mv);
+                best_move = Some(mv);
 
                 // update alpha
                 alpha_use = alpha_use.max(best_score);
@@ -434,7 +435,7 @@ impl<'a> Search<'a> {
                         );
 
                         // apply a penalty to all quiets searched so far
-                        for (mv, _) in sorted_moves.iter().take(i).filter(|(mv, _)| mv.is_quiet()) {
+                        for (_, mv) in sorted_moves.iter().take(i).filter(|(_, mv)| mv.is_quiet()) {
                             self.history_table.update(
                                 board.side_to_move(),
                                 mv.piece(),
@@ -601,23 +602,23 @@ impl<'a> Search<'a> {
             };
 
         // sort moves by MVV/LVA
-        let mut sorted_moves = captures
+        let sorted_moves = captures
             .into_iter()
             .map(|mv| {
                 (
-                    mv,
                     MoveOrder::classify(board.side_to_move(), &mv, &tt_move, &self.history_table),
+                    *mv,
                 )
             })
-            .collect::<Vec<(&Move, MoveOrder)>>();
-        sorted_moves.sort_by_key(|(_, order)| *order);
+            .collect::<Vec<(MoveOrder, Move)>>();
+        let move_iter = IncrementalSort::new(sorted_moves);
 
         let mut best = standing_eval;
         let mut best_move = tt_move;
         let original_alpha = alpha_use;
 
-        for (mv, _) in sorted_moves {
-            board.make_move_unchecked(mv).unwrap();
+        for mv in move_iter.into_iter() {
+            board.make_move_unchecked(&mv).unwrap();
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
@@ -629,7 +630,7 @@ impl<'a> Search<'a> {
 
             if score > best {
                 best = score;
-                best_move = Some(*mv);
+                best_move = Some(mv);
 
                 if score >= beta {
                     break;
