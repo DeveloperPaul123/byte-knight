@@ -37,14 +37,14 @@ impl Ord for MoveOrder {
                     Evaluation::<ByteKnightValues>::mvv_lva(*left_victim, *left_attacker);
                 let right_value =
                     Evaluation::<ByteKnightValues>::mvv_lva(*right_victim, *right_attacker);
-                return left_value.cmp(&right_value);
+                return right_value.cmp(&left_value);
             }
             (MoveOrder::Capture(_, _), _) => Ordering::Less,
             (_, MoveOrder::Capture(_, _)) => Ordering::Greater,
 
             // quiet moves come last, according to their score
             (MoveOrder::Quiet(left_score), MoveOrder::Quiet(right_score)) => {
-                return left_score.cmp(&right_score);
+                return right_score.cmp(&left_score);
             }
         }
     }
