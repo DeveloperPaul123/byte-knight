@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Apr 16 2025
+ * Last Modified: Thu Apr 17 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -21,10 +21,11 @@ use std::{
     time::{Duration, Instant},
 };
 
+use arrayvec::ArrayVec;
 use chess::{
-    board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move, pieces::Piece,
+    board::Board, definitions::MAX_MOVE_LIST_SIZE, move_generation::MoveGenerator,
+    move_list::MoveList, moves::Move, pieces::Piece,
 };
-use itertools::Itertools;
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
 use crate::{
@@ -35,7 +36,6 @@ use crate::{
     incremental_sort::IncrementalSort,
     move_order::MoveOrder,
     node_types::{NodeType, NonPvNode, PvNode, RootNode},
-    ordered_move::OrderedMove,
     score::{LargeScoreType, Score, ScoreType},
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
@@ -359,6 +359,7 @@ impl<'a> Search<'a> {
 
         // get all legal moves
         let mut move_list = MoveList::new();
+        let mut order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
         self.move_gen.generate_legal_moves(board, &mut move_list);
 
         // do we have moves?
@@ -370,20 +371,17 @@ impl<'a> Search<'a> {
             };
         }
 
+        MoveOrder::classify_all(
+            board.side_to_move(),
+            move_list.as_slice(),
+            &tt_move,
+            &self.history_table,
+            &mut order_list,
+        )
+        .expect("Failed to classify moves.");
+
         // sort moves by MVV/LVA
-        let mut classified_moves = move_list
-            .iter()
-            .map(|mv| OrderedMove {
-                order: MoveOrder::classify(
-                    board.side_to_move(),
-                    &mv,
-                    &tt_move,
-                    &self.history_table,
-                ),
-                mv: *mv,
-            })
-            .collect::<Vec<OrderedMove>>();
-        let move_iter = IncrementalSort::new(&mut classified_moves);
+        let move_iter = IncrementalSort::new(move_list.as_mut_slice(), &mut order_list);
 
         // initialize best move and best score
         // we ensured we have moves earlier
@@ -394,8 +392,6 @@ impl<'a> Search<'a> {
         let mut best_move = None;
 
         // loop through all moves
-        // TODO(PT): Not a fan of this clone() call, but we needed it (for now) for the history malus update later on.
-        // This will likely be a non-issue once we implement a move picker
         for (i, mv) in move_iter.into_iter().enumerate() {
             // make the move
             board.make_move_unchecked(&mv).unwrap();
@@ -439,11 +435,7 @@ impl<'a> Search<'a> {
                         );
 
                         // apply a penalty to all quiets searched so far
-                        for OrderedMove { order: _, mv } in classified_moves
-                            .iter()
-                            .take(i)
-                            .filter(|OrderedMove { order: _, mv }| mv.is_quiet())
-                        {
+                        for mv in move_list.iter().take(i).filter(|mv| mv.is_quiet()) {
                             self.history_table.update(
                                 board.side_to_move(),
                                 mv.piece(),
@@ -578,13 +570,15 @@ impl<'a> Search<'a> {
         let mut alpha_use: Score = alpha.max(standing_eval);
 
         let mut move_list = MoveList::new();
+        let mut move_order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
         self.move_gen.generate_legal_moves(board, &mut move_list);
 
         // we only want captures here
-        let captures = move_list
+        let mut captures = move_list
             .iter()
-            .filter(|mv: &&Move| mv.captured_piece().is_some())
-            .collect_vec();
+            .filter(|mv| mv.captured_piece().is_some())
+            .map(|mv| *mv)
+            .collect::<Vec<_>>();
 
         // no captures
         if captures.is_empty() {
@@ -610,20 +604,30 @@ impl<'a> Search<'a> {
             };
 
         // sort moves by MVV/LVA
-        let mut classified_captures = captures
-            .into_iter()
-            .map(|mv| OrderedMove {
-                order: MoveOrder::classify(
-                    board.side_to_move(),
-                    &mv,
-                    &tt_move,
-                    &self.history_table,
-                ),
-                mv: *mv,
-            })
-            .collect::<Vec<OrderedMove>>();
+        MoveOrder::classify_all(
+            board.side_to_move(),
+            captures.as_slice(),
+            &tt_move,
+            &self.history_table,
+            &mut move_order_list,
+        )
+        .expect("Failed to classify moves.");
 
-        let move_iter = IncrementalSort::new(&mut classified_captures);
+        // let mut classified_captures = captures
+        //     .into_iter()
+        //     .map(|mv| OrderedMove {
+        //         order: MoveOrder::classify(
+        //             board.side_to_move(),
+        //             &mv,
+        //             &tt_move,
+        //             &self.history_table,
+        //         ),
+        //         mv: *mv,
+        //     })
+        //     .collect::<Vec<OrderedMove>>();
+
+        let captures_slice = captures.as_mut_slice();
+        let move_iter = IncrementalSort::new(captures_slice, &mut move_order_list);
 
         let mut best = standing_eval;
         let mut best_move = tt_move;

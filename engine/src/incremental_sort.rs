@@ -1,21 +1,41 @@
-use crate::ordered_move::OrderedMove;
+/*
+ * incremental_sort.rs
+ * Part of the byte-knight project
+ * Created Date: Thursday, April 17th 2025
+ * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * -----
+ * Last Modified: Thu Apr 17 2025
+ * -----
+ * Copyright (c) 2025 Paul Tsouchlos (DeveloperPaul123)
+ * GNU General Public License v3.0 or later
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ * 
+ */
+use crate::move_order::MoveOrder;
 use chess::moves::Move;
 
 pub(crate) struct IncrementalSort<'s> {
-    data: &'s mut [OrderedMove],
+    moves: &'s mut [Move],
+    move_order: &'s mut [MoveOrder],
     current_index: usize,
 }
 
 impl<'s> IncrementalSort<'s> {
-    pub(crate) fn new(move_list: &'s mut Vec<OrderedMove>) -> Self {
+    pub(crate) fn new(moves: &'s mut [Move], order: &'s mut [MoveOrder]) -> Self {
+        debug_assert!(
+            moves.len() == order.len(),
+            "Moves and move orders must have the same length"
+        );
+
         Self {
-            data: move_list.as_mut_slice(),
+            moves,
+            move_order: order,
             current_index: 0,
         }
     }
 
     pub(crate) fn has_next(&self) -> bool {
-        self.current_index < self.data.len()
+        self.current_index < self.moves.len()
     }
 
     pub(crate) fn next(&mut self) -> Option<Move> {
@@ -25,17 +45,18 @@ impl<'s> IncrementalSort<'s> {
 
         // Find the index of the maximum score among remaining elements
         let mut max_idx = self.current_index;
-        for i in self.current_index..self.data.len() {
+        for i in self.current_index..self.move_order.len() {
             // This comparison ensures we get the HIGHEST scores first
             // MoveOrdering sorts in descending order
-            if self.data[i] < self.data[max_idx] {
+            if self.move_order[i] < self.move_order[max_idx] {
                 max_idx = i;
             }
         }
 
         // Swap the max element with the current position
         if max_idx != self.current_index {
-            self.data.swap(self.current_index, max_idx);
+            self.move_order.swap(self.current_index, max_idx);
+            self.moves.swap(self.current_index, max_idx);
         }
 
         // Move the index forward and return the current max item
@@ -43,7 +64,7 @@ impl<'s> IncrementalSort<'s> {
         self.current_index += 1;
 
         // Take the item at the current index
-        Some(self.data[current].mv)
+        Some(self.moves[current])
     }
 }
 
@@ -55,25 +76,27 @@ impl<'s> Iterator for IncrementalSort<'s> {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let remaining = self.data.len() - self.current_index;
+        let remaining = self.moves.len() - self.current_index;
         (remaining, Some(remaining))
     }
 
     fn count(self) -> usize {
-        self.data.len() - self.current_index
+        self.moves.len() - self.current_index
     }
 }
 
 #[cfg(test)]
 mod tests {
+
     use chess::{
-        board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::MoveType,
+        board::Board,
+        move_generation::MoveGenerator,
+        move_list::MoveList,
+        moves::{Move, MoveType},
         pieces::Piece,
     };
 
-    use crate::{
-        incremental_sort::IncrementalSort, move_order::MoveOrder, ordered_move::OrderedMove,
-    };
+    use crate::{incremental_sort::IncrementalSort, move_order::MoveOrder};
 
     #[test]
     fn test_incremental_sort() {
@@ -81,63 +104,62 @@ mod tests {
         let mut move_list = MoveList::new();
         let board = Board::default_board();
 
-        // generate moves
+        // generate moves for starting position (20)
         move_gen.generate_moves(&board, &mut move_list, MoveType::All);
 
-        let mut test_moves = vec![
-            OrderedMove {
-                order: MoveOrder::Quiet(14),
-                mv: *move_list.at(0).unwrap(),
-            },
-            OrderedMove {
-                order: MoveOrder::Quiet(15),
-                mv: *move_list.at(5).unwrap(),
-            },
-            OrderedMove {
-                order: MoveOrder::Capture(Piece::Bishop, Piece::Rook),
-                mv: *move_list.at(1).unwrap(),
-            },
-            OrderedMove {
-                order: MoveOrder::TtMove,
-                mv: *move_list.at(3).unwrap(),
-            },
-            OrderedMove {
-                order: MoveOrder::Capture(Piece::Queen, Piece::Pawn),
-                mv: *move_list.at(2).unwrap(),
-            },
+        let mut order = vec![
+            MoveOrder::Quiet(14),
+            MoveOrder::Capture(Piece::Bishop, Piece::Rook),
+            MoveOrder::Capture(Piece::Queen, Piece::Pawn),
+            MoveOrder::TtMove,
+            MoveOrder::Quiet(15),
+            MoveOrder::Quiet(16),
+            MoveOrder::Quiet(17),
+            MoveOrder::Quiet(100),
+            MoveOrder::Capture(Piece::Pawn, Piece::Queen),
+            MoveOrder::Capture(Piece::Knight, Piece::Bishop),
+            MoveOrder::Quiet(4),
+            MoveOrder::Quiet(24),
+            MoveOrder::Quiet(43),
+            MoveOrder::Quiet(987),
+            MoveOrder::Quiet(354),
+            MoveOrder::Quiet(64),
+            MoveOrder::Quiet(79),
+            MoveOrder::Quiet(484),
+            MoveOrder::Quiet(769),
+            MoveOrder::Quiet(13),
         ];
 
-        let print_test_moves = |msg: &str, mvs: &[OrderedMove]| {
+        let print_test_moves = |msg: &str, mvs: &[Move], order: &[MoveOrder]| {
             println!("{}:", msg);
             for i in 0..mvs.len() {
-                println!("test_moves[{}]: {:?}", i, mvs[i]);
+                println!(
+                    "test_moves[{}]: {} {:?}",
+                    i,
+                    mvs[i].to_long_algebraic(),
+                    order[i]
+                );
             }
         };
 
-        print_test_moves("before sorting", &test_moves);
+        print_test_moves("before sorting", &move_list.as_slice(), &order);
 
-        let incremental_sort = IncrementalSort::new(&mut test_moves);
+        let incremental_sort = IncrementalSort::new(move_list.as_mut_slice(), &mut order);
 
         // check if has next
         assert!(incremental_sort.has_next());
 
-        let expected_move_order = vec![
-            move_list.at(3).unwrap(),
-            move_list.at(2).unwrap(),
-            move_list.at(1).unwrap(),
-            move_list.at(5).unwrap(),
-            move_list.at(0).unwrap(),
+        let expected_moves = vec![
+            "g1h3", "g1f3", "b1c3", "c2c4", "c2c3", "e2e4", "h2h3", "g2g4", "f2f3", "b2b4", "g2g3",
+            "f2f4", "e2e3", "d2d4", "b2b3", "a2a4", "a2a3", "b1a3", "h2h4", "d2d3",
         ];
 
         // loop through the iterator
         for (i, mv) in incremental_sort.enumerate() {
-            assert_eq!(mv, *expected_move_order[i]);
+            println!("{}: {}", i, mv.to_long_algebraic());
+            assert_eq!(mv.to_long_algebraic(), expected_moves[i]);
         }
 
-        print_test_moves("after sorting", &test_moves);
-        // check if the vector has been sorted
-        for i in 0..test_moves.len() {
-            assert_eq!(test_moves[i].mv, *expected_move_order[i]);
-        }
+        print_test_moves("after sorting", move_list.as_slice(), &order);
     }
 }

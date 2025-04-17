@@ -4,7 +4,7 @@
  * Created Date: Monday, November 25th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 26 2024
+ * Last Modified: Thu Apr 17 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -70,6 +70,14 @@ impl MoveList {
     /// Clear the list of moves.
     pub fn clear(&mut self) {
         self.moves.clear();
+    }
+
+    pub fn as_slice(&self) -> &[Move] {
+        self.moves.as_slice()
+    }
+
+    pub fn as_mut_slice(&mut self) -> &mut [Move] {
+        self.moves.as_mut_slice()
     }
 }
 

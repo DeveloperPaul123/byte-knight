@@ -1,3 +1,6 @@
+// Allows for benchmarking
+#![feature(test)]
+
 pub mod aspiration_window;
 pub mod defs;
 pub mod engine;
@@ -8,7 +11,6 @@ mod incremental_sort;
 pub mod input_handler;
 mod move_order;
 pub(crate) mod node_types;
-mod ordered_move;
 pub mod phased_score;
 pub mod score;
 pub mod search;
