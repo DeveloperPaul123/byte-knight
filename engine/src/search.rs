@@ -35,6 +35,7 @@ use crate::{
     incremental_sort::IncrementalSort,
     move_order::MoveOrder,
     node_types::{NodeType, NonPvNode, PvNode, RootNode},
+    ordered_move::OrderedMove,
     score::{LargeScoreType, Score, ScoreType},
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
@@ -370,16 +371,19 @@ impl<'a> Search<'a> {
         }
 
         // sort moves by MVV/LVA
-        let sorted_moves = move_list
+        let mut classified_moves = move_list
             .iter()
-            .map(|mv| {
-                (
-                    MoveOrder::classify(board.side_to_move(), &mv, &tt_move, &self.history_table),
-                    *mv,
-                )
+            .map(|mv| OrderedMove {
+                order: MoveOrder::classify(
+                    board.side_to_move(),
+                    &mv,
+                    &tt_move,
+                    &self.history_table,
+                ),
+                mv: *mv,
             })
-            .collect::<Vec<(MoveOrder, Move)>>();
-        let move_iter = IncrementalSort::new(sorted_moves.clone());
+            .collect::<Vec<OrderedMove>>();
+        let move_iter = IncrementalSort::new(&mut classified_moves);
 
         // initialize best move and best score
         // we ensured we have moves earlier
@@ -435,7 +439,11 @@ impl<'a> Search<'a> {
                         );
 
                         // apply a penalty to all quiets searched so far
-                        for (_, mv) in sorted_moves.iter().take(i).filter(|(_, mv)| mv.is_quiet()) {
+                        for OrderedMove { order: _, mv } in classified_moves
+                            .iter()
+                            .take(i)
+                            .filter(|OrderedMove { order: _, mv }| mv.is_quiet())
+                        {
                             self.history_table.update(
                                 board.side_to_move(),
                                 mv.piece(),
@@ -602,16 +610,20 @@ impl<'a> Search<'a> {
             };
 
         // sort moves by MVV/LVA
-        let sorted_moves = captures
+        let mut classified_captures = captures
             .into_iter()
-            .map(|mv| {
-                (
-                    MoveOrder::classify(board.side_to_move(), &mv, &tt_move, &self.history_table),
-                    *mv,
-                )
+            .map(|mv| OrderedMove {
+                order: MoveOrder::classify(
+                    board.side_to_move(),
+                    &mv,
+                    &tt_move,
+                    &self.history_table,
+                ),
+                mv: *mv,
             })
-            .collect::<Vec<(MoveOrder, Move)>>();
-        let move_iter = IncrementalSort::new(sorted_moves);
+            .collect::<Vec<OrderedMove>>();
+
+        let move_iter = IncrementalSort::new(&mut classified_captures);
 
         let mut best = standing_eval;
         let mut best_move = tt_move;
