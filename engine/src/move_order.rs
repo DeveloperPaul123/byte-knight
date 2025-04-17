@@ -1,6 +1,8 @@
 use std::cmp::Ordering;
 
-use chess::{moves::Move, pieces::Piece, side::Side};
+use anyhow::{Ok, Result};
+use arrayvec::ArrayVec;
+use chess::{definitions::MAX_MOVE_LIST_SIZE, moves::Move, pieces::Piece, side::Side};
 
 use crate::{
     evaluation::Evaluation, hce_values::ByteKnightValues, history_table, score::LargeScoreType,
@@ -71,14 +73,43 @@ impl MoveOrder {
         let score = history_table.get(stm, mv.piece(), mv.to());
         Self::Quiet(score)
     }
+
+    pub fn classify_all(
+        stm: Side,
+        moves: &[Move],
+        tt_move: &Option<Move>,
+        history_table: &history_table::HistoryTable,
+        move_order: &mut ArrayVec<MoveOrder, MAX_MOVE_LIST_SIZE>,
+    ) -> Result<()> {
+        move_order.clear();
+
+        for mv in moves.iter() {
+            move_order.try_push(Self::classify(stm, mv, tt_move, history_table))?;
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
+    extern crate test;
+    use arrayvec::ArrayVec;
+    use chess::{
+        board::Board,
+        definitions::MAX_MOVE_LIST_SIZE,
+        file::File,
+        move_generation::MoveGenerator,
+        move_list::MoveList,
+        moves::Move,
+        rank::Rank,
+        square::Square,
+    };
     use itertools::Itertools;
+    use test::Bencher;
 
     use crate::{
+        history_table,
         move_order::MoveOrder,
         score::Score,
         ttable::{EntryFlag, TranspositionTable, TranspositionTableEntry},
@@ -126,5 +157,47 @@ mod tests {
         assert!(moves.len() >= 6);
         assert_eq!(moves[0], &tt_move);
         // check the order of the moves
+    }
+
+    #[bench]
+    fn bench_move_ordering(b: &mut Bencher) {
+        // benchmark the worst case scenario
+        // 218 possible moves
+        let fen_pos = "R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1";
+        let board = Board::from_fen(fen_pos).unwrap();
+        let move_generation = MoveGenerator::new();
+        let mut move_list = MoveList::new();
+        let mut tt = TranspositionTable::from_capacity(10);
+        let history_table = history_table::HistoryTable::new();
+
+        move_generation.generate_legal_moves(&board, &mut move_list);
+        assert!(move_list.len() == 218);
+
+        // create a transposition table entry
+        let king_from = Square::from_file_rank(File::F.to_char(), Rank::R1.as_number()).unwrap();
+        let king_to = Square::from_file_rank(File::F.to_char(), Rank::R2.as_number()).unwrap();
+
+        tt.store_entry(TranspositionTableEntry::new(
+            board.zobrist_hash(),
+            3,
+            Score::new(1234),
+            EntryFlag::Exact,
+            Move::new_king_move(&king_from, &king_to, None),
+        ));
+
+        let mut move_order = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
+        let tt_move = tt.get_entry(board.zobrist_hash()).unwrap().board_move;
+
+        // now classify the moves and bench
+        b.iter(|| {
+            MoveOrder::classify_all(
+                board.side_to_move(),
+                move_list.as_slice(),
+                &Some(tt_move),
+                &history_table,
+                &mut move_order,
+            )
+            .unwrap();
+        });
     }
 }
