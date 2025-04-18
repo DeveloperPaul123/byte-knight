@@ -57,7 +57,7 @@ mod tests {
         for i in 0..MAX_DEPTH {
             let killers = killers_table.get(i);
             assert_eq!(killers.len(), 2);
-            assert!(killers.iter().all(|mv| *mv == None));
+            assert!(killers.iter().all(|mv| mv.is_none()));
         }
     }
 }

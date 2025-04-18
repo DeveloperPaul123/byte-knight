@@ -126,9 +126,8 @@ mod tests {
     use arrayvec::ArrayVec;
     use chess::{
         board::Board, definitions::MAX_MOVE_LIST_SIZE, move_generation::MoveGenerator,
-        move_list::MoveList, moves::Move,
+        move_list::MoveList,
     };
-    use itertools::Itertools;
 
     use crate::{
         inplace_incremental_sort::InplaceIncrementalSort,
@@ -201,7 +200,7 @@ mod tests {
             &mut move_orders,
         )
         .expect("Failed to classify moves");
-        let expected_move_order = vec![*first_mv, *fourth_mv, *third_mv, *second_mv];
+        let expected_move_order = [*first_mv, *fourth_mv, *third_mv, *second_mv];
         for ex_mv in expected_move_order.iter() {
             println!("expected: {}", ex_mv);
         }
