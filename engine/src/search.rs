@@ -613,19 +613,6 @@ impl<'a> Search<'a> {
         )
         .expect("Failed to classify moves.");
 
-        // let mut classified_captures = captures
-        //     .into_iter()
-        //     .map(|mv| OrderedMove {
-        //         order: MoveOrder::classify(
-        //             board.side_to_move(),
-        //             &mv,
-        //             &tt_move,
-        //             &self.history_table,
-        //         ),
-        //         mv: *mv,
-        //     })
-        //     .collect::<Vec<OrderedMove>>();
-
         let captures_slice = captures.as_mut_slice();
         let move_iter = InplaceIncrementalSort::new(captures_slice, &mut move_order_list);
 
