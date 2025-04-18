@@ -66,7 +66,7 @@ impl Ord for MoveOrder {
 impl MoveOrder {
     /// Classify moves for move ordering  purposes.
     pub fn classify(
-        depth: u8,
+        ply: u8,
         stm: Side,
         mv: &Move,
         tt_move: &Option<Move>,
@@ -85,7 +85,7 @@ impl MoveOrder {
 
         let score = history_table.get(stm, mv.piece(), mv.to());
         if killers_table
-            .get(depth as u8)
+            .get(ply as u8)
             .is_some_and(|killer| *mv == killer)
         {
             return Self::Killer(score);
@@ -95,7 +95,7 @@ impl MoveOrder {
     }
 
     pub fn classify_all(
-        depth: u8,
+        ply: u8,
         stm: Side,
         moves: &[Move],
         tt_move: &Option<Move>,
@@ -107,7 +107,7 @@ impl MoveOrder {
 
         for mv in moves.iter() {
             move_order.try_push(Self::classify(
-                depth,
+                ply,
                 stm,
                 mv,
                 tt_move,

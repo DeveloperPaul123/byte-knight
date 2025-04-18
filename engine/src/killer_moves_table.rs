@@ -17,9 +17,9 @@ impl KillerMovesTable {
         self.table[depth as usize]
     }
 
-    pub(crate) fn update(&mut self, depth: u8, mv: Move) {
-        assert!(depth < MAX_DEPTH, "Depth is out of bounds");
-        self.table[depth as usize] = Some(mv);
+    pub(crate) fn update(&mut self, ply: u8, mv: Move) {
+        assert!(ply < MAX_DEPTH, "Depth is out of bounds");
+        self.table[ply as usize] = Some(mv);
     }
 
     pub(crate) fn clear(&mut self) {

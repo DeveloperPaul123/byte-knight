@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Apr 17 2025
+ * Last Modified: Fri Apr 18 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -327,7 +327,7 @@ impl<'a> Search<'a> {
         let mut alpha_use = alpha;
 
         if depth == 0 {
-            return self.quiescence::<Node>(board, alpha, beta);
+            return self.quiescence::<Node>(ply + 1, board, alpha, beta);
         }
 
         // Transposition Table Cutoffs: https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
@@ -376,7 +376,7 @@ impl<'a> Search<'a> {
         }
 
         MoveOrder::classify_all(
-            depth as u8,
+            ply as u8,
             board.side_to_move(),
             move_list.as_slice(),
             &tt_move,
@@ -431,7 +431,7 @@ impl<'a> Search<'a> {
                 if alpha_use >= beta {
                     // update history table for quiets
                     if mv.is_quiet() {
-                        self.killer_moves_table.update(depth as u8, mv);
+                        self.killer_moves_table.update(ply as u8, mv);
 
                         // calculate history bonus
                         let bonus = 300 * depth - 250;
@@ -567,6 +567,7 @@ impl<'a> Search<'a> {
     ///
     fn quiescence<Node: NodeType>(
         &mut self,
+        ply: ScoreType,
         board: &mut Board,
         alpha: Score,
         beta: Score,
@@ -613,7 +614,7 @@ impl<'a> Search<'a> {
 
         // sort moves by MVV/LVA
         MoveOrder::classify_all(
-            0,
+            ply as u8,
             board.side_to_move(),
             captures.as_slice(),
             &tt_move,
@@ -635,7 +636,7 @@ impl<'a> Search<'a> {
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
-                let eval = -self.quiescence::<Node>(board, -beta, -alpha_use);
+                let eval = -self.quiescence::<Node>(ply + 1, board, -beta, -alpha_use);
                 self.nodes += 1;
                 eval
             };
