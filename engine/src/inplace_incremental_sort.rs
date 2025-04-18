@@ -14,18 +14,17 @@
 use crate::move_order::MoveOrder;
 use chess::moves::Move;
 
-///
+/// Iterator type that yields moves in a sorted order based on their move orders.
+/// The moves are sorted in-place, meaning that the original array of moves is modified.
+/// The sorting is done in a way that the highest scoring moves are returned first.
+/// The iterator is stateful and keeps track of the current index in the moves array.
+/// The iterator is designed to be used in a loop, where each call to `next()`.
 pub(crate) struct InplaceIncrementalSort<'s> {
     moves: &'s mut [Move],
     move_order: &'s mut [MoveOrder],
     current_index: usize,
 }
 
-/// Iterator type that yields moves in a sorted order based on their move orders.
-/// The moves are sorted in-place, meaning that the original array of moves is modified.
-/// The sorting is done in a way that the highest scoring moves are returned first.
-/// The iterator is stateful and keeps track of the current index in the moves array.
-/// The iterator is designed to be used in a loop, where each call to `next()`.
 impl<'s> InplaceIncrementalSort<'s> {
     /// Creates a new `InplaceIncrementalSort` iterator.
     ///
@@ -85,7 +84,7 @@ impl<'s> InplaceIncrementalSort<'s> {
     }
 }
 
-impl<'s> Iterator for InplaceIncrementalSort<'s> {
+impl Iterator for InplaceIncrementalSort<'_> {
     type Item = Move;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -159,7 +158,7 @@ mod tests {
             }
         };
 
-        print_test_moves("before sorting", &move_list.as_slice(), &order);
+        print_test_moves("before sorting", move_list.as_slice(), &order);
 
         let incremental_sort = InplaceIncrementalSort::new(move_list.as_mut_slice(), &mut order);
 

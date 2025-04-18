@@ -110,10 +110,7 @@ impl Default for ByteKnightEvaluation {
 mod tests {
     use chess::{
         board::Board,
-        moves::{self, Move},
-        pieces::{ALL_PIECES, PIECE_SHORT_NAMES, Piece},
-        side::Side,
-        square::Square,
+        pieces::{ALL_PIECES, PIECE_SHORT_NAMES},
     };
 
     use crate::{
