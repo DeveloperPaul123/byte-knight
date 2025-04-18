@@ -375,7 +375,7 @@ impl<'a> Search<'a> {
             board.side_to_move(),
             move_list.as_slice(),
             &tt_move,
-            &self.history_table,
+            self.history_table,
             &mut order_list,
         )
         .expect("Failed to classify moves.");
@@ -577,7 +577,7 @@ impl<'a> Search<'a> {
         let mut captures = move_list
             .iter()
             .filter(|mv| mv.captured_piece().is_some())
-            .map(|mv| *mv)
+            .copied()
             .collect::<Vec<_>>();
 
         // no captures
@@ -608,7 +608,7 @@ impl<'a> Search<'a> {
             board.side_to_move(),
             captures.as_slice(),
             &tt_move,
-            &self.history_table,
+            self.history_table,
             &mut move_order_list,
         )
         .expect("Failed to classify moves.");

@@ -39,14 +39,14 @@ impl Ord for MoveOrder {
                     Evaluation::<ByteKnightValues>::mvv_lva(*left_victim, *left_attacker);
                 let right_value =
                     Evaluation::<ByteKnightValues>::mvv_lva(*right_victim, *right_attacker);
-                return right_value.cmp(&left_value);
+                right_value.cmp(&left_value)
             }
             (MoveOrder::Capture(_, _), _) => Ordering::Less,
             (_, MoveOrder::Capture(_, _)) => Ordering::Greater,
 
             // quiet moves come last, according to their score
             (MoveOrder::Quiet(left_score), MoveOrder::Quiet(right_score)) => {
-                return right_score.cmp(&left_score);
+                right_score.cmp(left_score)
             }
         }
     }
@@ -93,17 +93,10 @@ impl MoveOrder {
 
 #[cfg(test)]
 mod tests {
-    extern crate test;
-    use arrayvec::ArrayVec;
-    use chess::{
-        board::Board, definitions::MAX_MOVE_LIST_SIZE, file::File, move_generation::MoveGenerator,
-        move_list::MoveList, moves::Move, rank::Rank, square::Square,
-    };
+    use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
     use itertools::Itertools;
-    use test::Bencher;
 
     use crate::{
-        history_table,
         move_order::MoveOrder,
         score::Score,
         ttable::{EntryFlag, TranspositionTable, TranspositionTableEntry},
