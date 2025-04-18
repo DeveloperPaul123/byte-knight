@@ -1,13 +1,10 @@
-// Allows for benchmarking
-#![feature(test)]
-
 pub mod aspiration_window;
 pub mod defs;
 pub mod engine;
 pub mod evaluation;
 pub mod hce_values;
 pub mod history_table;
-mod incremental_sort;
+mod inplace_incremental_sort;
 pub mod input_handler;
 mod move_order;
 pub(crate) mod node_types;
