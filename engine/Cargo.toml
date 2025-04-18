@@ -1,8 +1,8 @@
 [package]
 name = "engine"
 version = "2.0.0"
-# 2024 isn't stable yet
 edition = "2024"
+
 
 [dependencies]
 chess = { path = "../chess" }
@@ -14,3 +14,4 @@ uci-parser = { version = "1.1.0", features = [
     "types",
 ] }
 rand = { version = "0.9.0", features = ["small_rng"] }
+arrayvec = "0.7.6"

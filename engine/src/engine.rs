@@ -4,7 +4,7 @@
  * Created Date: Friday, November 15th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Dec 10 2024
+ * Last Modified: Thu Apr 17 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -95,7 +95,7 @@ impl ByteKnight {
                             UciOption::<&str, i32>::spin("Hash", 16, 1, 1024),
                             UciOption::<&str, i32>::spin("Threads", 1, 1, 1),
                         ];
-                        // TODO: Actually implement the hash option
+
                         for option in options {
                             writeln!(stdout, "{}", UciResponse::Option(option)).unwrap();
                         }

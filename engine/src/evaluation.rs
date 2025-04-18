@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Mar 24 2025
+ * Last Modified: Thu Apr 17 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -12,11 +12,10 @@
  *
  */
 
-use chess::{bitboard_helpers, board::Board, moves::Move, pieces::Piece, side::Side};
+use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
 
 use crate::{
     hce_values::{ByteKnightValues, GAME_PHASE_MAX, GAMEPHASE_INC},
-    history_table,
     phased_score::{PhaseType, PhasedScore},
     score::{LargeScoreType, Score, ScoreType},
     traits::{Eval, EvalValues},
@@ -41,42 +40,6 @@ impl<Values: EvalValues> Evaluation<Values> {
 
     pub fn mutable_values(&mut self) -> &mut Values {
         &mut self.values
-    }
-
-    /// Scores a move for ordering. This will return the _negative_ score of
-    /// the move so that if you sort moves by their score, the best move will
-    /// be first (at index 0).
-    ///
-    /// # Arguments
-    ///
-    /// - `mv`: The move to score.
-    /// - `tt_entry`: The transposition table entry for the current position.
-    ///
-    /// # Returns
-    ///
-    /// The score of the move.
-    pub(crate) fn score_move_for_ordering(
-        stm: Side,
-        mv: &Move,
-        tt_move: &Option<Move>,
-        history_table: &history_table::HistoryTable,
-    ) -> LargeScoreType {
-        if tt_move.is_some_and(|tt| *mv == tt) {
-            return LargeScoreType::MIN;
-        }
-
-        let mut score = 0;
-        if mv.is_quiet() {
-            //history heuristic
-            score += history_table.get(stm, mv.piece(), mv.to());
-        } else if mv.is_capture() {
-            // mvv-lva for captures
-            // safe to unwrap the captured piece because we already checked
-            score += Self::mvv_lva(mv.captured_piece().unwrap(), mv.piece());
-        }
-
-        // negate the score to get the best move first
-        -score
     }
 
     pub(crate) fn mvv_lva(captured: Piece, capturing: Piece) -> LargeScoreType {
@@ -147,10 +110,7 @@ impl Default for ByteKnightEvaluation {
 mod tests {
     use chess::{
         board::Board,
-        moves::{self, Move},
-        pieces::{ALL_PIECES, PIECE_SHORT_NAMES, Piece},
-        side::Side,
-        square::Square,
+        pieces::{ALL_PIECES, PIECE_SHORT_NAMES},
     };
 
     use crate::{
@@ -173,55 +133,6 @@ mod tests {
                 assert!((score as i64) < (LargeScoreType::MIN as i64).abs());
             }
         }
-    }
-
-    #[test]
-    fn score_moves() {
-        let from = Square::from_square_index(0);
-        let to = Square::from_square_index(1);
-        let mut mv = Move::new(
-            &from,
-            &to,
-            moves::MoveDescriptor::None,
-            Piece::Pawn,
-            Some(Piece::Queen),
-            None,
-        );
-        let side = Side::Black;
-        let history_table = Default::default();
-        // note that these scores are for ordering, so they are negated
-        assert_eq!(
-            -ByteKnightEvaluation::score_move_for_ordering(side, &mv, &None, &history_table),
-            ByteKnightEvaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
-        );
-
-        mv = Move::new(
-            &from,
-            &to,
-            moves::MoveDescriptor::None,
-            Piece::Bishop,
-            Some(Piece::Rook),
-            None,
-        );
-
-        assert_eq!(
-            -ByteKnightEvaluation::score_move_for_ordering(side, &mv, &None, &history_table),
-            ByteKnightEvaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
-        );
-
-        mv = Move::new(
-            &from,
-            &to,
-            moves::MoveDescriptor::None,
-            Piece::Knight,
-            Some(Piece::Pawn),
-            None,
-        );
-
-        assert_eq!(
-            -ByteKnightEvaluation::score_move_for_ordering(side, &mv, &None, &history_table),
-            ByteKnightEvaluation::mvv_lva(mv.captured_piece().unwrap(), mv.piece())
-        );
     }
 
     #[test]
