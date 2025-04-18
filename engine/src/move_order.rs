@@ -5,7 +5,8 @@ use arrayvec::ArrayVec;
 use chess::{definitions::MAX_MOVE_LIST_SIZE, moves::Move, pieces::Piece, side::Side};
 
 use crate::{
-    evaluation::Evaluation, hce_values::ByteKnightValues, history_table, score::LargeScoreType,
+    evaluation::Evaluation, hce_values::ByteKnightValues, history_table, killer_moves_table,
+    score::LargeScoreType,
 };
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Default)]
@@ -13,6 +14,9 @@ pub enum MoveOrder {
     #[default]
     TtMove,
     Capture(Piece, Piece),
+    // We separate killers from other quiet moves
+    // to ensure that killers are always tried first
+    Killer(LargeScoreType),
     Quiet(LargeScoreType),
 }
 
@@ -44,6 +48,13 @@ impl Ord for MoveOrder {
             (MoveOrder::Capture(_, _), _) => Ordering::Less,
             (_, MoveOrder::Capture(_, _)) => Ordering::Greater,
 
+            // break ties with killer moves using their score
+            (MoveOrder::Killer(left_score), MoveOrder::Killer(right_score)) => {
+                right_score.cmp(left_score)
+            }
+            (MoveOrder::Killer(_), _) => Ordering::Less,
+            (_, MoveOrder::Killer(_)) => Ordering::Greater,
+
             // quiet moves come last, according to their score
             (MoveOrder::Quiet(left_score), MoveOrder::Quiet(right_score)) => {
                 right_score.cmp(left_score)
@@ -55,10 +66,12 @@ impl Ord for MoveOrder {
 impl MoveOrder {
     /// Classify moves for move ordering  purposes.
     pub fn classify(
+        depth: u8,
         stm: Side,
         mv: &Move,
         tt_move: &Option<Move>,
         history_table: &history_table::HistoryTable,
+        killers_table: &killer_moves_table::KillerMovesTable,
     ) -> Self {
         if tt_move.is_some_and(|tt| *mv == tt) {
             return Self::TtMove;
@@ -71,20 +84,36 @@ impl MoveOrder {
         }
 
         let score = history_table.get(stm, mv.piece(), mv.to());
+        if killers_table
+            .get(depth as u8)
+            .is_some_and(|killer| *mv == killer)
+        {
+            return Self::Killer(score);
+        }
+
         Self::Quiet(score)
     }
 
     pub fn classify_all(
+        depth: u8,
         stm: Side,
         moves: &[Move],
         tt_move: &Option<Move>,
         history_table: &history_table::HistoryTable,
+        killers_table: &killer_moves_table::KillerMovesTable,
         move_order: &mut ArrayVec<MoveOrder, MAX_MOVE_LIST_SIZE>,
     ) -> Result<()> {
         move_order.clear();
 
         for mv in moves.iter() {
-            move_order.try_push(Self::classify(stm, mv, tt_move, history_table))?;
+            move_order.try_push(Self::classify(
+                depth,
+                stm,
+                mv,
+                tt_move,
+                history_table,
+                killers_table,
+            ))?;
         }
 
         Ok(())
@@ -97,6 +126,7 @@ mod tests {
     use itertools::Itertools;
 
     use crate::{
+        killer_moves_table::KillerMovesTable,
         move_order::MoveOrder,
         score::Score,
         ttable::{EntryFlag, TranspositionTable, TranspositionTableEntry},
@@ -131,19 +161,27 @@ mod tests {
             second_mv.to(),
             300 * depth - 250,
         );
+        let killers = KillerMovesTable::new();
         let tt_entry = tt.get_entry(board.zobrist_hash()).unwrap();
         let tt_move = tt_entry.board_move;
         // sort the moves
         let moves = move_list
             .iter()
             .sorted_by_key(|mv| {
-                MoveOrder::classify(board.side_to_move(), mv, &Some(tt_move), &history_table)
+                MoveOrder::classify(
+                    0,
+                    board.side_to_move(),
+                    mv,
+                    &Some(tt_move),
+                    &history_table,
+                    &killers,
+                )
             })
             .collect::<Vec<&Move>>();
 
         assert!(moves.len() >= 6);
         assert_eq!(moves[0], &tt_move);
-        // check the order of the moves
+        // TODO: check the order of the moves
     }
 
     // TODO(PT): Re-enable benchmark when bench is stablized (if ever)

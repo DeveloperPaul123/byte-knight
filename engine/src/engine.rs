@@ -24,6 +24,7 @@ use crate::{
     defs::About,
     history_table::HistoryTable,
     input_handler::{CommandProxy, EngineCommand, InputHandler},
+    killer_moves_table::KillerMovesTable,
     search::SearchParameters,
     search_thread::SearchThread,
     ttable::{self, TranspositionTable},
@@ -34,6 +35,7 @@ pub struct ByteKnight {
     search_thread: SearchThread,
     transposition_table: Arc<Mutex<TranspositionTable>>,
     history_table: Arc<Mutex<HistoryTable>>,
+    killers_table: Arc<Mutex<KillerMovesTable>>,
     debug: bool,
 }
 
@@ -44,6 +46,7 @@ impl ByteKnight {
             search_thread: SearchThread::new(),
             transposition_table: Default::default(),
             history_table: Default::default(),
+            killers_table: Default::default(),
             debug: false,
         }
     }
@@ -55,6 +58,10 @@ impl ByteKnight {
 
         if let Ok(ht) = self.history_table.lock().as_mut() {
             ht.clear();
+        }
+
+        if let Ok(kt) = self.killers_table.lock().as_mut() {
+            kt.clear();
         }
     }
 
@@ -139,6 +146,7 @@ impl ByteKnight {
                             search_params,
                             self.transposition_table.clone(),
                             self.history_table.clone(),
+                            self.killers_table.clone(),
                         );
                     }
                     UciCommand::SetOption { name, value } => {

@@ -34,6 +34,7 @@ use crate::{
     evaluation::ByteKnightEvaluation,
     history_table::HistoryTable,
     inplace_incremental_sort::InplaceIncrementalSort,
+    killer_moves_table::{self, KillerMovesTable},
     move_order::MoveOrder,
     node_types::{NodeType, NonPvNode, PvNode, RootNode},
     score::{LargeScoreType, Score, ScoreType},
@@ -151,6 +152,7 @@ impl Display for SearchParameters {
 pub struct Search<'search_lifetime> {
     transposition_table: &'search_lifetime mut TranspositionTable,
     history_table: &'search_lifetime mut HistoryTable,
+    killer_moves_table: &'search_lifetime mut KillerMovesTable,
     move_gen: MoveGenerator,
     nodes: u64,
     parameters: SearchParameters,
@@ -163,10 +165,12 @@ impl<'a> Search<'a> {
         parameters: &SearchParameters,
         ttable: &'a mut TranspositionTable,
         history_table: &'a mut HistoryTable,
+        killer_moves_table: &'a mut KillerMovesTable,
     ) -> Self {
         Search {
             transposition_table: ttable,
             history_table,
+            killer_moves_table,
             move_gen: MoveGenerator::new(),
             nodes: 0,
             parameters: parameters.clone(),
@@ -372,10 +376,12 @@ impl<'a> Search<'a> {
         }
 
         MoveOrder::classify_all(
+            depth as u8,
             board.side_to_move(),
             move_list.as_slice(),
             &tt_move,
             self.history_table,
+            &self.killer_moves_table,
             &mut order_list,
         )
         .expect("Failed to classify moves.");
@@ -425,6 +431,8 @@ impl<'a> Search<'a> {
                 if alpha_use >= beta {
                     // update history table for quiets
                     if mv.is_quiet() {
+                        self.killer_moves_table.update(depth as u8, mv);
+
                         // calculate history bonus
                         let bonus = 300 * depth - 250;
                         self.history_table.update(
@@ -605,10 +613,12 @@ impl<'a> Search<'a> {
 
         // sort moves by MVV/LVA
         MoveOrder::classify_all(
+            0,
             board.side_to_move(),
             captures.as_slice(),
             &tt_move,
             self.history_table,
+            &self.killer_moves_table,
             &mut move_order_list,
         )
         .expect("Failed to classify moves.");
@@ -698,7 +708,13 @@ mod tests {
 
         let mut ttable = TranspositionTable::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut killer_moves_table = Default::default();
+        let mut search = Search::new(
+            &config,
+            &mut ttable,
+            &mut history_table,
+            &mut killer_moves_table,
+        );
         let res = search.search(&mut board.clone(), None);
         // b6a7
         assert_eq!(
@@ -718,7 +734,13 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut killer_moves_table = Default::default();
+        let mut search = Search::new(
+            &config,
+            &mut ttable,
+            &mut history_table,
+            &mut killer_moves_table,
+        );
         let res = search.search(&mut board, None);
 
         assert_eq!(res.best_move.unwrap().to_long_algebraic(), "b8a8")
@@ -732,7 +754,13 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut killer_moves_table = Default::default();
+        let mut search = Search::new(
+            &config,
+            &mut ttable,
+            &mut history_table,
+            &mut killer_moves_table,
+        );
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_none());
         assert_eq!(res.score, Score::DRAW);
@@ -750,7 +778,13 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut killer_moves_table = Default::default();
+        let mut search = Search::new(
+            &config,
+            &mut ttable,
+            &mut history_table,
+            &mut killer_moves_table,
+        );
         let res = search.search(&mut board, None);
 
         assert!(res.best_move.is_some());
@@ -767,7 +801,13 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut killer_moves_table = Default::default();
+        let mut search = Search::new(
+            &config,
+            &mut ttable,
+            &mut history_table,
+            &mut killer_moves_table,
+        );
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -784,7 +824,13 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut killer_moves_table = Default::default();
+        let mut search = Search::new(
+            &config,
+            &mut ttable,
+            &mut history_table,
+            &mut killer_moves_table,
+        );
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -844,7 +890,13 @@ mod tests {
 
             let mut ttable = Default::default();
             let mut history_table = Default::default();
-            let mut search = Search::new(&config, &mut ttable, &mut history_table);
+            let mut killer_moves_table = Default::default();
+            let mut search = Search::new(
+                &config,
+                &mut ttable,
+                &mut history_table,
+                &mut killer_moves_table,
+            );
             let res = search.search(&mut board, None);
 
             assert!(res.best_move.is_some());

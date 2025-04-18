@@ -28,6 +28,7 @@ use uci_parser::{UciMove, UciResponse};
 
 use crate::{
     history_table::HistoryTable,
+    killer_moves_table::KillerMovesTable,
     search::{Search, SearchParameters},
     ttable::TranspositionTable,
 };
@@ -60,6 +61,7 @@ pub(crate) enum SearchThreadValue {
         SearchParameters,
         Arc<Mutex<TranspositionTable>>,
         Arc<Mutex<HistoryTable>>,
+        Arc<Mutex<KillerMovesTable>>,
     ),
     Exit,
 }
@@ -89,13 +91,15 @@ impl SearchThread {
             'search_loop: loop {
                 let value = receiver.recv().unwrap();
                 match value {
-                    SearchThreadValue::Params(mut board, params, ttable, history) => {
+                    SearchThreadValue::Params(mut board, params, ttable, history, killers) => {
                         let mut tt = ttable.lock().unwrap();
                         let mut hist_table = history.lock().unwrap();
+                        let mut killers_table = killers.lock().unwrap();
                         let flag = stop_flag.clone();
                         is_searching.store(true, Ordering::Relaxed);
-                        let result = Search::new(&params, &mut tt, &mut hist_table)
-                            .search(&mut board, Some(flag));
+                        let result =
+                            Search::new(&params, &mut tt, &mut hist_table, &mut killers_table)
+                                .search(&mut board, Some(flag));
                         is_searching.store(false, Ordering::Relaxed);
                         let best_move = result.best_move;
                         let move_output = UciResponse::BestMove {
@@ -146,6 +150,7 @@ impl SearchThread {
         params: SearchParameters,
         ttable: Arc<Mutex<TranspositionTable>>,
         history_table: Arc<Mutex<HistoryTable>>,
+        killer_moves_table: Arc<Mutex<KillerMovesTable>>,
     ) {
         self.stop_search_flag.store(false, Ordering::Relaxed);
         self.sender
@@ -154,6 +159,7 @@ impl SearchThread {
                 params,
                 ttable,
                 history_table,
+                killer_moves_table,
             ))
             .unwrap();
     }
