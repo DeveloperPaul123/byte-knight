@@ -6,6 +6,7 @@ pub mod hce_values;
 pub mod history_table;
 mod inplace_incremental_sort;
 pub mod input_handler;
+pub mod killer_moves_table;
 mod move_order;
 pub(crate) mod node_types;
 pub mod phased_score;
