@@ -84,10 +84,7 @@ impl MoveOrder {
         }
 
         let score = history_table.get(stm, mv.piece(), mv.to());
-        if killers_table
-            .get(ply as u8)
-            .is_some_and(|killer| *mv == killer)
-        {
+        if killers_table.get(ply).is_some_and(|killer| *mv == killer) {
             return Self::Killer(score);
         }
 

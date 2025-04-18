@@ -34,7 +34,7 @@ use crate::{
     evaluation::ByteKnightEvaluation,
     history_table::HistoryTable,
     inplace_incremental_sort::InplaceIncrementalSort,
-    killer_moves_table::{self, KillerMovesTable},
+    killer_moves_table::KillerMovesTable,
     move_order::MoveOrder,
     node_types::{NodeType, NonPvNode, PvNode, RootNode},
     score::{LargeScoreType, Score, ScoreType},
@@ -381,7 +381,7 @@ impl<'a> Search<'a> {
             move_list.as_slice(),
             &tt_move,
             self.history_table,
-            &self.killer_moves_table,
+            self.killer_moves_table,
             &mut order_list,
         )
         .expect("Failed to classify moves.");
@@ -619,7 +619,7 @@ impl<'a> Search<'a> {
             captures.as_slice(),
             &tt_move,
             self.history_table,
-            &self.killer_moves_table,
+            self.killer_moves_table,
             &mut move_order_list,
         )
         .expect("Failed to classify moves.");
