@@ -9,18 +9,35 @@
  * Copyright (c) 2025 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
- * 
+ *
  */
 use crate::move_order::MoveOrder;
 use chess::moves::Move;
 
-pub(crate) struct IncrementalSort<'s> {
+///
+pub(crate) struct InplaceIncrementalSort<'s> {
     moves: &'s mut [Move],
     move_order: &'s mut [MoveOrder],
     current_index: usize,
 }
 
-impl<'s> IncrementalSort<'s> {
+/// Iterator type that yields moves in a sorted order based on their move orders.
+/// The moves are sorted in-place, meaning that the original array of moves is modified.
+/// The sorting is done in a way that the highest scoring moves are returned first.
+/// The iterator is stateful and keeps track of the current index in the moves array.
+/// The iterator is designed to be used in a loop, where each call to `next()`.
+impl<'s> InplaceIncrementalSort<'s> {
+    /// Creates a new `InplaceIncrementalSort` iterator.
+    ///
+    /// # Arguments
+    ///
+    /// * `moves` - A mutable slice of moves to be sorted.
+    /// * `order` - A mutable slice of move orders corresponding to the moves.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the lengths of `moves` and `order` are not equal.
+    ///
     pub(crate) fn new(moves: &'s mut [Move], order: &'s mut [MoveOrder]) -> Self {
         debug_assert!(
             moves.len() == order.len(),
@@ -68,7 +85,7 @@ impl<'s> IncrementalSort<'s> {
     }
 }
 
-impl<'s> Iterator for IncrementalSort<'s> {
+impl<'s> Iterator for InplaceIncrementalSort<'s> {
     type Item = Move;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -96,7 +113,7 @@ mod tests {
         pieces::Piece,
     };
 
-    use crate::{incremental_sort::IncrementalSort, move_order::MoveOrder};
+    use crate::{inplace_incremental_sort::InplaceIncrementalSort, move_order::MoveOrder};
 
     #[test]
     fn test_incremental_sort() {
@@ -144,7 +161,7 @@ mod tests {
 
         print_test_moves("before sorting", &move_list.as_slice(), &order);
 
-        let incremental_sort = IncrementalSort::new(move_list.as_mut_slice(), &mut order);
+        let incremental_sort = InplaceIncrementalSort::new(move_list.as_mut_slice(), &mut order);
 
         // check if has next
         assert!(incremental_sort.has_next());

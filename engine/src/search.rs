@@ -33,7 +33,7 @@ use crate::{
     defs::MAX_DEPTH,
     evaluation::ByteKnightEvaluation,
     history_table::HistoryTable,
-    incremental_sort::IncrementalSort,
+    inplace_incremental_sort::InplaceIncrementalSort,
     move_order::MoveOrder,
     node_types::{NodeType, NonPvNode, PvNode, RootNode},
     score::{LargeScoreType, Score, ScoreType},
@@ -381,7 +381,7 @@ impl<'a> Search<'a> {
         .expect("Failed to classify moves.");
 
         // sort moves by MVV/LVA
-        let move_iter = IncrementalSort::new(move_list.as_mut_slice(), &mut order_list);
+        let move_iter = InplaceIncrementalSort::new(move_list.as_mut_slice(), &mut order_list);
 
         // initialize best move and best score
         // we ensured we have moves earlier
@@ -627,7 +627,7 @@ impl<'a> Search<'a> {
         //     .collect::<Vec<OrderedMove>>();
 
         let captures_slice = captures.as_mut_slice();
-        let move_iter = IncrementalSort::new(captures_slice, &mut move_order_list);
+        let move_iter = InplaceIncrementalSort::new(captures_slice, &mut move_order_list);
 
         let mut best = standing_eval;
         let mut best_move = tt_move;
