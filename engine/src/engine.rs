@@ -95,7 +95,7 @@ impl ByteKnight {
                             UciOption::<&str, i32>::spin("Hash", 16, 1, 1024),
                             UciOption::<&str, i32>::spin("Threads", 1, 1, 1),
                         ];
-                        
+
                         for option in options {
                             writeln!(stdout, "{}", UciResponse::Option(option)).unwrap();
                         }
