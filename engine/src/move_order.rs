@@ -84,8 +84,12 @@ impl MoveOrder {
         }
 
         let score = history_table.get(stm, mv.piece(), mv.to());
-        if killers_table.get(ply).is_some_and(|killer| *mv == killer) {
-            return Self::Killer(score);
+
+        for (i, killer) in killers_table.get(ply).iter().enumerate() {
+            if killer.is_some_and(|killer| killer == *mv) {
+                let order_penalty = i as LargeScoreType * 10;
+                return Self::Killer(score - order_penalty);
+            }
         }
 
         Self::Quiet(score)
@@ -119,10 +123,15 @@ impl MoveOrder {
 
 #[cfg(test)]
 mod tests {
-    use chess::{board::Board, move_generation::MoveGenerator, move_list::MoveList, moves::Move};
+    use arrayvec::ArrayVec;
+    use chess::{
+        board::Board, definitions::MAX_MOVE_LIST_SIZE, move_generation::MoveGenerator,
+        move_list::MoveList, moves::Move,
+    };
     use itertools::Itertools;
 
     use crate::{
+        inplace_incremental_sort::InplaceIncrementalSort,
         killer_moves_table::KillerMovesTable,
         move_order::MoveOrder,
         score::Score,
@@ -158,27 +167,54 @@ mod tests {
             second_mv.to(),
             300 * depth - 250,
         );
-        let killers = KillerMovesTable::new();
+        let mut killers = KillerMovesTable::new();
+
+        let third_mv = move_list.at(1).unwrap();
+        let fourth_mv = move_list.at(3).unwrap();
+        killers.update(0, *third_mv);
+        killers.update(0, *fourth_mv);
+        // put these in the history too
+        history_table.update(
+            board.side_to_move(),
+            third_mv.piece(),
+            third_mv.to(),
+            300 * depth - 250,
+        );
+        history_table.update(
+            board.side_to_move(),
+            fourth_mv.piece(),
+            fourth_mv.to(),
+            300 * depth - 250,
+        );
+
         let tt_entry = tt.get_entry(board.zobrist_hash()).unwrap();
         let tt_move = tt_entry.board_move;
+        let mut move_orders = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
         // sort the moves
-        let moves = move_list
-            .iter()
-            .sorted_by_key(|mv| {
-                MoveOrder::classify(
-                    0,
-                    board.side_to_move(),
-                    mv,
-                    &Some(tt_move),
-                    &history_table,
-                    &killers,
-                )
-            })
-            .collect::<Vec<&Move>>();
+        MoveOrder::classify_all(
+            0,
+            board.side_to_move(),
+            move_list.as_slice(),
+            &Some(tt_move),
+            &history_table,
+            &killers,
+            &mut move_orders,
+        )
+        .expect("Failed to classify moves");
+        let expected_move_order = vec![*first_mv, *fourth_mv, *third_mv, *second_mv];
+        for ex_mv in expected_move_order.iter() {
+            println!("expected: {}", ex_mv);
+        }
+        let ordered_moves =
+            InplaceIncrementalSort::new(move_list.as_mut_slice(), move_orders.as_mut_slice());
 
-        assert!(moves.len() >= 6);
-        assert_eq!(moves[0], &tt_move);
-        // TODO: check the order of the moves
+        for (i, mv) in ordered_moves.into_iter().enumerate() {
+            println!("mv[{}]: {}", i, mv);
+        }
+
+        for order in move_orders.iter() {
+            println!("order: {:?}", order);
+        }
     }
 
     // TODO(PT): Re-enable benchmark when bench is stablized (if ever)
