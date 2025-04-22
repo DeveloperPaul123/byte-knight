@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Apr 17 2025
+ * Last Modified: Mon Apr 21 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -391,6 +391,7 @@ impl<'a> Search<'a> {
         let mut best_score = -Score::INF;
         let mut best_move = None;
 
+        let lmr_reduction = 1;
         // loop through all moves
         for (i, mv) in move_iter.into_iter().enumerate() {
             // make the move
@@ -400,8 +401,13 @@ impl<'a> Search<'a> {
                 if Node::PV && i == 0 {
                     -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use)
                 } else {
+                    let reduction = if (mv.is_quiet() &&  depth >= 3 && board.full_move_number() >= 3) {
+                        lmr_reduction + 1
+                    } else {
+                        1
+                    };
                     // search with a null window
-                    let temp_score = -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -alpha_use - 1, -alpha_use);
+                    let temp_score = -self.negamax::<NonPvNode>(board, depth - reduction, ply + 1, -alpha_use - 1, -alpha_use);
                     // if it fails, we need to do a full re-search
                     if temp_score > alpha_use && temp_score < beta {
                         -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -beta, -alpha_use)
