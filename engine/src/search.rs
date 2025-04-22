@@ -402,7 +402,7 @@ impl<'a> Search<'a> {
                     -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use)
                 } else {
                     let reduction = if (mv.is_quiet() &&  depth >= 3 && board.full_move_number() >= 3) {
-                        lmr_reduction + 1
+                        (lmr_reduction as f64 + (depth as f64).ln() + ((board.full_move_number() as f64)/2.0).ln()).floor() as i16
                     } else {
                         1
                     };
