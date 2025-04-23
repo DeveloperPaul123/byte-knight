@@ -12,6 +12,8 @@ pub mod phased_score;
 pub mod score;
 pub mod search;
 pub mod search_thread;
+mod table;
 pub mod traits;
 pub mod ttable;
 pub mod tuneable;
+mod lmr;
