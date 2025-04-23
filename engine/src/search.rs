@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Apr 21 2025
+ * Last Modified: Tue Apr 22 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -23,9 +23,15 @@ use std::{
 
 use arrayvec::ArrayVec;
 use chess::{
-    board::Board, definitions::MAX_MOVE_LIST_SIZE, move_generation::MoveGenerator,
-    move_list::MoveList, moves::Move, pieces::Piece,
+    board::Board,
+    definitions::{MAX_MOVE_LIST_SIZE, MAX_MOVES},
+    move_generation::MoveGenerator,
+    move_list::MoveList,
+    moves::Move,
+    pieces::Piece,
+    table::Table,
 };
+use itertools::Itertools;
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
 use crate::{
@@ -156,6 +162,7 @@ pub struct Search<'search_lifetime> {
     parameters: SearchParameters,
     eval: ByteKnightEvaluation,
     stop_flag: Option<Arc<AtomicBool>>,
+    lmr_table: Table<f64, 32_000>,
 }
 
 impl<'a> Search<'a> {
@@ -164,6 +171,22 @@ impl<'a> Search<'a> {
         ttable: &'a mut TranspositionTable,
         history_table: &'a mut HistoryTable,
     ) -> Self {
+        // init our LMR table as a 2D array of our LMR formula for depth and moves played
+        let mut table = Table::<f64, 32_000>::new(MAX_DEPTH as usize, MAX_MOVE_LIST_SIZE);
+        let lmr_formula = |depth: usize, move_count: usize| -> f64 {
+            let d_ln = (depth as f64).ln();
+            let mvs_ln = (move_count as f64).ln();
+            if d_ln.is_finite() && mvs_ln.is_finite() {
+                (d_ln * mvs_ln) / 3.0
+            } else {
+                0_f64
+            }
+        };
+        table.fill(lmr_formula);
+        let (min, max) = table.iter().minmax().into_option().unwrap();
+        println!("min/max {}/{}", min, max);
+        // println!("lmr\n{}", table);
+
         Search {
             transposition_table: ttable,
             history_table,
@@ -172,6 +195,7 @@ impl<'a> Search<'a> {
             parameters: parameters.clone(),
             eval: ByteKnightEvaluation::default(),
             stop_flag: None,
+            lmr_table: table,
         }
     }
 
@@ -401,8 +425,8 @@ impl<'a> Search<'a> {
                 if Node::PV && i == 0 {
                     -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use)
                 } else {
-                    let reduction = if (mv.is_quiet() &&  depth >= 3 && board.full_move_number() >= 3) {
-                        (lmr_reduction as f64 + (depth as f64).ln() + ((board.full_move_number() as f64)/2.0).ln()).floor() as i16
+                    let reduction = if mv.is_quiet() &&  depth >= 3 && board.full_move_number() >= 3 {
+                        (lmr_reduction as f64 + self.lmr_table.at(depth as usize, i).expect("LMR value uninitialized")).floor() as i16
                     } else {
                         1
                     };
