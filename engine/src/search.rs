@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Apr 22 2025
+ * Last Modified: Wed Apr 23 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -23,13 +23,8 @@ use std::{
 
 use arrayvec::ArrayVec;
 use chess::{
-    board::Board,
-    definitions::{MAX_MOVE_LIST_SIZE, MAX_MOVES},
-    move_generation::MoveGenerator,
-    move_list::MoveList,
-    moves::Move,
-    pieces::Piece,
-    table::Table,
+    board::Board, definitions::MAX_MOVE_LIST_SIZE, move_generation::MoveGenerator,
+    move_list::MoveList, moves::Move, pieces::Piece,
 };
 use itertools::Itertools;
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
@@ -40,14 +35,16 @@ use crate::{
     evaluation::ByteKnightEvaluation,
     history_table::HistoryTable,
     inplace_incremental_sort::InplaceIncrementalSort,
+    lmr,
     move_order::MoveOrder,
     node_types::{NodeType, NonPvNode, PvNode, RootNode},
     score::{LargeScoreType, Score, ScoreType},
+    table::Table,
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
     tuneable::{
-        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, MAX_RFP_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH,
-        RFP_MARGIN,
+        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_OFFSET, LMR_SCALING_FACTOR, MAX_RFP_DEPTH,
+        NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RFP_MARGIN,
     },
 };
 use ttable::TranspositionTable;
@@ -171,21 +168,9 @@ impl<'a> Search<'a> {
         ttable: &'a mut TranspositionTable,
         history_table: &'a mut HistoryTable,
     ) -> Self {
-        // init our LMR table as a 2D array of our LMR formula for depth and moves played
+        // Initialize our LMR table as a 2D array of our LMR formula for depth and moves played
         let mut table = Table::<f64, 32_000>::new(MAX_DEPTH as usize, MAX_MOVE_LIST_SIZE);
-        let lmr_formula = |depth: usize, move_count: usize| -> f64 {
-            let d_ln = (depth as f64).ln();
-            let mvs_ln = (move_count as f64).ln();
-            if d_ln.is_finite() && mvs_ln.is_finite() {
-                (d_ln * mvs_ln) / 3.0
-            } else {
-                0_f64
-            }
-        };
-        table.fill(lmr_formula);
-        let (min, max) = table.iter().minmax().into_option().unwrap();
-        println!("min/max {}/{}", min, max);
-        // println!("lmr\n{}", table);
+        table.fill(lmr::formula);
 
         Search {
             transposition_table: ttable,

@@ -4,7 +4,7 @@
  * Created Date: Friday, August 16th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Apr 22 2025
+ * Last Modified: Wed Apr 23 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -32,5 +32,4 @@ pub mod pieces;
 pub mod rank;
 pub mod side;
 pub mod square;
-pub mod table;
 pub mod zobrist;
