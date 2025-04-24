@@ -26,7 +26,6 @@ use chess::{
     board::Board, definitions::MAX_MOVE_LIST_SIZE, move_generation::MoveGenerator,
     move_list::MoveList, moves::Move, pieces::Piece,
 };
-use itertools::Itertools;
 use uci_parser::{UciInfo, UciResponse, UciSearchOptions};
 
 use crate::{
@@ -43,8 +42,8 @@ use crate::{
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
     tuneable::{
-        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMR_OFFSET, LMR_SCALING_FACTOR, MAX_RFP_DEPTH,
-        NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RFP_MARGIN,
+        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, MAX_RFP_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH,
+        RFP_MARGIN,
     },
 };
 use ttable::TranspositionTable;
