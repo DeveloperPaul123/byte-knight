@@ -875,7 +875,6 @@ impl MoveGenerator {
             let to_square = match us {
                 Side::White => from_square as u64 + direction,
                 Side::Black => from_square as u64 - direction,
-                Side::Both => panic!("Both side not allowed"),
             };
 
             // pawn non-capture moves
@@ -885,7 +884,6 @@ impl MoveGenerator {
                 let can_double_push = match us {
                     Side::White => square::is_square_on_rank(from_square, Rank::R2 as u8),
                     Side::Black => square::is_square_on_rank(from_square, Rank::R7 as u8),
-                    Side::Both => panic!("Both side not allowed"),
                 };
 
                 let double_push_square = if can_double_push {
@@ -898,7 +896,6 @@ impl MoveGenerator {
                             let (value, did_overflow) = to_square.overflowing_sub(direction);
                             if did_overflow { None } else { Some(value) }
                         }
-                        Side::Both => panic!("Both side not allowed"),
                     }
                 } else {
                     None

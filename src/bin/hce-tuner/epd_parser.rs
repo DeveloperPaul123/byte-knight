@@ -85,7 +85,6 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         match board.side_to_move() {
             Side::White => game_result,
             Side::Black => 1.0 - game_result,
-            Side::Both => panic!("Side to move cannot be both."),
         }
     };
 
@@ -225,7 +224,6 @@ mod tests {
             let val = match board.side_to_move() {
                 Side::White => position.evaluate(&params),
                 Side::Black => -position.evaluate(&params),
-                Side::Both => panic!("Side to move cannot be both."),
             };
 
             println!("{} // {}", expected_value, val);
@@ -265,7 +263,6 @@ mod tests {
             let expected_game_result: f64 = match board.side_to_move() {
                 Side::Black => 1.0 - EXPECTED_PARSED_GAME_RESULTS[i],
                 Side::White => EXPECTED_PARSED_GAME_RESULTS[i],
-                Side::Both => panic!("Side to move cannot be both."),
             };
 
             assert_eq!(position.game_result, expected_game_result);
@@ -276,7 +273,6 @@ mod tests {
             let val = match board.side_to_move() {
                 Side::White => position.evaluate(&params),
                 Side::Black => -position.evaluate(&params),
-                Side::Both => panic!("Side to move cannot be both."),
             };
             println!("{} // {}", expected_value, val);
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
@@ -315,7 +311,6 @@ mod tests {
             let val = match board.side_to_move() {
                 Side::White => position.evaluate(&params),
                 Side::Black => -position.evaluate(&params),
-                Side::Both => panic!("Side to move cannot be both."),
             };
             println!("{} // {}", expected_value, val);
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)

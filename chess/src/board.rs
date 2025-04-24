@@ -4,7 +4,7 @@
  * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Apr 14 2025
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -117,7 +117,6 @@ impl Board {
         match side {
             Side::White => self.initialize_white_bbs(),
             Side::Black => self.initialize_black_bbs(),
-            _ => panic!("Invalid side"),
         }
     }
 
@@ -325,7 +324,6 @@ impl Board {
 
     /// Returns the bitboard for a specific piece and side.
     pub fn piece_bitboard(&self, piece: Piece, side: Side) -> &Bitboard {
-        debug_assert!(side != Side::Both);
         &self.piece_bitboards[side as usize][piece as usize]
     }
 
@@ -418,7 +416,6 @@ impl Board {
         match side {
             Side::White => castling_rights & CastlingAvailability::WHITE_KINGSIDE != 0,
             Side::Black => castling_rights & CastlingAvailability::BLACK_KINGSIDE != 0,
-            Side::Both => panic!("Cannot check if both sides can castle kingside"),
         }
     }
 
@@ -436,7 +433,6 @@ impl Board {
         match side {
             Side::White => castling_rights & CastlingAvailability::WHITE_QUEENSIDE != 0,
             Side::Black => castling_rights & CastlingAvailability::BLACK_QUEENSIDE != 0,
-            Side::Both => panic!("Cannot check if both sides can castle queenside"),
         }
     }
 

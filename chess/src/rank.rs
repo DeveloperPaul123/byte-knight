@@ -4,7 +4,7 @@
  * Created Date: Monday, November 25th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Dec 18 2024
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -37,7 +37,6 @@ impl Rank {
         match side {
             Side::White => Rank::R8,
             Side::Black => Rank::R1,
-            _ => Rank::R1,
         }
     }
 
@@ -46,7 +45,6 @@ impl Rank {
         match side {
             Side::White => Rank::R2,
             Side::Black => Rank::R7,
-            _ => panic!("Invalid side"),
         }
     }
 
