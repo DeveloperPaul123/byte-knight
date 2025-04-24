@@ -34,10 +34,7 @@ impl<T, const CAP: usize> Table<T, CAP> {
             width * height,
             CAP
         );
-        assert!(
-            width > 0 && height > 0,
-            "Width and height must be greater than zero"
-        );
+
         Self {
             data: ArrayVec::<T, CAP>::new(),
             width,
@@ -85,7 +82,7 @@ impl<T, const CAP: usize> Table<T, CAP> {
     /// A slice of the row at the specified index.
     pub fn row(&self, row: usize) -> &[T] {
         let start_idx = self.index(row, 0);
-        let end_idx = self.index(row, self.cols() - 1);
+        let end_idx = self.index(row, self.cols());
         // note, this is an inclusive range
         self.data.get(start_idx..end_idx).expect("Invalid range")
     }
@@ -127,13 +124,15 @@ impl<T: Display, const CAP: usize> Display for Table<T, CAP> {
             let row_data = self.row(row);
             for (col, item) in row_data.iter().enumerate() {
                 output.push_str(format!("{}", item).as_str());
-                if col < self.cols() {
+                if col < self.cols() - 1 {
                     output.push(',');
                     output.push(' ');
                 }
             }
 
-            output.push('\n');
+            if row < self.rows() - 1 {
+                output.push('\n');
+            }
         }
 
         write!(f, "{}", output)
@@ -169,6 +168,14 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn insert_invalid_index() {
+        const SIZE: usize = 8;
+        let mut table = Table::<usize, SIZE>::new(8, 8);
+        table.insert(0, 0, 10);
+    }
+
+    #[test]
     fn index_calculation() {
         const SIZE: usize = 64;
         let table = Table::<usize, SIZE>::new(8, 8);
@@ -179,5 +186,39 @@ mod tests {
                 i += 1;
             }
         }
+    }
+
+    #[test]
+    fn read_row() {
+        const SIZE: usize = 64;
+        let mut table = Table::<usize, SIZE>::new(8, 8);
+        table.fill(|_, col| col);
+
+        for row in 0..table.rows() {
+            let row_data = table.row(row);
+            assert!(row_data.len() == table.cols());
+            for (i, item) in row_data.iter().enumerate() {
+                assert_eq!(*item, i);
+            }
+        }
+    }
+
+    #[test]
+    fn verify_formatting() {
+        const SIZE: usize = 64;
+        let mut table = Table::<usize, SIZE>::new(8, 8);
+        table.fill(|row, col| row * 8 + col);
+        let formatted = format!("{}", table);
+        println!("{}", formatted);
+        let expected = "0, 1, 2, 3, 4, 5, 6, 7\n\
+                        8, 9, 10, 11, 12, 13, 14, 15\n\
+                        16, 17, 18, 19, 20, 21, 22, 23\n\
+                        24, 25, 26, 27, 28, 29, 30, 31\n\
+                        32, 33, 34, 35, 36, 37, 38, 39\n\
+                        40, 41, 42, 43, 44, 45, 46, 47\n\
+                        48, 49, 50, 51, 52, 53, 54, 55\n\
+                        56, 57, 58, 59, 60, 61, 62, 63";
+
+        assert_eq!(formatted, expected);
     }
 }
