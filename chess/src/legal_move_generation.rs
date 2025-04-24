@@ -4,7 +4,7 @@
  * Created Date: Tuesday, November 26th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Nov 26 2024
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -180,7 +180,6 @@ impl MoveGenerator {
                     capture_mask |= en_passant_bb;
                 }
             }
-            Side::Both => panic!("Both side not allowed"),
         }
 
         (
@@ -268,7 +267,6 @@ impl MoveGenerator {
                 let captured_sq = match board.side_to_move() {
                     Side::White => sq - SOUTH as u8,
                     Side::Black => sq + NORTH as u8,
-                    Side::Both => panic!("Both side not allowed"),
                 };
                 occupancy &= !(Bitboard::from_square(captured_sq));
                 // get the squares attacked by the sliding pieces
@@ -337,7 +335,6 @@ impl MoveGenerator {
         let direction = match us {
             Side::White => NORTH as u8,
             Side::Black => SOUTH as u8,
-            Side::Both => panic!("Both side not allowed"),
         };
         let from_square = square.to_square_index();
         let to_square = match us {
@@ -355,7 +352,6 @@ impl MoveGenerator {
                     false => Some(result),
                 }
             }
-            Side::Both => panic!("Both side not allowed"),
         };
 
         let mut pushes: Bitboard = match to_square {
@@ -369,7 +365,6 @@ impl MoveGenerator {
         let can_double_push = match us {
             Side::White => square::is_square_on_rank(from_square, Rank::R2 as u8),
             Side::Black => square::is_square_on_rank(from_square, Rank::R7 as u8),
-            Side::Both => panic!("Both side not allowed"),
         };
 
         // if single push is obstructed, we can't double push
@@ -389,7 +384,6 @@ impl MoveGenerator {
                         false => Some(result),
                     }
                 }
-                Side::Both => panic!("Both side not allowed"),
             };
 
             if let Some(to) = double_push_sq {
@@ -559,7 +553,6 @@ impl MoveGenerator {
         let king_sq = match us {
             Side::White => Squares::E1,
             Side::Black => Squares::E8,
-            Side::Both => panic!("Both side not allowed"),
         };
 
         // sanity check
@@ -572,7 +565,6 @@ impl MoveGenerator {
             let king_side_rook = match us {
                 Side::White => Squares::H1,
                 Side::Black => Squares::H8,
-                Side::Both => panic!("Both side not allowed"),
             };
             // sanity check for the rook placement
             let maybe_rook = board.piece_on_square(king_side_rook);
@@ -588,13 +580,11 @@ impl MoveGenerator {
                 Side::Black => {
                     Bitboard::from_square(Squares::F8) | Bitboard::from_square(Squares::G8)
                 }
-                Side::Both => panic!("Both side not allowed"),
             };
 
             let king_side_target_sq = match us {
                 Side::White => Squares::G1,
                 Side::Black => Squares::G8,
-                Side::Both => panic!("Both side not allowed"),
             };
 
             let is_king_ray_empty = king_side_empty & occupancy == Bitboard::default();
@@ -608,7 +598,6 @@ impl MoveGenerator {
             let queen_side_rook = match us {
                 Side::White => Squares::A1,
                 Side::Black => Squares::A8,
-                Side::Both => panic!("Both side not allowed"),
             };
             // sanity check for the rook placement
             let maybe_rook = board.piece_on_square(queen_side_rook);
@@ -624,18 +613,15 @@ impl MoveGenerator {
                 Side::Black => {
                     Bitboard::from_square(Squares::C8) | Bitboard::from_square(Squares::D8)
                 }
-                Side::Both => panic!("Both side not allowed"),
             };
             let queen_side_empty = match us {
                 Side::White => queen_side_no_attack | Bitboard::from_square(Squares::B1),
                 Side::Black => queen_side_no_attack | Bitboard::from_square(Squares::B8),
-                Side::Both => panic!("Both side not allowed"),
             };
 
             let queen_side_target_sq = match us {
                 Side::White => Squares::C1,
                 Side::Black => Squares::C8,
-                Side::Both => panic!("Both side not allowed"),
             };
 
             let is_king_ray_empty = queen_side_empty & occupancy == Bitboard::default();
