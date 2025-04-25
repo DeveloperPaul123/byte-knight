@@ -4,6 +4,8 @@
 
 `byte-knight` is a UCI compliant chess engine written in Rust. It started as a port of the chess engine I submitted for Sebatian Lague's [Chess Engine Challenge](https://github.com/DeveloperPaul123/Leonidas) where it placed in the top 32 out of 600+ entries.
 
+You can challenge `byte-knight` yourself on [Lichess](https://lichess.org/@/byte-knight)!
+
 # Overview
 
 `byte-knight` is my first "real" Rust project. I'm a long time [C++ developer](https://github.com/DeveloperPaul123?tab=repositories&q=&type=source&language=c%2B%2B&sort=stargazers) and have been itching to learn Rust. I really enjoyed participating in the chess challenge a while back and thought that writing a new chess engine from scratch would be a good way to learn the language.
@@ -30,6 +32,7 @@ New features are tested via my [OpenBench](https://github.com/AndyGrant/OpenBenc
 - [Principle variation search](https://www.chessprogramming.org/Principal_Variation_Search)
 - [Aspiration windows](https://www.chessprogramming.org/Aspiration_Windows)
 - [Reverse futility pruning](https://www.chessprogramming.org/Reverse_Futility_Pruning)
+- [Late Move Reductions](https://www.chessprogramming.org/Late_Move_Reductions)
 - [Time control](https://www.chessprogramming.org/Time_Management)
   - Basic hard/soft limits
 - Move ordering
