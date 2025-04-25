@@ -4,7 +4,7 @@
  * Created Date: Thursday, April 24th 2025
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Apr 24 2025
+ * Last Modified: Fri Apr 25 2025
  * -----
  * Copyright (c) 2025 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -23,10 +23,10 @@ pub enum PieceCategory {
 
 impl PieceCategory {
     /// Returns the piece type of the piece category.
-    pub fn piece_type(&self) -> u8 {
+    pub fn piece_type(&self) -> Piece {
         match self {
-            PieceCategory::NonSlider(piece) => piece.piece_type() as u8,
-            PieceCategory::Slider(piece) => piece.piece_type() as u8,
+            PieceCategory::NonSlider(piece) => piece.piece_type(),
+            PieceCategory::Slider(piece) => piece.piece_type(),
         }
     }
 }
@@ -59,12 +59,16 @@ mod tests {
             let category = PieceCategory::from(slider);
             let slider_piece = SliderPiece::try_from(slider).unwrap();
             assert_eq!(category, PieceCategory::Slider(slider_piece));
+            assert_eq!(category.piece_type(), slider_piece.piece_type());
+            assert_eq!(category.piece_type(), slider);
         }
 
         for non_slider in non_sliders {
             let category = PieceCategory::from(non_slider);
             let non_slider_piece = NonSliderPiece::try_from(non_slider).unwrap();
             assert_eq!(category, PieceCategory::NonSlider(non_slider_piece));
+            assert_eq!(category.piece_type(), non_slider_piece.piece_type());
+            assert_eq!(category.piece_type(), non_slider);
         }
     }
 }
