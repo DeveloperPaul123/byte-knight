@@ -4,7 +4,7 @@
  * Created Date: Thursday, April 24th 2025
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Apr 24 2025
+ * Last Modified: Fri Apr 25 2025
  * -----
  * Copyright (c) 2025 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -16,7 +16,7 @@ use crate::pieces::Piece;
 use anyhow::Result;
 
 /// Enum to represent sliding pieces only.
-#[derive(Debug, PartialEq, Eq, PartialOrd)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Copy, Clone)]
 pub enum SliderPiece {
     Rook,
     Bishop,
