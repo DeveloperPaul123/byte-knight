@@ -4,7 +4,7 @@
  * Created Date: Monday, August 19th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Sun Apr 13 2025
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -100,8 +100,10 @@ impl Display for Move {
             self.to_long_algebraic(),
             self.move_descriptor() as u8,
             self.piece(),
-            self.captured_piece().unwrap_or(Piece::None),
-            self.promotion_piece().unwrap_or(Piece::None)
+            self.captured_piece()
+                .map_or("".to_string(), |p| p.to_string()),
+            self.promotion_piece()
+                .map_or("".to_string(), |p| p.to_string()),
         )
     }
 }
@@ -140,7 +142,7 @@ impl Move {
             None => 0,
             _ => 0,
         };
-        let move_info = ((captured_piece.unwrap_or(Piece::None) as u32)
+        let move_info = ((captured_piece.map_or(Piece::NONE, |cp| cp as u32))
             << MOVE_INFO_CAPTURED_PIECE_SHIFT)
             | ((piece as u32) << MOVE_INFO_PIECE_SHIFT)
             | (from_index << MOVE_INFO_FROM_SHIFT)
@@ -276,12 +278,12 @@ impl Move {
     pub fn is_quiet(&self) -> bool {
         let mv_desc = self.move_descriptor();
         mv_desc != MoveDescriptor::EnPassantCapture
-            && self.captured_piece_value() == Piece::None as u32
+            && self.captured_piece_value() == Piece::NONE
             && !self.is_promotion()
     }
 
     pub fn is_capture(&self) -> bool {
-        self.captured_piece_value() != Piece::None as u32 || self.is_en_passant_capture()
+        self.captured_piece_value() != Piece::NONE || self.is_en_passant_capture()
     }
 
     fn captured_piece_value(&self) -> u32 {
@@ -292,7 +294,7 @@ impl Move {
     pub fn captured_piece(&self) -> Option<Piece> {
         // shift right and then mask 3 bits
         let piece_value = self.captured_piece_value();
-        if piece_value == Piece::None as u32 {
+        if piece_value == Piece::NONE {
             return None;
         }
 
@@ -318,7 +320,7 @@ impl Move {
         let from = SQUARE_NAME[self.from() as usize];
         let to = SQUARE_NAME[self.to() as usize];
         // handle promotion too
-        let promotion_piece = self.promotion_piece().unwrap_or(Piece::None);
+        let promotion_piece = self.promotion_piece().map_or(Piece::NONE, |p| p as u32);
         format!(
             "{}{}{}",
             from,

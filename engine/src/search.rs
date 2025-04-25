@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Apr 23 2025
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -379,14 +379,15 @@ impl<'a> Search<'a> {
             };
         }
 
-        MoveOrder::classify_all(
+        let classify_res = MoveOrder::classify_all(
             board.side_to_move(),
             move_list.as_slice(),
             &tt_move,
             self.history_table,
             &mut order_list,
-        )
-        .expect("Failed to classify moves.");
+        );
+        // TODO(PT): Should we log a message to the CLI or a log?
+        assert!(classify_res.is_ok());
 
         // sort moves by MVV/LVA
         let move_iter = InplaceIncrementalSort::new(move_list.as_mut_slice(), &mut order_list);
@@ -410,7 +411,9 @@ impl<'a> Search<'a> {
                     -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use)
                 } else {
                     let reduction = if mv.is_quiet() &&  depth >= 3 && board.full_move_number() >= 3 {
-                        (lmr_reduction as f64 + self.lmr_table.at(depth as usize, i).expect("LMR value uninitialized")).floor() as i16
+                        let lmr_table_val = self.lmr_table.at(depth as usize, i);
+                        assert!(lmr_table_val.is_some(), "LMR table not initialized.");
+                        (lmr_reduction as f64 + lmr_table_val.unwrap()).floor() as i16
                     } else {
                         1
                     };
@@ -618,14 +621,15 @@ impl<'a> Search<'a> {
             };
 
         // sort moves by MVV/LVA
-        MoveOrder::classify_all(
+        let classify_res = MoveOrder::classify_all(
             board.side_to_move(),
             captures.as_slice(),
             &tt_move,
             self.history_table,
             &mut move_order_list,
-        )
-        .expect("Failed to classify moves.");
+        );
+        // TODO(PT): Should we log a message to the CLI or a log?
+        assert!(classify_res.is_ok());
 
         let captures_slice = captures.as_mut_slice();
         let move_iter = InplaceIncrementalSort::new(captures_slice, &mut move_order_list);
@@ -842,7 +846,7 @@ mod tests {
         let mut min_mvv_lva = LargeScoreType::MAX;
         let mut max_mvv_lva = LargeScoreType::MIN;
         for capturing in ALL_PIECES {
-            for captured in ALL_PIECES.iter().filter(|p| !p.is_king() && !p.is_none()) {
+            for captured in ALL_PIECES.iter().filter(|p| !p.is_king()) {
                 let mvv_lva = ByteKnightEvaluation::mvv_lva(*captured, capturing);
                 if mvv_lva < min_mvv_lva {
                     min_mvv_lva = mvv_lva;

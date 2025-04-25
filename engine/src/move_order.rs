@@ -54,6 +54,7 @@ impl Ord for MoveOrder {
 
 impl MoveOrder {
     /// Classify moves for move ordering  purposes.
+    #[allow(clippy::expect_used)]
     pub fn classify(
         stm: Side,
         mv: &Move,

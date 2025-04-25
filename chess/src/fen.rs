@@ -4,7 +4,7 @@
  * Created Date: Tuesday, November 26th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Mar 19 2025
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -270,7 +270,6 @@ pub(crate) fn active_color_to_fen(board: &Board) -> String {
     match board.side_to_move() {
         Side::White => "w".to_string(),
         Side::Black => "b".to_string(),
-        _ => panic!("Invalid side"),
     }
 }
 

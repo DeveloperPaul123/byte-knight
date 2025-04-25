@@ -8,7 +8,11 @@ make_dir := if os_family() == "windows" {
 }
 env_var_prefix := if os_family() == "windows" { "$env:" } else { "" }
 env_var_postfix := if os_family() == "windows" { ";" } else { "" }
-default: (build)
+default:
+    @just -l
+
+build-engine:
+    cargo rustc --release --bin byte-knight -- -C target-cpu=native
 
 [group('dev')]
 [doc('Build the project (default is debug)')]
@@ -64,9 +68,8 @@ lint:
 [group('chess')]
 [group('performance')]
 [doc('Run sarch benchmark - required before committing for OpenBench.')]
-search-bench:
+search-bench: build-engine
     echo "Running search benchmark..."
-    cargo rustc --release --bin byte-knight -- -C target-cpu=native
     ./target/release/byte-knight bench
 
 [group('chess')]
