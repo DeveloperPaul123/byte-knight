@@ -1,3 +1,7 @@
+#![deny(clippy::unused_result_ok)]
+#![deny(clippy::panic)]
+#![deny(clippy::expect_used)]
+
 pub mod aspiration_window;
 pub mod defs;
 pub mod engine;

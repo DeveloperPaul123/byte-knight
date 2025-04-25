@@ -23,9 +23,12 @@ use crate::{
     magics::{BISHOP_MAGIC_VALUES, MagicNumber, ROOK_MAGIC_VALUES},
     move_list::MoveList,
     moves::{Move, MoveDescriptor, MoveType, PromotionDescriptor},
+    non_slider_piece::NonSliderPiece,
+    piece_category::PieceCategory,
     pieces::{Piece, SQUARE_NAME},
     rank::Rank,
     side::Side,
+    slider_pieces::SliderPiece,
     square::{self, Square},
 };
 
@@ -221,6 +224,7 @@ impl MoveGenerator {
         self.initialize_magic_numbers(Piece::Bishop);
     }
 
+    #[allow(clippy::panic)]
     fn initialize_magic_numbers(&mut self, piece: Piece) {
         assert!(piece == Piece::Rook || piece == Piece::Bishop);
         let mut offset = 0;
@@ -596,14 +600,14 @@ impl MoveGenerator {
 
             while piece_bb.as_number() > 0 {
                 let from = bitboard_helpers::next_bit(&mut piece_bb) as u8;
-                let attacks_bb =
-                    if piece == &Piece::Bishop || piece == &Piece::Queen || piece == &Piece::Rook {
-                        self.get_slider_attacks(*piece, from, occupancy)
-                    } else if piece == &Piece::Pawn {
-                        self.pawn_attacks[side as usize][from as usize]
-                    } else {
-                        self.get_non_slider_attacks(*piece, from)
-                    };
+                let attacks_bb = match PieceCategory::from(*piece) {
+                    PieceCategory::NonSlider(non_slider) => {
+                        self.get_non_slider_attacks(side, non_slider, from)
+                    }
+                    PieceCategory::Slider(slider) => {
+                        self.get_slider_attacks(slider, from, occupancy)
+                    }
+                };
 
                 attacks |= attacks_bb;
             }
@@ -627,13 +631,20 @@ impl MoveGenerator {
         attacking_side: Side,
         occupancy: &Bitboard,
     ) -> Bitboard {
-        if piece.is_slider() {
-            self.get_slider_attacks(piece, square, occupancy)
-        } else if piece == Piece::Pawn {
-            self.pawn_attacks[Side::opposite(attacking_side) as usize][square as usize]
-        } else {
-            self.get_non_slider_attacks(piece, square)
+        match PieceCategory::from(piece) {
+            PieceCategory::Slider(slider) => self.get_slider_attacks(slider, square, occupancy),
+            PieceCategory::NonSlider(non_slider) => {
+                self.get_non_slider_attacks(Side::opposite(attacking_side), non_slider, square)
+            }
         }
+        // TODO(PT): Remove this old code
+        // if piece.is_slider() {
+        //     self.get_slider_attacks(piece, square, occupancy)
+        // } else if piece == Piece::Pawn {
+        //     self.pawn_attacks[Side::opposite(attacking_side) as usize][square as usize]
+        // } else {
+        //     self.get_non_slider_attacks(piece, square)
+        // }
     }
 
     /// Generates pseudo-legal moves for the current board state.
@@ -775,6 +786,11 @@ impl MoveGenerator {
         move_list: &mut MoveList,
         move_type: &MoveType,
     ) {
+        debug_assert!(
+            piece != Piece::Pawn,
+            "Pawn move enumeration is handle separately."
+        );
+
         let us = board.side_to_move();
         let them = Side::opposite(us);
         let our_pieces = board.pieces(us);
@@ -786,12 +802,13 @@ impl MoveGenerator {
         // loop through all the pieces of the given type
         while piece_bb.as_number() > 0 {
             let from_square = bitboard_helpers::next_bit(&mut piece_bb) as u8;
-            let attack_bb = match piece {
-                Piece::King | Piece::Knight => self.get_non_slider_attacks(piece, from_square),
-                Piece::Rook | Piece::Bishop | Piece::Queen => {
-                    self.get_slider_attacks(piece, from_square, &occupancy)
+            let attack_bb = match PieceCategory::from(piece) {
+                PieceCategory::Slider(slider) => {
+                    self.get_slider_attacks(slider, from_square, &occupancy)
                 }
-                _ => panic!("Piece must be non-slider and not pawn"),
+                PieceCategory::NonSlider(non_slider) => {
+                    self.get_non_slider_attacks(us, non_slider, from_square)
+                }
             };
 
             let bb_moves = match move_type {
@@ -810,42 +827,41 @@ impl MoveGenerator {
         }
     }
 
-    fn get_non_slider_attacks(&self, piece: Piece, from_square: u8) -> Bitboard {
-        assert!(
-            piece == Piece::King || piece == Piece::Knight,
-            "Piece must be non-slider and not pawn"
-        );
-
-        let attack_table = match piece {
-            Piece::King => self.king_attacks,
-            Piece::Knight => self.knight_attacks,
-            _ => panic!("Piece must be non-slider and not pawn"),
-        };
-
-        attack_table[from_square as usize]
+    fn get_non_slider_attacks(
+        &self,
+        attacking_side: Side,
+        piece: NonSliderPiece,
+        from_square: u8,
+    ) -> Bitboard {
+        match piece {
+            NonSliderPiece::King => self.king_attacks[from_square as usize],
+            NonSliderPiece::Knight => self.knight_attacks[from_square as usize],
+            NonSliderPiece::Pawn => {
+                self.pawn_attacks[attacking_side as usize][from_square as usize]
+            }
+        }
     }
 
-    fn get_slider_attacks(&self, piece: Piece, from_square: u8, occupancy: &Bitboard) -> Bitboard {
-        assert!(
-            piece == Piece::Rook || piece == Piece::Bishop || piece == Piece::Queen,
-            "Piece must be a slider"
-        );
-
+    fn get_slider_attacks(
+        &self,
+        piece: SliderPiece,
+        from_square: u8,
+        occupancy: &Bitboard,
+    ) -> Bitboard {
         match piece {
-            Piece::Rook => {
+            SliderPiece::Rook => {
                 let index = self.rook_magics[from_square as usize].index(*occupancy);
                 self.rook_attacks[index]
             }
-            Piece::Bishop => {
+            SliderPiece::Bishop => {
                 let index = self.bishop_magics[from_square as usize].index(*occupancy);
                 self.bishop_attacks[index]
             }
-            Piece::Queen => {
+            SliderPiece::Queen => {
                 let rook_index = self.rook_magics[from_square as usize].index(*occupancy);
                 let bishop_index = self.bishop_magics[from_square as usize].index(*occupancy);
                 self.rook_attacks[rook_index] ^ self.bishop_attacks[bishop_index]
             }
-            _ => panic!("Piece must be a slider"),
         }
     }
 
@@ -955,6 +971,7 @@ impl MoveGenerator {
     /// - piece - The piece that is moving
     /// - board - The current board state
     /// - move_list - The list of moves to append to
+    #[allow(clippy::panic)]
     pub(crate) fn enumerate_moves(
         &self,
         bitboard: &Bitboard,
@@ -1737,7 +1754,8 @@ mod tests {
         let queen_bb = bishop_bb | rook_bb;
 
         let move_gen = MoveGenerator::new();
-        let queen_attacks = move_gen.get_slider_attacks(Piece::Queen, square, &Bitboard::default());
+        let queen_attacks =
+            move_gen.get_slider_attacks(SliderPiece::Queen, square, &Bitboard::default());
         println!("queen attacks: \n{}", queen_attacks);
         println!("queen bb: \n{}", queen_bb);
 

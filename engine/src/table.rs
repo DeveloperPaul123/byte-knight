@@ -80,11 +80,11 @@ impl<T, const CAP: usize> Table<T, CAP> {
     /// # Returns
     ///
     /// A slice of the row at the specified index.
-    pub fn row(&self, row: usize) -> &[T] {
+    pub fn row(&self, row: usize) -> Option<&[T]> {
         let start_idx = self.index(row, 0);
         let end_idx = self.index(row, self.cols());
         // note, this is an inclusive range
-        self.data.get(start_idx..end_idx).expect("Invalid range")
+        self.data.get(start_idx..end_idx)
     }
 
     /// Returns the number of rows in the table; a.k.a, the height.
@@ -121,7 +121,7 @@ impl<T: Display, const CAP: usize> Display for Table<T, CAP> {
         let mut output = "".to_string();
 
         for row in 0..self.rows() {
-            let row_data = self.row(row);
+            let row_data = self.row(row).unwrap();
             for (col, item) in row_data.iter().enumerate() {
                 output.push_str(format!("{}", item).as_str());
                 if col < self.cols() - 1 {
@@ -195,7 +195,7 @@ mod tests {
         table.fill(|_, col| col);
 
         for row in 0..table.rows() {
-            let row_data = table.row(row);
+            let row_data = table.row(row).unwrap();
             assert!(row_data.len() == table.cols());
             for (i, item) in row_data.iter().enumerate() {
                 assert_eq!(*item, i);

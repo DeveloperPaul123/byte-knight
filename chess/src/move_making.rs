@@ -174,6 +174,7 @@ impl Board {
 
     /// Make a move on the board without checking if it is legal.
     /// This should be used with legal move generation.
+    #[allow(clippy::panic)]
     pub fn make_move_unchecked(&mut self, mv: &Move) -> Result<()> {
         // validate pre-conditions first before even bothering to go further
         self.check_move_preconditions(mv)?;
@@ -370,6 +371,7 @@ impl Board {
     /// no moves have been made on the board.
     #[cfg_attr(not(debug_assertions), inline(always))]
     #[cfg_attr(debug_assertions, inline(never))]
+    #[allow(clippy::panic)]
     pub fn unmake_move(&mut self) -> Result<()> {
         let maybe_state = self.history.pop();
         if maybe_state.is_none() {
