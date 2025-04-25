@@ -4,7 +4,7 @@
  * Created Date: Monday, November 25th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Apr 17 2025
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -51,10 +51,7 @@ impl MoveList {
     /// Push a move to the list. If the list is full, the program will panic.
     /// This is done to avoid the overhead of returning a Result.
     pub fn push(&mut self, mv: Move) {
-        let overflow = self.moves.try_push(mv);
-        if overflow.is_err() {
-            panic!("MoveList is full");
-        }
+        self.moves.push(mv);
     }
 
     /// Get an iterator to the moves in the list.
@@ -114,7 +111,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "MoveList is full"]
+    #[should_panic]
     fn push_with_overflow() {
         let mut move_list = MoveList::new();
         assert_eq!(move_list.len(), 0);
