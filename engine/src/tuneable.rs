@@ -4,7 +4,7 @@
  * Created Date: Wednesday, December 11th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Apr 23 2025
+ * Last Modified: Fri Apr 25 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -27,4 +27,4 @@ pub(crate) const NMP_MIN_DEPTH: ScoreType = 3;
 pub(crate) const NMP_DEPTH_REDUCTION: ScoreType = 2;
 
 pub(crate) const LMR_OFFSET: f64 = 0.2;
-pub(crate) const LMR_SCALING_FACTOR: f64 = 3.0;
+pub(crate) const LMR_SCALING_FACTOR: f64 = 2.0;
