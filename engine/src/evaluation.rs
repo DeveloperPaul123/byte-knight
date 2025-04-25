@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Apr 17 2025
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -43,7 +43,7 @@ impl<Values: EvalValues> Evaluation<Values> {
     }
 
     pub(crate) fn mvv_lva(captured: Piece, capturing: Piece) -> LargeScoreType {
-        let can_capture = captured != Piece::King && captured != Piece::None;
+        let can_capture = captured != Piece::King;
         ((can_capture as LargeScoreType)
             * (25 * Self::piece_value(captured) - Self::piece_value(capturing)))
             << 16
@@ -57,7 +57,6 @@ impl<Values: EvalValues> Evaluation<Values> {
             Piece::Bishop => 3,
             Piece::Knight => 2,
             Piece::Pawn => 1,
-            Piece::None => 0,
         }
     }
 }
