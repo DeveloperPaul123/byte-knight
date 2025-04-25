@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Wed Apr 23 2025
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -842,7 +842,7 @@ mod tests {
         let mut min_mvv_lva = LargeScoreType::MAX;
         let mut max_mvv_lva = LargeScoreType::MIN;
         for capturing in ALL_PIECES {
-            for captured in ALL_PIECES.iter().filter(|p| !p.is_king() && !p.is_none()) {
+            for captured in ALL_PIECES.iter().filter(|p| !p.is_king()) {
                 let mvv_lva = ByteKnightEvaluation::mvv_lva(*captured, capturing);
                 if mvv_lva < min_mvv_lva {
                     min_mvv_lva = mvv_lva;
