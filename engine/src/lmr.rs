@@ -24,6 +24,7 @@ pub(crate) fn formula(depth: usize, move_count: usize) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    const ZERO: f64 = 0.0;
 
     #[test]
     fn test_lmr_formula() {
@@ -31,7 +32,7 @@ mod tests {
         let move_count = 10;
         let result = formula(depth, move_count);
         assert!(result.is_finite());
-        assert!(result > 0.0);
+        assert!(result > ZERO);
     }
 
     #[test]
@@ -39,7 +40,7 @@ mod tests {
         let depth = 0;
         let move_count = 10;
         let result = formula(depth, move_count);
-        assert_eq!(result, LMR_OFFSET);
+        assert_eq!(result, ZERO);
     }
 
     #[test]
@@ -47,6 +48,6 @@ mod tests {
         let depth = 5;
         let move_count = 0;
         let result = formula(depth, move_count);
-        assert_eq!(result, LMR_OFFSET);
+        assert_eq!(result, ZERO);
     }
 }

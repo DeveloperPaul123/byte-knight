@@ -26,5 +26,5 @@ pub(crate) const IIR_DEPTH_REDUCTION: ScoreType = 1;
 pub(crate) const NMP_MIN_DEPTH: ScoreType = 3;
 pub(crate) const NMP_DEPTH_REDUCTION: ScoreType = 2;
 
-pub(crate) const LMR_OFFSET: f64 = 0.0;
+pub(crate) const LMR_OFFSET: f64 = 0.2;
 pub(crate) const LMR_SCALING_FACTOR: f64 = 3.0;
