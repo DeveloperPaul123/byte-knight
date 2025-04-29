@@ -4,7 +4,7 @@
  * Created Date: Monday, November 25th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Dec 17 2024
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -54,7 +54,7 @@ pub const ALL_PIECES: [Piece; 6] = [
 /// code to index into arrays and tables. Changing the value of a piece
 /// would likely be catastrophic and result in a number of bugs and possibly crashes.
 #[repr(u8)]
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Piece {
     King = 0,
     Queen = 1,
@@ -62,11 +62,11 @@ pub enum Piece {
     Bishop = 3,
     Knight = 4,
     Pawn = 5,
-    #[default]
-    None = 6,
 }
 
 impl Piece {
+    pub const NONE: u32 = 6;
+
     /// Returns `true` if the piece is [`KING`].
     ///
     /// [`KING`]: Piece::KING
@@ -115,14 +115,6 @@ impl Piece {
         matches!(self, Self::Pawn)
     }
 
-    /// Returns `true` if the piece is [`NONE`].
-    ///
-    /// [`NONE`]: Piece::NONE
-    #[must_use]
-    pub fn is_none(&self) -> bool {
-        matches!(self, Self::None)
-    }
-
     /// Returns `true` if the piece is a slider piece.
     ///
     /// A slider piece is a piece that can move any number of squares in a straight line.
@@ -136,7 +128,7 @@ impl Piece {
         PIECE_SHORT_NAMES[*self as usize].to_ascii_lowercase()
     }
 
-    /// Returns an iterator over all the pieces except [`Piece::None`].
+    /// Returns an iterator over all the pieces.
     pub fn iter() -> impl Iterator<Item = Piece> {
         ALL_PIECES.iter().copied()
     }
@@ -151,7 +143,6 @@ impl Display for Piece {
             Piece::Bishop => write!(f, "Bishop"),
             Piece::Knight => write!(f, "Knight"),
             Piece::Pawn => write!(f, "Pawn"),
-            Piece::None => write!(f, "None"),
         }
     }
 }
@@ -166,7 +157,6 @@ impl TryFrom<u8> for Piece {
             3 => Ok(Piece::Bishop),
             4 => Ok(Piece::Knight),
             5 => Ok(Piece::Pawn),
-            6 => Ok(Piece::None),
             _ => Err(()),
         }
     }
@@ -192,12 +182,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn piece_default() {
-        let piece: Piece = Default::default();
-        assert_eq!(piece, Piece::None);
-    }
-
-    #[test]
     fn piece_from_u8() {
         assert_eq!(Piece::try_from(0), Ok(Piece::King));
         assert_eq!(Piece::try_from(1), Ok(Piece::Queen));
@@ -205,7 +189,6 @@ mod tests {
         assert_eq!(Piece::try_from(3), Ok(Piece::Bishop));
         assert_eq!(Piece::try_from(4), Ok(Piece::Knight));
         assert_eq!(Piece::try_from(5), Ok(Piece::Pawn));
-        assert_eq!(Piece::try_from(6), Ok(Piece::None));
         assert_eq!(Piece::try_from(7), Err(()));
     }
 
@@ -228,7 +211,6 @@ mod tests {
         assert_eq!(Piece::Bishop.to_string(), "Bishop");
         assert_eq!(Piece::Knight.to_string(), "Knight");
         assert_eq!(Piece::Pawn.to_string(), "Pawn");
-        assert_eq!(Piece::None.to_string(), "None");
     }
 
     #[test]
@@ -239,7 +221,6 @@ mod tests {
         assert_eq!(Piece::Bishop.as_char(), 'b');
         assert_eq!(Piece::Knight.as_char(), 'n');
         assert_eq!(Piece::Pawn.as_char(), 'p');
-        assert_eq!(Piece::None.as_char(), ' ');
     }
 
     #[test]
@@ -259,7 +240,6 @@ mod tests {
         assert!(!Piece::King.is_bishop());
         assert!(!Piece::King.is_knight());
         assert!(!Piece::King.is_pawn());
-        assert!(!Piece::King.is_none());
 
         assert!(Piece::Queen.is_queen());
         assert!(!Piece::Queen.is_king());
@@ -267,7 +247,6 @@ mod tests {
         assert!(!Piece::Queen.is_bishop());
         assert!(!Piece::Queen.is_knight());
         assert!(!Piece::Queen.is_pawn());
-        assert!(!Piece::Queen.is_none());
 
         assert!(Piece::Bishop.is_bishop());
         assert!(!Piece::Bishop.is_king());
@@ -275,7 +254,6 @@ mod tests {
         assert!(!Piece::Bishop.is_rook());
         assert!(!Piece::Bishop.is_knight());
         assert!(!Piece::Bishop.is_pawn());
-        assert!(!Piece::Bishop.is_none());
 
         assert!(Piece::Knight.is_knight());
         assert!(!Piece::Knight.is_king());
@@ -283,7 +261,6 @@ mod tests {
         assert!(!Piece::Knight.is_rook());
         assert!(!Piece::Knight.is_bishop());
         assert!(!Piece::Knight.is_pawn());
-        assert!(!Piece::Knight.is_none());
 
         assert!(Piece::Rook.is_rook());
         assert!(!Piece::Rook.is_king());
@@ -291,7 +268,6 @@ mod tests {
         assert!(!Piece::Rook.is_bishop());
         assert!(!Piece::Rook.is_knight());
         assert!(!Piece::Rook.is_pawn());
-        assert!(!Piece::Rook.is_none());
 
         assert!(Piece::Pawn.is_pawn());
         assert!(!Piece::Pawn.is_king());
@@ -299,6 +275,5 @@ mod tests {
         assert!(!Piece::Pawn.is_rook());
         assert!(!Piece::Pawn.is_bishop());
         assert!(!Piece::Pawn.is_knight());
-        assert!(!Piece::Pawn.is_none());
     }
 }

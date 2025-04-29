@@ -24,7 +24,6 @@ fn piece_value(piece: Piece) -> f64 {
         Piece::Bishop => 300.,
         Piece::Knight => 200.,
         Piece::Pawn => 100.,
-        Piece::None => 0.,
     }
 }
 

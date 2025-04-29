@@ -1,3 +1,7 @@
+#![deny(clippy::unused_result_ok)]
+#![deny(clippy::panic)]
+#![deny(clippy::expect_used)]
+
 pub mod aspiration_window;
 pub mod defs;
 pub mod engine;
@@ -7,12 +11,14 @@ pub mod history_table;
 mod inplace_incremental_sort;
 pub mod input_handler;
 pub mod killer_moves_table;
+mod lmr;
 mod move_order;
 pub(crate) mod node_types;
 pub mod phased_score;
 pub mod score;
 pub mod search;
 pub mod search_thread;
+pub(crate) mod table;
 pub mod traits;
 pub mod ttable;
 pub mod tuneable;

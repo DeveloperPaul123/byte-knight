@@ -4,7 +4,7 @@
  * Created Date: Friday, August 23rd 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Mon Apr 14 2025
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -134,7 +134,7 @@ impl Board {
             let captured_piece = mv.captured_piece().unwrap();
             let piece_and_side = self.piece_on_square(to);
             if piece_and_side.is_none() {
-                bail!("No piece on square");
+                bail!("No piece on square for move {}", mv.to_long_algebraic());
             }
 
             let (piece_on_square, side) = piece_and_side.unwrap();
@@ -174,6 +174,7 @@ impl Board {
 
     /// Make a move on the board without checking if it is legal.
     /// This should be used with legal move generation.
+    #[allow(clippy::panic)]
     pub fn make_move_unchecked(&mut self, mv: &Move) -> Result<()> {
         // validate pre-conditions first before even bothering to go further
         self.check_move_preconditions(mv)?;
@@ -370,6 +371,7 @@ impl Board {
     /// no moves have been made on the board.
     #[cfg_attr(not(debug_assertions), inline(always))]
     #[cfg_attr(debug_assertions, inline(never))]
+    #[allow(clippy::panic)]
     pub fn unmake_move(&mut self) -> Result<()> {
         let maybe_state = self.history.pop();
         if maybe_state.is_none() {
@@ -546,7 +548,6 @@ fn get_castling_right_to_remove(us: Side, from: u8) -> u8 {
             }
             _ => 0,
         },
-        _ => panic!("Invalid piece"),
     }
 }
 

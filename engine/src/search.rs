@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Fri Apr 18 2025
+ * Last Modified: Thu Apr 24 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -34,10 +34,12 @@ use crate::{
     evaluation::ByteKnightEvaluation,
     history_table::HistoryTable,
     inplace_incremental_sort::InplaceIncrementalSort,
+    lmr,
     killer_moves_table::KillerMovesTable,
     move_order::MoveOrder,
     node_types::{NodeType, NonPvNode, PvNode, RootNode},
     score::{LargeScoreType, Score, ScoreType},
+    table::Table,
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
     tuneable::{
@@ -158,6 +160,7 @@ pub struct Search<'search_lifetime> {
     parameters: SearchParameters,
     eval: ByteKnightEvaluation,
     stop_flag: Option<Arc<AtomicBool>>,
+    lmr_table: Table<f64, 32_000>,
 }
 
 impl<'a> Search<'a> {
@@ -167,6 +170,10 @@ impl<'a> Search<'a> {
         history_table: &'a mut HistoryTable,
         killer_moves_table: &'a mut KillerMovesTable,
     ) -> Self {
+        // Initialize our LMR table as a 2D array of our LMR formula for depth and moves played
+        let mut table = Table::<f64, 32_000>::new(MAX_DEPTH as usize, MAX_MOVE_LIST_SIZE);
+        table.fill(lmr::formula);
+
         Search {
             transposition_table: ttable,
             history_table,
@@ -176,6 +183,7 @@ impl<'a> Search<'a> {
             parameters: parameters.clone(),
             eval: ByteKnightEvaluation::default(),
             stop_flag: None,
+            lmr_table: table,
         }
     }
 
@@ -375,7 +383,7 @@ impl<'a> Search<'a> {
             };
         }
 
-        MoveOrder::classify_all(
+        let classify_res = MoveOrder::classify_all(
             ply as u8,
             board.side_to_move(),
             move_list.as_slice(),
@@ -383,8 +391,9 @@ impl<'a> Search<'a> {
             self.history_table,
             self.killer_moves_table,
             &mut order_list,
-        )
-        .expect("Failed to classify moves.");
+        );
+        // TODO(PT): Should we log a message to the CLI or a log?
+        assert!(classify_res.is_ok());
 
         // sort moves by MVV/LVA
         let move_iter = InplaceIncrementalSort::new(move_list.as_mut_slice(), &mut order_list);
@@ -397,6 +406,7 @@ impl<'a> Search<'a> {
         let mut best_score = -Score::INF;
         let mut best_move = None;
 
+        let lmr_reduction = 1;
         // loop through all moves
         for (i, mv) in move_iter.into_iter().enumerate() {
             // make the move
@@ -406,8 +416,15 @@ impl<'a> Search<'a> {
                 if Node::PV && i == 0 {
                     -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use)
                 } else {
+                    let reduction = if mv.is_quiet() &&  depth >= 3 && board.full_move_number() >= 3 {
+                        let lmr_table_val = self.lmr_table.at(depth as usize, i);
+                        assert!(lmr_table_val.is_some(), "LMR table not initialized.");
+                        (lmr_reduction as f64 + lmr_table_val.unwrap()).floor() as i16
+                    } else {
+                        1
+                    };
                     // search with a null window
-                    let temp_score = -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -alpha_use - 1, -alpha_use);
+                    let temp_score = -self.negamax::<NonPvNode>(board, depth - reduction, ply + 1, -alpha_use - 1, -alpha_use);
                     // if it fails, we need to do a full re-search
                     if temp_score > alpha_use && temp_score < beta {
                         -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -beta, -alpha_use)
@@ -613,7 +630,7 @@ impl<'a> Search<'a> {
             };
 
         // sort moves by MVV/LVA
-        MoveOrder::classify_all(
+        let classify_res = MoveOrder::classify_all(
             ply as u8,
             board.side_to_move(),
             captures.as_slice(),
@@ -621,8 +638,9 @@ impl<'a> Search<'a> {
             self.history_table,
             self.killer_moves_table,
             &mut move_order_list,
-        )
-        .expect("Failed to classify moves.");
+        );
+        // TODO(PT): Should we log a message to the CLI or a log?
+        assert!(classify_res.is_ok());
 
         let captures_slice = captures.as_mut_slice();
         let move_iter = InplaceIncrementalSort::new(captures_slice, &mut move_order_list);
@@ -875,7 +893,7 @@ mod tests {
         let mut min_mvv_lva = LargeScoreType::MAX;
         let mut max_mvv_lva = LargeScoreType::MIN;
         for capturing in ALL_PIECES {
-            for captured in ALL_PIECES.iter().filter(|p| !p.is_king() && !p.is_none()) {
+            for captured in ALL_PIECES.iter().filter(|p| !p.is_king()) {
                 let mvv_lva = ByteKnightEvaluation::mvv_lva(*captured, capturing);
                 if mvv_lva < min_mvv_lva {
                     min_mvv_lva = mvv_lva;
