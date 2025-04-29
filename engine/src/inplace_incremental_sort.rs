@@ -4,7 +4,7 @@
  * Created Date: Thursday, April 17th 2025
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Apr 17 2025
+ * Last Modified: Mon Apr 28 2025
  * -----
  * Copyright (c) 2025 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -35,7 +35,7 @@ impl<'s> InplaceIncrementalSort<'s> {
     ///
     /// # Panics
     ///
-    /// Panics if the lengths of `moves` and `order` are not equal.
+    /// If the lengths of `moves` and `order` are not equal.
     ///
     pub(crate) fn new(moves: &'s mut [Move], order: &'s mut [MoveOrder]) -> Self {
         debug_assert!(
@@ -141,9 +141,9 @@ mod tests {
             MoveOrder::Quiet(354),
             MoveOrder::Quiet(64),
             MoveOrder::Quiet(79),
-            MoveOrder::Quiet(484),
+            MoveOrder::Killer(484),
             MoveOrder::Quiet(769),
-            MoveOrder::Quiet(13),
+            MoveOrder::Killer(13),
         ];
 
         let print_test_moves = |msg: &str, mvs: &[Move], order: &[MoveOrder]| {
@@ -166,8 +166,8 @@ mod tests {
         assert!(incremental_sort.has_next());
 
         let expected_moves = vec![
-            "g1h3", "g1f3", "b1c3", "c2c4", "c2c3", "e2e4", "h2h3", "g2g4", "f2f3", "b2b4", "g2g3",
-            "f2f4", "e2e3", "d2d4", "b2b3", "a2a4", "a2a3", "b1a3", "h2h4", "d2d3",
+            "g1h3", "g1f3", "b1c3", "c2c4", "c2c3", "g2g4", "h2h4", "e2e4", "h2h3", "f2f3", "b2b4",
+            "g2g3", "f2f4", "e2e3", "d2d4", "b2b3", "a2a4", "a2a3", "b1a3", "d2d3",
         ];
 
         // loop through the iterator

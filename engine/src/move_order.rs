@@ -65,6 +65,7 @@ impl Ord for MoveOrder {
 
 impl MoveOrder {
     /// Classify moves for move ordering  purposes.
+    #[allow(clippy::expect_used)]
     pub fn classify(
         ply: u8,
         stm: Side,
@@ -190,7 +191,7 @@ mod tests {
         let tt_move = tt_entry.board_move;
         let mut move_orders = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
         // sort the moves
-        MoveOrder::classify_all(
+        let classify_res = MoveOrder::classify_all(
             0,
             board.side_to_move(),
             move_list.as_slice(),
@@ -198,8 +199,9 @@ mod tests {
             &history_table,
             &killers,
             &mut move_orders,
-        )
-        .expect("Failed to classify moves");
+        );
+        assert!(classify_res.is_ok(), "Failed to classify moves");
+
         let expected_move_order = [*first_mv, *fourth_mv, *third_mv, *second_mv];
         for ex_mv in expected_move_order.iter() {
             println!("expected: {}", ex_mv);
