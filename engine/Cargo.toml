@@ -12,6 +12,7 @@ uci-parser = { version = "1.1.0", features = [
     "parse-go-perft",
     "parse-position-kiwipete",
     "types",
+    "clamp-negatives",
 ] }
 rand = { version = "0.9.0", features = ["small_rng"] }
 arrayvec = "0.7.6"
