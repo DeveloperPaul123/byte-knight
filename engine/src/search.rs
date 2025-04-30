@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Thu Apr 24 2025
+ * Last Modified: Tue Apr 29 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -705,6 +705,21 @@ mod tests {
 
     use super::LargeScoreType;
 
+    fn run_search_tests(test_pairs: &[(&str, &str)], config: SearchParameters) {
+        let mut ttable = TranspositionTable::default();
+        let mut history_table = Default::default();
+        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+
+        for (fen, expected_move) in test_pairs {
+            let mut board = Board::from_fen(fen).unwrap();
+            let result = search.search(&mut board, None);
+            assert_eq!(
+                result.best_move.unwrap().to_long_algebraic(),
+                *expected_move
+            );
+        }
+    }
+
     #[test]
     fn white_mate_in_1() {
         let fen = "k7/8/KQ6/8/8/8/8/8 w - - 0 1";
@@ -740,6 +755,45 @@ mod tests {
         let res = search.search(&mut board, None);
 
         assert_eq!(res.best_move.unwrap().to_long_algebraic(), "b8a8")
+    }
+
+    #[test]
+    fn mate_in_one() {
+        // taken from Toad: https://github.com/dannyhammer/toad/blob/a84ea4c01c8bb036a132ff0e0f3d283029854289/src/search.rs#L1820
+        let tests = [
+            ("6k1/R7/6K1/8/8/8/8/8 w - - 0 1", "a7a8"),
+            ("8/8/8/8/8/6k1/r7/6K1 b - - 0 1", "a2a1"),
+            ("6k1/4R3/6K1/q7/8/8/8/8 w - - 0 1", "e7e8"),
+            ("8/8/8/8/Q7/6k1/4r3/6K1 b - - 0 1", "e2e1"),
+            ("6k1/8/6K1/q3R3/8/8/8/8 w - - 0 1", "e5e8"),
+            ("8/8/8/8/Q3r3/6k1/8/6K1 b - - 0 1", "e4e1"),
+            ("k7/6R1/5R1P/8/8/8/8/K7 w - - 0 1", "f6f8"),
+            ("k7/8/8/8/8/5r1p/6r1/K7 b - - 0 1", "f3f1"),
+        ];
+
+        let params = SearchParameters {
+            max_depth: 3,
+            ..Default::default()
+        };
+        run_search_tests(&tests, params);
+    }
+
+    #[test]
+    fn obvious_captures() {
+        let tests = [
+            ("5k2/8/8/b7/2N5/r7/8/5K2 w - - 0 1", "c4a3"),
+            ("5k2/8/8/B7/2n5/R7/8/5K2 b - - 0 1", "c4a3"),
+            ("5k2/8/8/b7/2N5/r7/8/5K2 w - - 0 1", "c4a3"),
+            ("5k2/8/8/B7/2n5/R7/8/5K2 b - - 0 1", "c4a3"),
+            ("4k3/8/8/1n1p4/2P5/8/8/4K3 w - - 0 1", "c4b5"),
+            ("4k3/8/8/2p5/1N1P4/8/8/4K3 b - - 0 1", "c5b4"),
+        ];
+
+        let params = SearchParameters {
+            max_depth: 3,
+            ..Default::default()
+        };
+        run_search_tests(&tests, params);
     }
 
     #[test]
