@@ -11,8 +11,15 @@ env_var_postfix := if os_family() == "windows" { ";" } else { "" }
 default:
     @just -l
 
-build-engine:
-    cargo rustc --release --bin byte-knight -- -C target-cpu=native
+[group('dev')]
+[doc('Build binary target in debug for native CPU')]
+build-native target:
+    cargo rustc --bin {{target}} -- -C target-cpu=native
+
+[group('dev')]
+[doc('Build binary target in debug for native CPU')]
+build-native-release target:
+    cargo rustc --release --bin {{target}} -- -C target-cpu=native
 
 [group('dev')]
 [doc('Build the project (default is debug)')]
@@ -68,7 +75,7 @@ lint:
 [group('chess')]
 [group('performance')]
 [doc('Run sarch benchmark - required before committing for OpenBench.')]
-search-bench: build-engine
+search-bench: (build-native-release "byte-knight")
     echo "Running search benchmark..."
     ./target/release/byte-knight bench
 
@@ -126,3 +133,9 @@ compare-to-main engine1: (build "release")
 [doc('Format all Rust code')]
 format:
     cargo fmt --all
+
+[group('dev')]
+[doc('Run the HCE tuner on the given input book')]
+hce-tune book:
+    echo "Running HCE tuner..."
+    cargo run --release --bin hce-tune -- -i {{ book }} -o {{ book }}.tuned -t 4
