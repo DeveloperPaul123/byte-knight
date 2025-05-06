@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue Apr 29 2025
+ * Last Modified: Tue May 06 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -37,6 +37,7 @@ use crate::{
     lmr,
     move_order::MoveOrder,
     node_types::{NodeType, NonPvNode, PvNode, RootNode},
+    principle_variation::PrincipleVariation,
     score::{LargeScoreType, Score, ScoreType},
     table::Table,
     traits::Eval,
@@ -225,7 +226,7 @@ impl<'a> Search<'a> {
         score: Score,
         nps: f32,
         time: u64,
-        best_move: Option<Move>,
+        pv: &PrincipleVariation,
     ) {
         // create UciInfo and print it
         let info = UciInfo::new()
@@ -234,7 +235,7 @@ impl<'a> Search<'a> {
             .score(score)
             .nps(nps.trunc())
             .time(time)
-            .pv(best_move.map(|m| m.to_long_algebraic()));
+            .pv(pv.iter().map(|m| m.to_long_algebraic()));
         let message = UciResponse::info(info);
         println!("{}", message);
     }
@@ -255,6 +256,7 @@ impl<'a> Search<'a> {
             // create an aspiration window around the best result so far
             let mut aspiration_window =
                 AspirationWindow::around(best_result.score, best_result.depth as ScoreType);
+            let mut pv = PrincipleVariation::new();
 
             let mut score: Score;
             'aspiration_window: loop {
@@ -265,6 +267,7 @@ impl<'a> Search<'a> {
                     0,
                     aspiration_window.alpha(),
                     aspiration_window.beta(),
+                    &mut pv,
                 );
 
                 if aspiration_window.failed_low(score) {
@@ -300,7 +303,7 @@ impl<'a> Search<'a> {
                 best_result.score,
                 (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32()).trunc(),
                 self.parameters.start_time.elapsed().as_millis() as u64,
-                best_result.best_move,
+                &pv,
             );
 
             // increment depth for next iteration
@@ -321,6 +324,7 @@ impl<'a> Search<'a> {
         ply: ScoreType,
         alpha: Score,
         beta: Score,
+        pv: &mut PrincipleVariation,
     ) -> Score
     where
         Node: NodeType,
@@ -331,8 +335,12 @@ impl<'a> Search<'a> {
         let mut alpha_use = alpha;
 
         if depth == 0 {
-            return self.quiescence::<Node>(board, alpha, beta);
+            return self.quiescence::<Node>(board, alpha, beta, pv);
         }
+
+        let mut local_pv = PrincipleVariation::new();
+        // clear the current PV because this is a new position
+        pv.clear();
 
         // Transposition Table Cutoffs: https://www.chessprogramming.org/Transposition_Table#Transposition_Table_Cutoffs
         // Check if we have a transposition table entry and if we can return early
@@ -361,7 +369,7 @@ impl<'a> Search<'a> {
         }
 
         // can we prune the current node with something other than TT?
-        if let Some(score) = self.pruned_score::<Node>(board, depth, ply, beta) {
+        if let Some(score) = self.pruned_score::<Node>(board, depth, ply, beta, &mut local_pv) {
             return score;
         }
 
@@ -386,6 +394,7 @@ impl<'a> Search<'a> {
             self.history_table,
             &mut order_list,
         );
+
         // TODO(PT): Should we log a message to the CLI or a log?
         assert!(classify_res.is_ok());
 
@@ -398,17 +407,21 @@ impl<'a> Search<'a> {
 
         // really "bad" initial score
         let mut best_score = -Score::INF;
-        let mut best_move = None;
+        let mut best_move = tt_move;
 
         let lmr_reduction = 1;
         // loop through all moves
         for (i, mv) in move_iter.into_iter().enumerate() {
+            // local PV is for each node below this one is different when we call negamax recursively
+            // so we have to clear it
+            local_pv.clear();
+
             // make the move
             board.make_move_unchecked(&mv).unwrap();
             let score : Score =
                 // Principal Variation Search (PVS)
                 if Node::PV && i == 0 {
-                    -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use)
+                    -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
                 } else {
                     let reduction = if mv.is_quiet() &&  depth >= 3 && board.full_move_number() >= 3 {
                         let lmr_table_val = self.lmr_table.at(depth as usize, i);
@@ -418,10 +431,10 @@ impl<'a> Search<'a> {
                         1
                     };
                     // search with a null window
-                    let temp_score = -self.negamax::<NonPvNode>(board, depth - reduction, ply + 1, -alpha_use - 1, -alpha_use);
+                    let temp_score = -self.negamax::<NonPvNode>(board, depth - reduction, ply + 1, -alpha_use - 1, -alpha_use, &mut local_pv);
                     // if it fails, we need to do a full re-search
                     if temp_score > alpha_use && temp_score < beta {
-                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -beta, -alpha_use)
+                        -self.negamax::<NonPvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
                     }
                     else {
                         temp_score
@@ -436,9 +449,12 @@ impl<'a> Search<'a> {
                 // we improved, so update the score and best move
                 best_score = score;
                 best_move = Some(mv);
+                if Node::PV {
+                    pv.extend(mv, &local_pv);
+                }
 
-                // update alpha
                 alpha_use = alpha_use.max(best_score);
+                // Did we fail high?
                 if alpha_use >= beta {
                     // update history table for quiets
                     if mv.is_quiet() {
@@ -509,6 +525,7 @@ impl<'a> Search<'a> {
         depth: ScoreType,
         ply: ScoreType,
         beta: Score,
+        local_pv: &mut PrincipleVariation,
     ) -> Option<Score> {
         // no pruning if we are in check or if we are in a PV node
         if board.is_in_check(&self.move_gen) || Node::PV {
@@ -549,8 +566,14 @@ impl<'a> Search<'a> {
             let null_move_depth = depth - NMP_DEPTH_REDUCTION - 1;
             let mut null_board = board.clone();
             null_board.null_move();
-            let null_score =
-                -self.negamax::<Node>(&mut null_board, null_move_depth, ply + 1, -beta, -beta + 1);
+            let null_score = -self.negamax::<Node>(
+                &mut null_board,
+                null_move_depth,
+                ply + 1,
+                -beta,
+                -beta + 1,
+                local_pv,
+            );
             null_board.unmake_move().unwrap();
             if null_score >= beta {
                 return Some(null_score);
@@ -579,6 +602,7 @@ impl<'a> Search<'a> {
         board: &mut Board,
         alpha: Score,
         beta: Score,
+        pv: &mut PrincipleVariation,
     ) -> Score {
         let standing_eval = self.eval.eval(board);
         if standing_eval >= beta {
@@ -643,7 +667,7 @@ impl<'a> Search<'a> {
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
-                let eval = -self.quiescence::<Node>(board, -beta, -alpha_use);
+                let eval = -self.quiescence::<Node>(board, -beta, -alpha_use, pv);
                 self.nodes += 1;
                 eval
             };
