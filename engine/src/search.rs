@@ -296,6 +296,22 @@ impl<'a> Search<'a> {
                 .get_entry(board.zobrist_hash())
                 .map(|e| e.board_move);
 
+            // verify the PV as a sanity check, but only in debug
+            #[allow(clippy::expect_used)]
+            debug_assert!({
+                let mut board_cpy = board.clone();
+                pv.iter().all(|mv| {
+                    let mv_ok = board_cpy.make_move(mv, &self.move_gen);
+                    if mv_ok.is_ok() {
+                        board_cpy
+                            .unmake_move()
+                            .expect("Unmake move failed during PV check.")
+                    }
+
+                    mv_ok.is_ok()
+                })
+            });
+
             // send UCI info
             self.send_info(
                 best_result.depth,
@@ -450,7 +466,8 @@ impl<'a> Search<'a> {
                 best_score = score;
                 best_move = Some(mv);
                 if Node::PV {
-                    pv.extend(mv, &local_pv);
+                    pv.extend(mv, &local_pv)
+                        .expect("Could not extend PV - have you allocated enough space?");
                 }
 
                 alpha_use = alpha_use.max(best_score);
