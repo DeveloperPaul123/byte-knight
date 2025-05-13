@@ -46,14 +46,9 @@ impl PrincipleVariation {
         self.data.clear();
     }
 
-    pub(crate) fn len(&self) -> usize {
-        self.data.len()
-    }
-
     pub(crate) fn iter(&self) -> impl Iterator<Item = &Move> {
         self.data.iter()
     }
-    
 }
 
 #[cfg(test)]
