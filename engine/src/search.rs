@@ -21,6 +21,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use anyhow::{Result, bail};
 use arrayvec::ArrayVec;
 use chess::{
     board::Board, definitions::MAX_MOVE_LIST_SIZE, move_generation::MoveGenerator,
@@ -240,6 +241,27 @@ impl<'a> Search<'a> {
         println!("{}", message);
     }
 
+    /// Verify that a given [PrincipleVariation] is valid. This is expensive and should only be used for debugging.
+    #[allow(clippy::expect_used)]
+    fn verify_pv_moves(&self, pv: &PrincipleVariation, board: &Board) -> Result<()> {
+        let mut board_cpy = board.clone();
+        let all_ok = pv.iter().all(|mv| {
+            let mv_ok = board_cpy.make_move(mv, &self.move_gen);
+            if mv_ok.is_ok() {
+                board_cpy
+                    .unmake_move()
+                    .expect("Unmake move failed during PV check.")
+            }
+
+            mv_ok.is_ok()
+        });
+        if !all_ok {
+            bail!("PV is invalid!")
+        }
+
+        Ok(())
+    }
+
     fn iterative_deepening(&mut self, board: &mut Board) -> SearchResult {
         // initialize the best result
         let mut best_result = SearchResult::default();
@@ -297,20 +319,7 @@ impl<'a> Search<'a> {
                 .map(|e| e.board_move);
 
             // verify the PV as a sanity check, but only in debug
-            #[allow(clippy::expect_used)]
-            debug_assert!({
-                let mut board_cpy = board.clone();
-                pv.iter().all(|mv| {
-                    let mv_ok = board_cpy.make_move(mv, &self.move_gen);
-                    if mv_ok.is_ok() {
-                        board_cpy
-                            .unmake_move()
-                            .expect("Unmake move failed during PV check.")
-                    }
-
-                    mv_ok.is_ok()
-                })
-            });
+            debug_assert!(self.verify_pv_moves(&pv, board).is_ok(), "PV invalid");
 
             // send UCI info
             self.send_info(
