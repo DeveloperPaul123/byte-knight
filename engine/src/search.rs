@@ -640,6 +640,10 @@ impl<'a> Search<'a> {
         let mut move_order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
         self.move_gen.generate_legal_moves(board, &mut move_list);
 
+        let mut local_pv = PrincipleVariation::new();
+        // clear the current PV because this is a new position
+        pv.clear();
+
         // we only want captures here
         let mut captures = move_list
             .iter()
@@ -689,6 +693,10 @@ impl<'a> Search<'a> {
         let original_alpha = alpha_use;
 
         for mv in move_iter.into_iter() {
+            // local PV is for each node below this one is different when we call negamax recursively
+            // so we have to clear it
+            local_pv.clear();
+
             board.make_move_unchecked(&mv).unwrap();
             let score = if board.is_draw() {
                 Score::DRAW
@@ -702,6 +710,12 @@ impl<'a> Search<'a> {
             if score > best {
                 best = score;
                 best_move = Some(mv);
+
+                // extend PV if we're in a PV node
+                if Node::PV {
+                    pv.extend(mv, &local_pv)
+                        .expect("Could not extend PV - have you allocated enough space?");
+                }
 
                 if score >= beta {
                     break;
