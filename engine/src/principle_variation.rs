@@ -37,7 +37,9 @@ impl PrincipleVariation {
         Ok(push_result?)
     }
 
+    #[inline(always)]
     pub(crate) fn extend(&mut self, m: Move, pv: &Self) -> Result<()> {
+        self.clear();
         self.push(m)?;
         Ok(self.data.try_extend_from_slice(pv.data.as_slice())?)
     }
