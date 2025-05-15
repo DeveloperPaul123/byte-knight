@@ -4,7 +4,7 @@
  * Created Date: Thursday, November 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
  * -----
- * Last Modified: Tue May 06 2025
+ * Last Modified: Wed May 14 2025
  * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
@@ -247,12 +247,6 @@ impl<'a> Search<'a> {
         let mut board_cpy = board.clone();
         let all_ok = pv.iter().all(|mv| {
             let mv_ok = board_cpy.make_move(mv, &self.move_gen);
-            if mv_ok.is_ok() {
-                board_cpy
-                    .unmake_move()
-                    .expect("Unmake move failed during PV check.")
-            }
-
             mv_ok.is_ok()
         });
         if !all_ok {
@@ -701,7 +695,7 @@ impl<'a> Search<'a> {
             let score = if board.is_draw() {
                 Score::DRAW
             } else {
-                let eval = -self.quiescence::<Node>(board, -beta, -alpha_use, pv);
+                let eval = -self.quiescence::<Node>(board, -beta, -alpha_use, &mut local_pv);
                 self.nodes += 1;
                 eval
             };
