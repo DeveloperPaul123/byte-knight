@@ -86,7 +86,7 @@ impl SearchThread {
 
         let handle = std::thread::Builder::new()
             .name("bk-search-thread".to_string())
-            .stack_size(4 * 1024 * 1024) // 4 MiB
+            .stack_size(8 * 1024 * 1024) // 8 MiB
             .spawn(move || {
                 let mut stdout = std::io::stdout();
                 'search_loop: loop {
