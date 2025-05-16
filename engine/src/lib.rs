@@ -14,6 +14,7 @@ mod lmr;
 mod move_order;
 pub(crate) mod node_types;
 pub mod phased_score;
+pub(crate) mod principle_variation;
 pub mod score;
 pub mod search;
 pub mod search_thread;

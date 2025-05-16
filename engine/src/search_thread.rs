@@ -84,40 +84,44 @@ impl SearchThread {
         let stop_flag_clone = stop_flag.clone();
         let is_searching_clone = is_searching.clone();
 
-        let handle = std::thread::spawn(move || {
-            let mut stdout = std::io::stdout();
-            'search_loop: loop {
-                let value = receiver.recv().unwrap();
-                match value {
-                    SearchThreadValue::Params(mut board, params, ttable, history) => {
-                        let mut tt = ttable.lock().unwrap();
-                        let mut hist_table = history.lock().unwrap();
-                        let flag = stop_flag.clone();
-                        is_searching.store(true, Ordering::Relaxed);
-                        let result = Search::new(&params, &mut tt, &mut hist_table)
-                            .search(&mut board, Some(flag));
-                        is_searching.store(false, Ordering::Relaxed);
-                        let best_move = result.best_move;
-                        let move_output = UciResponse::BestMove {
-                            bestmove: best_move
-                                .map(|bot_move| move_to_uci_move(&bot_move).to_string()),
-                            ponder: None,
-                        };
-                        writeln!(
-                            stdout,
-                            "{}",
-                            // TODO: Ponder
-                            move_output
-                        )
-                        .unwrap();
-                    }
+        let handle = std::thread::Builder::new()
+            .name("bk-search-thread".to_string())
+            .stack_size(8 * 1024 * 1024) // 8 MiB
+            .spawn(move || {
+                let mut stdout = std::io::stdout();
+                'search_loop: loop {
+                    let value = receiver.recv().unwrap();
+                    match value {
+                        SearchThreadValue::Params(mut board, params, ttable, history) => {
+                            let mut tt = ttable.lock().unwrap();
+                            let mut hist_table = history.lock().unwrap();
+                            let flag = stop_flag.clone();
+                            is_searching.store(true, Ordering::Relaxed);
+                            let result = Search::new(&params, &mut tt, &mut hist_table)
+                                .search(&mut board, Some(flag));
+                            is_searching.store(false, Ordering::Relaxed);
+                            let best_move = result.best_move;
+                            let move_output = UciResponse::BestMove {
+                                bestmove: best_move
+                                    .map(|bot_move| move_to_uci_move(&bot_move).to_string()),
+                                ponder: None,
+                            };
+                            writeln!(
+                                stdout,
+                                "{}",
+                                // TODO: Ponder
+                                move_output
+                            )
+                            .unwrap();
+                        }
 
-                    SearchThreadValue::Exit => {
-                        break 'search_loop;
+                        SearchThreadValue::Exit => {
+                            break 'search_loop;
+                        }
                     }
                 }
-            }
-        });
+            })
+            .unwrap();
 
         SearchThread {
             sender,
