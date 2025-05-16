@@ -479,7 +479,7 @@ impl<'a> Search<'a> {
                     // update history table for quiets
                     if mv.is_quiet() {
                         // calculate history bonus
-                        let bonus = 300 * depth - 250;
+                        let bonus = depth.wrapping_mul(300) - 250;
                         self.history_table.update(
                             board.side_to_move(),
                             mv.piece(),
