@@ -469,8 +469,7 @@ impl<'a> Search<'a> {
                 best_score = score;
                 best_move = Some(mv);
                 if Node::PV {
-                    pv.extend(mv, &local_pv)
-                        .expect("Could not extend PV - have you allocated enough space?");
+                    pv.extend(mv, &local_pv);
                 }
 
                 alpha_use = alpha_use.max(best_score);
@@ -707,8 +706,7 @@ impl<'a> Search<'a> {
 
                 // extend PV if we're in a PV node
                 if Node::PV {
-                    pv.extend(mv, &local_pv)
-                        .expect("Could not extend PV - have you allocated enough space?");
+                    pv.extend(mv, &local_pv);
                 }
 
                 if score >= beta {
