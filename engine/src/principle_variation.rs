@@ -37,6 +37,14 @@ impl PrincipleVariation {
         Ok(push_result?)
     }
 
+    /// Extend the current [PrincipleVariation] with the given move and another principle variation.
+    ///
+    /// This will clear the current PV and append the given move and [PrincipleVariation].
+    ///
+    /// # Arguments:
+    ///
+    /// - m: The new move to add to the principle variation.
+    /// - pv: The principle variation to append to the current variation.
     #[inline(always)]
     pub(crate) fn extend(&mut self, m: Move, pv: &Self) -> Result<()> {
         self.clear();
@@ -44,10 +52,12 @@ impl PrincipleVariation {
         Ok(self.data.try_extend_from_slice(pv.data.as_slice())?)
     }
 
+    /// Clear the principle variation.
     pub(crate) fn clear(&mut self) {
         self.data.clear();
     }
 
+    /// Returns an iterator to the underlying data of the [PrincipleVariation].
     pub(crate) fn iter(&self) -> impl Iterator<Item = &Move> {
         self.data.iter()
     }
