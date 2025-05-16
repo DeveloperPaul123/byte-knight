@@ -1,4 +1,5 @@
-use anyhow::Result;
+use core::panic;
+
 use arrayvec::ArrayVec;
 use chess::{definitions::MAX_MOVES, moves::Move};
 
@@ -32,9 +33,8 @@ impl PrincipleVariation {
     ///
     /// Empty Result<> on success or an error if the underlying ArrayVec
     /// is full before trying to push.
-    pub(crate) fn push(&mut self, m: Move) -> Result<()> {
-        let push_result = self.data.try_push(m);
-        Ok(push_result?)
+    pub(crate) fn push(&mut self, m: Move) {
+        self.data.push(m);
     }
 
     /// Extend the current [PrincipleVariation] with the given move and another principle variation.
@@ -46,10 +46,20 @@ impl PrincipleVariation {
     /// - m: The new move to add to the principle variation.
     /// - pv: The principle variation to append to the current variation.
     #[inline(always)]
-    pub(crate) fn extend(&mut self, m: Move, pv: &Self) -> Result<()> {
+    #[allow(clippy::panic)]
+    pub(crate) fn extend(&mut self, m: Move, pv: &Self) {
         self.clear();
-        self.push(m)?;
-        Ok(self.data.try_extend_from_slice(pv.data.as_slice())?)
+        self.push(m);
+        self.data
+            .try_extend_from_slice(pv.data.as_slice())
+            .unwrap_or_else(|err| {
+                panic!(
+                    "Error extending PV of size {} when adding {} and {:?}\n  {err}",
+                    self.data.len(),
+                    m,
+                    pv
+                );
+            })
     }
 
     /// Clear the principle variation.
@@ -98,8 +108,8 @@ mod tests {
         let (move1, move2) = make_moves();
 
         // Push moves to the principle variation
-        assert!(pv.push(move1).is_ok());
-        assert!(pv.push(move2).is_ok());
+        pv.push(move1);
+        pv.push(move2);
 
         // Check that the moves are in the principle variation
         assert_eq!(pv.data.len(), 2);
@@ -112,32 +122,32 @@ mod tests {
         let (move1, move2) = make_moves();
 
         // Push the first move to the principle variation
-        assert!(pv.push(move1).is_ok());
+        pv.push(move1);
 
         // Create a new principle variation to extend from
         let mut pv2 = PrincipleVariation::new();
-        assert!(pv2.push(move2).is_ok());
+        pv2.push(move2);
 
-        let pv_len_before = pv.data.len();
         // Extend the original principle variation with the new one
-        assert!(pv.extend(move1, &pv2).is_ok());
+        pv.extend(move1, &pv2);
 
         // Check that the moves are in the principle variation
-        assert_eq!(pv.data.len(), pv_len_before + 1 + pv2.data.len());
+        assert_eq!(pv.data.len(), 1 + pv2.data.len());
     }
 
     #[test]
-    fn extending_or_pushing_move_past_max_size_fails() {
+    #[should_panic]
+    fn extending_or_pushing_move_past_max_size_panics() {
         let (move1, move2) = make_moves();
         let mut pv = PrincipleVariation::new();
 
         // Fill the principle variation to its maximum size
         for _ in 0..MAX_MOVES {
-            assert!(pv.push(move1).is_ok());
+           pv.push(move1);
         }
 
         // Attempt to push another move, which should fail
-        assert!(pv.push(move2).is_err());
+        pv.push(move2);
 
         // reset
         pv = PrincipleVariation::new();
@@ -145,14 +155,14 @@ mod tests {
 
         // Fill the principle variation to its maximum size
         for _ in 0..MAX_MOVES - 10 {
-            assert!(pv.push(move1).is_ok());
+            pv.push(move1);
         }
 
         for _ in 0..10 {
-            assert!(pv2.push(move2).is_ok());
+            pv2.push(move2);
         }
 
         // Attempt to extend the principle variation with another one that would exceed the max size
-        assert!(pv.extend(move2, &pv2).is_err());
+        pv.extend(move2, &pv2);
     }
 }
