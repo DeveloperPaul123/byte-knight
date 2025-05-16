@@ -143,7 +143,7 @@ mod tests {
 
         // Fill the principle variation to its maximum size
         for _ in 0..MAX_MOVES {
-           pv.push(move1);
+            pv.push(move1);
         }
 
         // Attempt to push another move, which should fail
