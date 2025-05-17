@@ -11,7 +11,7 @@ pub struct HistoryTable {
 }
 
 /// Safe calculation of the bonus applied to quiet moves that are inserted into the history table.
-/// This uses `wrapping_mul` and `wrapping_sub` to safely calculate the value.
+/// This uses `wrappinag_mul` and `wrapping_sub` to safely calculate the value.
 ///
 /// # Arguments
 ///
@@ -22,8 +22,8 @@ pub struct HistoryTable {
 /// The calculated history score.
 pub(crate) fn calculate_bonus_for_depth(depth: i16) -> i16 {
     depth
-        .wrapping_mul(Score::HISTORY_MULT)
-        .wrapping_sub(Score::HISTORY_OFFSET)
+        .saturating_mul(Score::HISTORY_MULT)
+        .saturating_sub(Score::HISTORY_OFFSET)
 }
 
 impl HistoryTable {
@@ -122,3 +122,4 @@ mod tests {
         }
     }
 }
+
