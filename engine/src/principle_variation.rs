@@ -33,8 +33,15 @@ impl PrincipleVariation {
     ///
     /// Empty Result<> on success or an error if the underlying ArrayVec
     /// is full before trying to push.
+    #[allow(clippy::panic)]
     pub(crate) fn push(&mut self, m: Move) {
-        self.data.push(m);
+        self.data.try_push(m).unwrap_or_else(|err| {
+            panic!(
+                "Error extending PV of size {} when adding {}\n {err}",
+                self.data.len(),
+                m
+            );
+        })
     }
 
     /// Extend the current [PrincipleVariation] with the given move and another principle variation.
@@ -136,7 +143,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Error extending PV")]
     fn extending_or_pushing_move_past_max_size_panics() {
         let (move1, move2) = make_moves();
         let mut pv = PrincipleVariation::new();
