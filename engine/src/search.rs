@@ -33,7 +33,7 @@ use crate::{
     aspiration_window::AspirationWindow,
     defs::MAX_DEPTH,
     evaluation::ByteKnightEvaluation,
-    history_table::HistoryTable,
+    history_table::{self, HistoryTable},
     inplace_incremental_sort::InplaceIncrementalSort,
     lmr,
     move_order::MoveOrder,
@@ -478,7 +478,7 @@ impl<'a> Search<'a> {
                     // update history table for quiets
                     if mv.is_quiet() {
                         // calculate history bonus
-                        let bonus = depth.wrapping_mul(300) - 250;
+                        let bonus = history_table::calculate_bonus_for_depth(depth);
                         self.history_table.update(
                             board.side_to_move(),
                             mv.piece(),
