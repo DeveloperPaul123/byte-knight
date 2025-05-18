@@ -33,6 +33,9 @@ New features are tested via my [OpenBench](https://github.com/AndyGrant/OpenBenc
 - [Aspiration windows](https://www.chessprogramming.org/Aspiration_Windows)
 - [Reverse futility pruning](https://www.chessprogramming.org/Reverse_Futility_Pruning)
 - [Late Move Reductions](https://www.chessprogramming.org/Late_Move_Reductions)
+- [Internal Iterative Reductions](https://www.chessprogramming.org/Internal_Iterative_Reductions)
+- [Null Move Pruning](https://www.chessprogramming.org/Null_Move_Pruning)
+- [Late Move Reductions](https://www.chessprogramming.org/Late_Move_Reductions)
 - [Time control](https://www.chessprogramming.org/Time_Management)
   - Basic hard/soft limits
 - Move ordering
