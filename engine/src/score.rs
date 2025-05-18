@@ -53,8 +53,13 @@ impl Score {
     pub const MINIMUM_MATE: Score = Score(Score::MATE.0 - MAX_DEPTH as ScoreType);
     pub const INF: Score = Score(ScoreType::MAX as ScoreType);
 
-    // Max/min score for history heuristic
-    // Must be lower then the minimum score for captures in MVV_LVA
+    /// Multiplier for the history bonus calculation.
+    pub const HISTORY_MULT: ScoreType = 300;
+    /// Offset for the history bonus calculation.
+    pub const HISTORY_OFFSET: ScoreType = 250;
+
+    /// Max/min score for history heuristic
+    /// Must be lower then the minimum score for captures in MVV_LVA
     pub const MAX_HISTORY: LargeScoreType = 16_384;
 
     pub fn new(score: ScoreType) -> Score {
