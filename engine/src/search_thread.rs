@@ -108,9 +108,8 @@ impl SearchThread {
                             };
                             writeln!(
                                 stdout,
-                                "{}",
+                                "{move_output}",
                                 // TODO: Ponder
-                                move_output
                             )
                             .unwrap();
                         }

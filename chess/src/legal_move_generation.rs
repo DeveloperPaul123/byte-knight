@@ -895,8 +895,8 @@ mod tests {
             move_gen.calculate_check_and_pin_metadata(&board);
 
         assert_eq!(pinned_pieces.number_of_occupied_squares(), 2);
-        println!("horizontal pin rays:\n{}", horizontal_pin_rays);
-        println!("diagonal pin rays:\n{}", diagonal_pin_rays);
+        println!("horizontal pin rays:\n{horizontal_pin_rays}");
+        println!("diagonal pin rays:\n{diagonal_pin_rays}");
 
         assert!(pinned_pieces.intersects(Bitboard::from_square(Squares::C5)));
         assert!(pinned_pieces.intersects(Bitboard::from_square(Squares::D2)));
@@ -909,17 +909,17 @@ mod tests {
             Board::from_fen("rnQq1k1r/pp2bppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R b KQ - 0 8").unwrap();
         let (checkers, capture_mask, push_mask, pinned, orthogonal_rays, diagonal_rays) =
             move_gen.calculate_check_and_pin_metadata(&board);
-        println!("checkers:\n{}", checkers);
-        println!("check mask:\n{}", capture_mask);
-        println!("push mask:\n{}", push_mask);
-        println!("pinned:\n{}", pinned);
-        println!("orthogonal rays:\n{}", orthogonal_rays);
-        println!("diagonal rays:\n{}", diagonal_rays);
+        println!("checkers:\n{checkers}");
+        println!("check mask:\n{capture_mask}");
+        println!("push mask:\n{push_mask}");
+        println!("pinned:\n{pinned}");
+        println!("orthogonal rays:\n{orthogonal_rays}");
+        println!("diagonal rays:\n{diagonal_rays}");
 
         assert_eq!(checkers, 0);
         assert_eq!(pinned, Bitboard::from_square(Squares::D8));
-        println!("capture mask:\n{}", capture_mask);
-        println!("push mask:\n{}", push_mask);
+        println!("capture mask:\n{capture_mask}");
+        println!("push mask:\n{push_mask}");
     }
 
     #[test]
@@ -928,12 +928,12 @@ mod tests {
         let board = Board::from_fen("4B1r1/2q2p2/QP4k1/3P2p1/7B/8/6K1/7R b - - 3 59").unwrap();
         let (checkers, capture_mask, push_mask, pinned, orthogonal_rays, diagonal_rays) =
             move_gen.calculate_check_and_pin_metadata(&board);
-        println!("checkers:\n{}", checkers);
-        println!("check mask:\n{}", capture_mask);
-        println!("push mask:\n{}", push_mask);
-        println!("pinned:\n{}", pinned);
-        println!("orthogonal rays:\n{}", orthogonal_rays);
-        println!("diagonal rays:\n{}", diagonal_rays);
+        println!("checkers:\n{checkers}");
+        println!("check mask:\n{capture_mask}");
+        println!("push mask:\n{push_mask}");
+        println!("pinned:\n{pinned}");
+        println!("orthogonal rays:\n{orthogonal_rays}");
+        println!("diagonal rays:\n{diagonal_rays}");
 
         assert_eq!(checkers, 0);
         assert_eq!(pinned, Bitboard::from_square(Squares::F7));
@@ -949,7 +949,7 @@ mod tests {
         move_gen.generate_legal_moves(&board, &mut move_list);
 
         for mv in move_list.iter() {
-            println!("{}", mv);
+            println!("{mv}");
         }
 
         assert_eq!(move_list.len(), 6);
@@ -983,7 +983,7 @@ mod tests {
         move_gen.generate_legal_moves(&board, &mut move_list);
 
         for mv in move_list.iter() {
-            println!("{}", mv);
+            println!("{mv}");
         }
 
         assert_eq!(move_list.len(), 9);
@@ -1002,7 +1002,7 @@ mod tests {
             | Bitboard::from_square(Squares::E5)
             | Bitboard::from_square(Squares::F6)
             | Bitboard::from_square(Squares::G7);
-        println!("{}", rays);
+        println!("{rays}");
         assert_eq!(rays, expected);
 
         let from = Square::from_square_index(Squares::H1);

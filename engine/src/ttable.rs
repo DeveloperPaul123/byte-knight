@@ -205,7 +205,7 @@ mod tests {
         let random_numbers: Vec<u64> = (0..tt.size()).map(|_| rng.random::<u64>()).collect();
         let min = random_numbers.iter().min().unwrap();
         let max = random_numbers.iter().max().unwrap();
-        println!("min/max random number: {}/{}", min, max);
+        println!("min/max random number: {min}/{max}");
         println!("Table size: {}", tt.size());
         let mut index_histogram: HashMap<usize, usize> = HashMap::new();
         random_numbers.iter().for_each(|&num| {
@@ -220,11 +220,11 @@ mod tests {
         let mean = index_histogram.values().sum::<usize>() as f64 / index_histogram.len() as f64;
         let count = index_histogram.len();
 
-        println!("Min: {}, Max: {}, Mean: {}, Len: {}", min, max, mean, count);
+        println!("Min: {min}, Max: {max}, Mean: {mean}, Len: {count}");
         let unique_keys = random_numbers.iter().unique().count();
-        println!("Unique keys: {}", unique_keys);
+        println!("Unique keys: {unique_keys}");
         let collision_rate = (1.0 - (count as f64 / unique_keys as f64)) * 100.0;
-        println!("Collision rate: {}", collision_rate);
+        println!("Collision rate: {collision_rate}");
     }
 
     #[test]

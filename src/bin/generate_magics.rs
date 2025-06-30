@@ -111,7 +111,7 @@ fn find_magic_numbers(piece: Piece) -> Vec<MagicNumber> {
 
     let mut offset = 0;
 
-    println!("Finding magic numbers for {}", piece);
+    println!("Finding magic numbers for {piece}");
     for sq in 0..NumberOf::SQUARES as u8 {
         let rook_mask = MoveGenerator::relevant_rook_bits(sq);
         let bishop_mask = MoveGenerator::relevant_bishop_bits(sq);

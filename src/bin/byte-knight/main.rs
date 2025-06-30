@@ -47,7 +47,7 @@ fn run_uci() {
     match engine_run_result {
         Ok(_) => (),
         Err(e) => {
-            eprintln!("Error running engine: {}", e);
+            eprintln!("Error running engine: {e}");
             exit(1);
         }
     }

@@ -809,7 +809,7 @@ mod tests {
         let maybe_board = Board::from_fen("");
         assert!(maybe_board.is_err());
         let err = maybe_board.unwrap_err();
-        let message = format!("{}", err);
+        let message = format!("{err}");
         // check that the message contains something about the FEN being empty
         assert!(message.to_lowercase().contains("empty"));
     }

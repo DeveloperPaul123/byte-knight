@@ -62,17 +62,11 @@ fn process_epd_file(path: &str, move_generation: &MoveGenerator) {
                 let nodes = perft::perft(&mut board, move_generation, depth, false).unwrap();
                 if expected_nodes != nodes {
                     print!("{} ", "[FAIL]".red().bold());
-                    println!(
-                        "{:<30}: {:2} {:^10} != {:^10}",
-                        fen, depth, expected_nodes, nodes
-                    );
+                    println!("{fen:<30}: {depth:2} {expected_nodes:^10} != {nodes:^10}");
                     failures.push((fen.to_string(), depth, expected_nodes, nodes));
                 } else {
                     print!("{} ", "[PASS]".green());
-                    println!(
-                        "{:<30}: {:2} {:^10} == {:^10}",
-                        fen, depth, expected_nodes, nodes
-                    );
+                    println!("{fen:<30}: {depth:2} {expected_nodes:^10} == {nodes:^10}",);
                 }
             }
 
@@ -88,10 +82,7 @@ fn process_epd_file(path: &str, move_generation: &MoveGenerator) {
     );
 
     for (fen, depth, expected, actual) in all_failures.iter().flatten() {
-        println!(
-            "{:<30}: {:2} {:^10} != {:^10}",
-            fen, depth, expected, actual
-        );
+        println!("{fen:<30}: {depth:2} {expected:^10} != {actual:^10}",);
     }
 }
 

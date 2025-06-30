@@ -82,7 +82,7 @@ impl TryFrom<u8> for File {
             5 => Ok(Self::F),
             6 => Ok(Self::G),
             7 => Ok(Self::H),
-            _ => Err(anyhow::Error::msg(format!("Invalid file {}", value))),
+            _ => Err(anyhow::Error::msg(format!("Invalid file {value}"))),
         }
     }
 }
@@ -99,7 +99,7 @@ impl TryFrom<char> for File {
             'f' => Ok(Self::F),
             'g' => Ok(Self::G),
             'h' => Ok(Self::H),
-            _ => Err(anyhow::Error::msg(format!("Invalid file {}", value))),
+            _ => Err(anyhow::Error::msg(format!("Invalid file {value}"))),
         }
     }
 }
