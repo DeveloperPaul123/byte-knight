@@ -1166,11 +1166,7 @@ mod tests {
             let to = mv.to();
             let is_attacked =
                 move_gen.is_square_attacked(&board, &Square::from_square_index(to), side_to_move);
-            assert!(
-                is_attacked,
-                "Square {} is not attacked by move\n\t{}",
-                to, mv
-            );
+            assert!(is_attacked, "Square {to} is not attacked by move\n\t{mv}",);
         }
 
         {
@@ -1604,7 +1600,7 @@ mod tests {
 
             offset_sum += BASE.pow(rook_bits.as_number().count_ones());
         }
-        println!("rook offset sum: {}", offset_sum);
+        println!("rook offset sum: {offset_sum}");
     }
 
     #[test]
@@ -1686,7 +1682,7 @@ mod tests {
             offset_sum += BASE.pow(bishop_bits.as_number().count_ones());
         }
 
-        println!("bishop offset sum: {}", offset_sum);
+        println!("bishop offset sum: {offset_sum}");
     }
 
     #[test]
@@ -1739,7 +1735,7 @@ mod tests {
             assert!(attacks.len() <= blockers.len());
 
             for attack in attacks {
-                println!("attack: \n{}", attack);
+                println!("attack: \n{attack}");
                 // attack should be a subset of the bishop bitboard
                 assert_eq!(attack & !bishop_bb_with_edges, 0);
             }
@@ -1756,15 +1752,15 @@ mod tests {
         let move_gen = MoveGenerator::new();
         let queen_attacks =
             move_gen.get_slider_attacks(SliderPiece::Queen, square, &Bitboard::default());
-        println!("queen attacks: \n{}", queen_attacks);
-        println!("queen bb: \n{}", queen_bb);
+        println!("queen attacks: \n{queen_attacks}");
+        println!("queen bb: \n{queen_bb}");
 
         let attacks_without_edges = queen_attacks
             & !FILE_BITBOARDS[File::A as usize]
             & !FILE_BITBOARDS[File::H as usize]
             & !RANK_BITBOARDS[Rank::R1 as usize];
 
-        println!("attacks without edges: \n{}", attacks_without_edges);
+        println!("attacks without edges: \n{attacks_without_edges}");
         assert_eq!(attacks_without_edges, queen_bb);
     }
 
@@ -1776,7 +1772,7 @@ mod tests {
         move_gen.generate_moves(&board, &mut move_list, MoveType::All);
 
         for mv in move_list.iter() {
-            println!("{}", mv);
+            println!("{mv}");
             assert!(!mv.is_castle());
             assert!(!mv.is_en_passant_capture());
             assert!(!mv.is_promotion());
@@ -1788,7 +1784,7 @@ mod tests {
         move_gen.generate_legal_moves(&board, &mut move_list);
 
         for mv in move_list.iter() {
-            println!("{}", mv);
+            println!("{mv}");
         }
         assert_eq!(move_list.len(), 20);
     }

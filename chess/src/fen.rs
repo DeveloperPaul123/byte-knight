@@ -80,7 +80,7 @@ impl Display for FenError {
         if let Some(parts) = &self.offending_parts {
             write!(f, " Offending parts: ")?;
             for part in parts {
-                write!(f, "{} ", part)?;
+                write!(f, "{part} ")?;
             }
         }
         Ok(())
@@ -155,7 +155,7 @@ fn parse_piece_placement(board: &mut Board, part: &str) -> FenResult {
                 let piece_res = Piece::try_from(c);
                 if piece_res.is_err() {
                     return Err(FenError::with_offending_parts(
-                        &format!("Could not parse piece from char {}", c),
+                        &format!("Could not parse piece from char {c}"),
                         vec![FenPart::PiecePlacement],
                     ));
                 }
@@ -251,13 +251,13 @@ fn parse_active_color(board: &mut Board, part: &str) -> FenResult {
             board.set_side_to_move(side);
         } else {
             return Err(FenError::with_offending_parts(
-                &format!("Could not parse side from char {}", val),
+                &format!("Could not parse side from char {val}"),
                 vec![FenPart::ActiveColor],
             ));
         }
     } else {
         return Err(FenError::with_offending_parts(
-            &format!("Invalid active color string: {}", part),
+            &format!("Invalid active color string: {part}"),
             vec![FenPart::ActiveColor],
         ));
     }
@@ -418,7 +418,7 @@ mod tests {
             FenPart::HalfmoveClock,
             FenPart::FullmoveNumber,
         ] {
-            assert_eq!(format!("{}", part), part.to_string());
+            assert_eq!(format!("{part}"), part.to_string());
         }
     }
 
@@ -444,14 +444,14 @@ mod tests {
     #[test]
     fn display_fen_error() {
         let error = FenError::new("Test error");
-        assert_eq!(format!("{}", error), "Test error".to_string());
+        assert_eq!(format!("{error}"), "Test error".to_string());
 
         let error_with_parts = FenError::with_offending_parts(
             "Test error",
             vec![FenPart::PiecePlacement, FenPart::ActiveColor],
         );
         assert_eq!(
-            format!("{}", error_with_parts),
+            format!("{error_with_parts}"),
             "Test error Offending parts: Piece Placement Active Color ".to_string()
         );
     }

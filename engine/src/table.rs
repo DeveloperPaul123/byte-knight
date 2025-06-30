@@ -123,7 +123,7 @@ impl<T: Display, const CAP: usize> Display for Table<T, CAP> {
         for row in 0..self.rows() {
             let row_data = self.row(row).unwrap();
             for (col, item) in row_data.iter().enumerate() {
-                output.push_str(format!("{}", item).as_str());
+                output.push_str(format!("{item}").as_str());
                 if col < self.cols() - 1 {
                     output.push(',');
                     output.push(' ');
@@ -135,7 +135,7 @@ impl<T: Display, const CAP: usize> Display for Table<T, CAP> {
             }
         }
 
-        write!(f, "{}", output)
+        write!(f, "{output}")
     }
 }
 
@@ -208,8 +208,8 @@ mod tests {
         const SIZE: usize = 64;
         let mut table = Table::<usize, SIZE>::new(8, 8);
         table.fill(|row, col| row * 8 + col);
-        let formatted = format!("{}", table);
-        println!("{}", formatted);
+        let formatted = format!("{table}");
+        println!("{formatted}");
         let expected = "0, 1, 2, 3, 4, 5, 6, 7\n\
                         8, 9, 10, 11, 12, 13, 14, 15\n\
                         16, 17, 18, 19, 20, 21, 22, 23\n\

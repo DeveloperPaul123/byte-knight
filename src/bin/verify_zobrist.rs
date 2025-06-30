@@ -37,7 +37,7 @@ fn decompress_data(output_data_path: &Path, compressed_data_path: &Path) -> anyh
         .arg("-o")
         .arg(output_data_path.to_str().unwrap());
     println!("Decompressing data file...");
-    println!("Executing command: {:?}", decompress_command);
+    println!("Executing command: {decompress_command:?}");
     decompress_command.spawn()?.wait()?;
 
     // check if the output file exists
@@ -143,9 +143,9 @@ fn main() {
                     }
 
                     if !matched {
-                        println!("Hash collision detected: {}", hash);
+                        println!("Hash collision detected: {hash}");
                         for fen in fens {
-                            println!("{}", fen);
+                            println!("{fen}");
                         }
                         duplicates += 1;
                     }
@@ -153,13 +153,13 @@ fn main() {
             }
 
             if duplicates == 0 {
-                println!("{} No hash collisions detected!", CHECK_BOX);
+                println!("{CHECK_BOX} No hash collisions detected!");
             } else {
-                println!("{} {} hash collisions detected", CROSS_MARK, duplicates);
+                println!("{CROSS_MARK} {duplicates} hash collisions detected");
             }
         }
         Err(e) => {
-            println!("Failed to read records: {:?}", e);
+            println!("Failed to read records: {e:?}");
             exit(-1);
         }
     }

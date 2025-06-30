@@ -297,7 +297,7 @@ impl Display for Bitboard {
             for file in (0..8).rev() {
                 let mask = 1u64 << (LAST_BIT - (rank * 8) - file);
                 let symbol = if self.data & mask != 0 { 'x' } else { '-' };
-                write!(f, "{} ", symbol)?;
+                write!(f, "{symbol} ")?;
             }
             writeln!(f)?;
         }
@@ -315,7 +315,7 @@ mod tests {
     fn bitboard_new() {
         let bb = Bitboard::new(0x8000000000000001);
         assert_eq!(bb.data, 0x8000000000000001);
-        println!("{}", bb);
+        println!("{bb}");
     }
 
     #[test]
@@ -416,7 +416,7 @@ mod tests {
         let mut bb = Bitboard::from_square(Squares::B4);
         let mut bb_front = bb << 8;
         let mut bb_back = bb >> 8;
-        println!("{}\n{}\n{}", bb, bb_front, bb_back);
+        println!("{bb}\n{bb_front}\n{bb_back}");
 
         let original_square = bitboard_helpers::next_bit(&mut bb) as u8;
         let front_square = bitboard_helpers::next_bit(&mut bb_front) as u8;

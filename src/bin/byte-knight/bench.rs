@@ -121,5 +121,5 @@ pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
     }
 
     let nps = (nodes as f64 / config.start_time.elapsed().as_secs_f64()).trunc();
-    println!("{} nodes {} nps", nodes, nps);
+    println!("{nodes} nodes {nps} nps");
 }

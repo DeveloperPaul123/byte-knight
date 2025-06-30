@@ -20,7 +20,7 @@ fn construct_board_from_fen_string() {
     assert!(board_result.is_ok());
     let board = board_result.unwrap();
     let all_pieces = board.all_pieces();
-    println!("all {}", all_pieces);
+    println!("all {all_pieces}");
     assert_eq!(board.all_pieces(), 0xFFFF00000000FFFF);
 }
 
@@ -90,7 +90,7 @@ fn construct_board_from_fen_string_2() {
     let all_pieces_bb = white_pieces_bb | black_pieces_bb;
     assert_eq!(all_pieces, all_pieces_bb);
 
-    println!("{}", all_pieces);
+    println!("{all_pieces}");
 
     assert_eq!(board.all_pieces(), all_pieces_bb);
     assert!(board.en_passant_square().is_some());
@@ -113,7 +113,7 @@ fn construct_board_from_fen_string_3() {
     let board = board_result.unwrap();
 
     let all_pieces = board.all_pieces();
-    println!("all {}", all_pieces);
+    println!("all {all_pieces}");
     assert_eq!(board.all_pieces(), 0xFFEB00041A00E5FF);
 }
 

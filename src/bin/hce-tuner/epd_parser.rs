@@ -226,7 +226,7 @@ mod tests {
                 Side::Black => -position.evaluate(&params),
             };
 
-            println!("{} // {}", expected_value, val);
+            println!("{expected_value} // {val}");
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
     }
@@ -274,7 +274,7 @@ mod tests {
                 Side::White => position.evaluate(&params),
                 Side::Black => -position.evaluate(&params),
             };
-            println!("{} // {}", expected_value, val);
+            println!("{expected_value} // {val}");
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
     }
@@ -312,7 +312,7 @@ mod tests {
                 Side::White => position.evaluate(&params),
                 Side::Black => -position.evaluate(&params),
             };
-            println!("{} // {}", expected_value, val);
+            println!("{expected_value} // {val}");
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
     }

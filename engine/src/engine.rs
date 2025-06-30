@@ -99,8 +99,8 @@ impl ByteKnight {
                         for option in options {
                             writeln!(stdout, "{}", UciResponse::Option(option)).unwrap();
                         }
-                        writeln!(stdout, "{}", name).unwrap();
-                        writeln!(stdout, "{}", authors).unwrap();
+                        writeln!(stdout, "{name}").unwrap();
+                        writeln!(stdout, "{authors}").unwrap();
                         writeln!(stdout, "{}", UciResponse::<String>::UciOk).unwrap();
                     }
                     UciCommand::UciNewGame => {
