@@ -90,7 +90,7 @@ pub fn perft(
 
     if print_moves {
         for mv in move_list.iter() {
-            println!("{}", mv);
+            println!("{mv}");
         }
     }
 
@@ -105,7 +105,7 @@ pub fn perft(
         // if this happens, it is likely a bug in the move generator
         if result.is_err() {
             println!("current board: {}", board.to_fen());
-            println!("current move: {}", mv);
+            println!("current move: {mv}");
             bail!("move failed ({}): {:?}", depth, result);
         }
         nodes += perft(board, move_gen, depth - 1, print_moves)?;
@@ -330,7 +330,7 @@ mod tests {
     /// Helper to run the EPD tests below
     fn run_epd_test(tests: &[(&str, Vec<i64>)], move_gen: &MoveGenerator) {
         for (fen, results) in tests.iter() {
-            println!("{}", fen);
+            println!("{fen}");
             let mut board = Board::from_fen(fen).unwrap();
             for (idx, result) in results.iter().enumerate() {
                 let nodes = perft(&mut board, move_gen, idx + 1, false).unwrap();

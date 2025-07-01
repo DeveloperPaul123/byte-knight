@@ -147,11 +147,10 @@ mod tests {
         ];
 
         let print_test_moves = |msg: &str, mvs: &[Move], order: &[MoveOrder]| {
-            println!("{}:", msg);
+            println!("{msg}:");
             for i in 0..mvs.len() {
                 println!(
-                    "test_moves[{}]: {} {:?}",
-                    i,
+                    "test_moves[{i}]: {} {:?}",
                     mvs[i].to_long_algebraic(),
                     order[i]
                 );

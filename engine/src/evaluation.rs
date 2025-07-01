@@ -284,7 +284,7 @@ mod tests {
         let eval = ByteKnightEvaluation::default();
 
         for (i, fen) in positions.iter().enumerate() {
-            println!("Position {}: {}", i, fen);
+            println!("Position {i}: {fen}");
             let board = Board::from_fen(fen).unwrap();
             let score = eval.eval(&board);
             println!("{},", score.0);

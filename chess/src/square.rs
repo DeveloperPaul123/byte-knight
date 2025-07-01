@@ -183,8 +183,7 @@ impl TryFrom<&str> for Square {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         if value.len() != 2 {
             return Err(anyhow::Error::msg(format!(
-                "Input square must be at least 2 characters {}",
-                value
+                "Input square must be at least 2 characters {value}",
             )));
         }
 

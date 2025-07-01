@@ -570,7 +570,7 @@ mod tests {
             .find(|mv| mv.to() == crate::definitions::Squares::D6)
             .unwrap();
 
-        println!("Making en passant move: {}", en_passant_move);
+        println!("Making en passant move: {en_passant_move}");
         assert!(board.piece_on_square(Squares::C5).is_some());
         assert!(board.check_move_preconditions(en_passant_move).is_ok());
         let move_result = board.make_move(en_passant_move, &move_gen);
@@ -592,7 +592,7 @@ mod tests {
         ];
 
         for mv in uci_moves {
-            println!("{}", mv);
+            println!("{mv}");
             assert!(board.make_uci_move(mv).is_ok());
             println!("after {}: {}", mv, board.to_fen());
         }

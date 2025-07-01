@@ -205,7 +205,7 @@ impl<'a> Search<'a> {
 
         let info = UciInfo::default().string(format!("searching {}", self.parameters));
         let message = UciResponse::info(info);
-        println!("{}", message);
+        println!("{message}");
 
         let result = self.iterative_deepening(board);
         // search ended, reset our node count
@@ -238,7 +238,7 @@ impl<'a> Search<'a> {
             .time(time)
             .pv(pv.iter().map(|m| m.to_long_algebraic()));
         let message = UciResponse::info(info);
-        println!("{}", message);
+        println!("{message}");
     }
 
     /// Verify that a given [PrincipleVariation] is valid. This is expensive and should only be used for debugging.
@@ -988,8 +988,8 @@ mod tests {
                 }
             }
 
-            println!("max history: {:5}", max_history);
-            println!("min/max mvv-lva: {}, {}", min_mvv_lva, max_mvv_lva);
+            println!("max history: {max_history:5}");
+            println!("min/max mvv-lva: {min_mvv_lva}, {max_mvv_lva}");
             assert!(max_history < min_mvv_lva);
         }
     }

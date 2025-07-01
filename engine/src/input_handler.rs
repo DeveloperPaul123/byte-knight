@@ -90,7 +90,7 @@ impl InputHandler {
                                 break;
                             }
                         } else {
-                            eprintln!("Invalid UCI command: {}", line);
+                            eprintln!("Invalid UCI command: {line}");
                         }
                     }
                 } else {

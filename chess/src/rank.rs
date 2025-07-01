@@ -90,7 +90,7 @@ impl TryFrom<u8> for Rank {
             5 => Ok(Self::R6),
             6 => Ok(Self::R7),
             7 => Ok(Self::R8),
-            _ => Err(anyhow::Error::msg(format!("Invalid rank {}", value))),
+            _ => Err(anyhow::Error::msg(format!("Invalid rank {value}"))),
         }
     }
 }

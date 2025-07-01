@@ -67,7 +67,7 @@ fn print_table(indent: usize, table: &[TuningScore]) {
                 print!("{:indent$}", "", indent = indent);
             }
             let val = table[idx];
-            print!("{:?}, ", val);
+            print!("{val:?}, ");
             if file == 7 {
                 println!();
             }
@@ -112,7 +112,7 @@ fn plot_k(tuner: &Tuner) {
 }
 
 fn parse_data(input_data: &str) -> Vec<TuningPosition> {
-    println!("Reading data from: {}", input_data);
+    println!("Reading data from: {input_data}");
     let positions = epd_parser::parse_epd_file(input_data);
     // let positions = get_positions();
     println!("Read {} positions", positions.len());
@@ -134,10 +134,7 @@ fn main() {
                 ParameterStartType::PieceValues => Parameters::create_from_piece_values(),
             };
             let epchs = epochs.unwrap_or(10_000);
-            println!(
-                "Tuning parameters from {:?} for {} epochs",
-                param_start_type, epchs
-            );
+            println!("Tuning parameters from {param_start_type:?} for {epchs} epochs",);
             let mut tuner = tuner::Tuner::new(parameters, &positions, epchs);
             let tuned_results = tuner.tune();
             print_params(tuned_results);
@@ -153,7 +150,7 @@ fn main() {
             let parameters = Parameters::create_from_engine_values();
             let tuner = tuner::Tuner::new(parameters, &positions, 10_000);
             let error = tuner.mean_square_error(k);
-            println!("Error for k {:.8}: {:.8}", k, error);
+            println!("Error for k {k:.8}: {error:.8}");
         }
     }
 }
