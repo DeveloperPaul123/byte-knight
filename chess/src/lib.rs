@@ -33,6 +33,7 @@ pub mod move_making;
 pub mod moves;
 pub mod non_slider_piece;
 pub mod perft;
+pub mod pext;
 pub mod piece_category;
 pub mod pieces;
 pub mod rank;

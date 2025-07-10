@@ -220,6 +220,7 @@ impl MoveGenerator {
             initialize_pawn_attacks(square, &mut self.pawn_attacks);
         }
 
+        // TODO: Initialize attack tables in the case of PEXT being available
         self.initialize_magic_numbers(Piece::Rook);
         self.initialize_magic_numbers(Piece::Bishop);
     }
