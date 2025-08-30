@@ -12,8 +12,8 @@
  *
  */
 
+use crate::definitions::RANK_BITBOARDS;
 use crate::move_generation::NORTH;
-use crate::move_generation::RANK_BITBOARDS;
 use crate::move_generation::SOUTH;
 use crate::move_list::MoveList;
 use crate::square;

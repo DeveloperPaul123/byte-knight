@@ -1,9 +1,13 @@
 use crate::{
-    bitboard::Bitboard, definitions::NumberOf, magics::MagicNumber, move_generation::MoveGenerator,
-    pieces::Piece,
+    bitboard::Bitboard,
+    definitions::NumberOf,
+    magics::{BISHOP_MAGIC_VALUES, MagicNumber, ROOK_MAGIC_VALUES},
+    move_generation::MoveGenerator,
+    pieces::{Piece, SQUARE_NAME},
+    slider_pieces::SliderPiece,
 };
 
-struct SlidingPieceAttacks {
+pub(crate) struct SlidingPieceAttacks {
     pub(crate) rook_magics: [MagicNumber; NumberOf::SQUARES],
     pub(crate) bishop_magics: [MagicNumber; NumberOf::SQUARES],
     pub(crate) rook_attacks: Vec<Bitboard>,
@@ -14,7 +18,7 @@ struct SlidingPieceAttacks {
 
 // Public API
 impl SlidingPieceAttacks {
-    pub fn new() {
+    pub(crate) fn new() -> Self {
         let mut instance = SlidingPieceAttacks {
             rook_magics: [MagicNumber::default(); NumberOf::SQUARES],
             bishop_magics: [MagicNumber::default(); NumberOf::SQUARES],
@@ -24,42 +28,11 @@ impl SlidingPieceAttacks {
             bishop_pext_attacks: vec![Bitboard::default(); 1024], // 2^10
         };
 
+        // Initialize the magic numbers and attack tables.
         instance.initialize_magic_numbers(Piece::Rook);
         instance.initialize_magic_numbers(Piece::Bishop);
 
-        // TODO: Initialize PEXT attack tables
-        for square in 0..NumberOf::SQUARES as u8 {
-            let rook_relevant_bits = MoveGenerator::relevant_rook_bits(square);
-            let bishop_relevant_bits = MoveGenerator::relevant_bishop_bits(square);
-
-            let rook_bit_count = rook_relevant_bits.as_number().count_ones();
-            let bishop_bit_count = bishop_relevant_bits.as_number().count_ones();
-
-            let rook_total_permutations = 2u64.pow(rook_bit_count);
-            let bishop_total_permutations = 2u64.pow(bishop_bit_count);
-
-            let rook_blocker_bitboards =
-                MoveGenerator::create_blocker_permutations(rook_relevant_bits);
-            let bishop_blocker_bitboards =
-                MoveGenerator::create_blocker_permutations(bishop_relevant_bits);
-
-            let rook_attacks = MoveGenerator::rook_attacks(square, &rook_blocker_bitboards);
-            let bishop_attacks = MoveGenerator::bishop_attacks(square, &bishop_blocker_bitboards);
-
-            for i in 0..rook_blocker_bitboards.len() {
-                let blocker = rook_blocker_bitboards[i];
-                let index = blocker.pext(rook_relevant_bits) as usize;
-                assert!(index < instance.rook_pext_attacks.len());
-                instance.rook_pext_attacks[index] = rook_attacks[i];
-            }
-
-            for i in 0..bishop_blocker_bitboards.len() {
-                let blocker = bishop_blocker_bitboards[i];
-                let index = blocker.pext(bishop_relevant_bits) as usize;
-                assert!(index < instance.bishop_pext_attacks.len());
-                instance.bishop_pext_attacks[index] = bishop_attacks[i];
-            }
-        }
+        instance
     }
 }
 
@@ -141,5 +114,65 @@ impl SlidingPieceAttacks {
             // update the offset for the next square
             offset += total_permutations;
         }
+    }
+
+    pub(crate) fn get_slider_attack(
+        &self,
+        piece: SliderPiece,
+        from_square: u8,
+        occupancy: &Bitboard,
+    ) -> Bitboard {
+        match piece {
+            SliderPiece::Rook => {
+                let index = self.rook_magics[from_square as usize].index(*occupancy);
+                self.rook_attacks[index]
+            }
+            SliderPiece::Bishop => {
+                let index = self.bishop_magics[from_square as usize].index(*occupancy);
+                self.bishop_attacks[index]
+            }
+            SliderPiece::Queen => {
+                let rook_index = self.rook_magics[from_square as usize].index(*occupancy);
+                let bishop_index = self.bishop_magics[from_square as usize].index(*occupancy);
+                self.rook_attacks[rook_index] ^ self.bishop_attacks[bishop_index]
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        bitboard::Bitboard,
+        definitions::{FILE_BITBOARDS, RANK_BITBOARDS, Squares},
+        file::File,
+        move_generation::MoveGenerator,
+        rank::Rank,
+        slider_pieces::SliderPiece,
+    };
+
+    #[test]
+    fn check_queen_attacks() {
+        let square = Squares::D8;
+        let bishop_bb = MoveGenerator::relevant_bishop_bits(square);
+        let rook_bb = MoveGenerator::relevant_rook_bits(square);
+        let queen_bb = bishop_bb | rook_bb;
+
+        let sliding_piece_attacks = super::SlidingPieceAttacks::new();
+        let queen_attacks = sliding_piece_attacks.get_slider_attack(
+            SliderPiece::Queen,
+            square,
+            &Bitboard::default(),
+        );
+        println!("queen attacks: \n{queen_attacks}");
+        println!("queen bb: \n{queen_bb}");
+
+        let attacks_without_edges = queen_attacks
+            & !FILE_BITBOARDS[File::A as usize]
+            & !FILE_BITBOARDS[File::H as usize]
+            & !RANK_BITBOARDS[Rank::R1 as usize];
+
+        println!("attacks without edges: \n{attacks_without_edges}");
+        assert_eq!(attacks_without_edges, queen_bb);
     }
 }

@@ -17,7 +17,8 @@ use crate::{
     bitboard_helpers,
     board::Board,
     definitions::{
-        BISHOP_BLOCKER_PERMUTATIONS, NumberOf, QUEEN_OFFSETS, ROOK_BLOCKER_PERMUTATIONS, Squares,
+        BISHOP_BLOCKER_PERMUTATIONS, FILE_BITBOARDS, NumberOf, QUEEN_OFFSETS, RANK_BITBOARDS,
+        ROOK_BLOCKER_PERMUTATIONS, Squares,
     },
     file::File,
     magics::{BISHOP_MAGIC_VALUES, MagicNumber, ROOK_MAGIC_VALUES},
@@ -29,33 +30,9 @@ use crate::{
     rank::Rank,
     side::Side,
     slider_pieces::SliderPiece,
+    sliding_piece_attacks::SlidingPieceAttacks,
     square::{self, Square},
 };
-
-type FileBitboards = [Bitboard; NumberOf::FILES];
-type RankBitboards = [Bitboard; NumberOf::RANKS];
-
-const FILE_BITBOARDS: FileBitboards = [
-    Bitboard::new(72340172838076673),
-    Bitboard::new(144680345676153346),
-    Bitboard::new(289360691352306692),
-    Bitboard::new(578721382704613384),
-    Bitboard::new(1157442765409226768),
-    Bitboard::new(2314885530818453536),
-    Bitboard::new(4629771061636907072),
-    Bitboard::new(9259542123273814144),
-];
-
-pub(crate) const RANK_BITBOARDS: RankBitboards = [
-    Bitboard::new(255),
-    Bitboard::new(65280),
-    Bitboard::new(16711680),
-    Bitboard::new(4278190080),
-    Bitboard::new(1095216660480),
-    Bitboard::new(280375465082880),
-    Bitboard::new(71776119061217280),
-    Bitboard::new(18374686479671623680),
-];
 
 pub(crate) const NORTH: u64 = 8;
 pub(crate) const SOUTH: u64 = 8;
@@ -184,6 +161,7 @@ pub struct MoveGenerator {
     pub(crate) rook_attacks: Vec<Bitboard>,
     pub(crate) bishop_attacks: Vec<Bitboard>,
     pub(crate) rays_between: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES],
+    pub(crate) sliding_piece_attacks: SlidingPieceAttacks,
 }
 
 impl Default for MoveGenerator {
@@ -206,6 +184,7 @@ impl MoveGenerator {
             rook_attacks: vec![Bitboard::default(); ROOK_BLOCKER_PERMUTATIONS],
             bishop_attacks: vec![Bitboard::default(); BISHOP_BLOCKER_PERMUTATIONS],
             rays_between: [[Bitboard::default(); NumberOf::SQUARES]; NumberOf::SQUARES],
+            sliding_piece_attacks: SlidingPieceAttacks::new(),
         };
 
         move_gen.initialize_attack_boards();
@@ -605,9 +584,9 @@ impl MoveGenerator {
                     PieceCategory::NonSlider(non_slider) => {
                         self.get_non_slider_attacks(side, non_slider, from)
                     }
-                    PieceCategory::Slider(slider) => {
-                        self.get_slider_attacks(slider, from, occupancy)
-                    }
+                    PieceCategory::Slider(slider) => self
+                        .sliding_piece_attacks
+                        .get_slider_attack(slider, from, occupancy),
                 };
 
                 attacks |= attacks_bb;
@@ -633,7 +612,9 @@ impl MoveGenerator {
         occupancy: &Bitboard,
     ) -> Bitboard {
         match PieceCategory::from(piece) {
-            PieceCategory::Slider(slider) => self.get_slider_attacks(slider, square, occupancy),
+            PieceCategory::Slider(slider) => self
+                .sliding_piece_attacks
+                .get_slider_attack(slider, square, occupancy),
             PieceCategory::NonSlider(non_slider) => {
                 self.get_non_slider_attacks(Side::opposite(attacking_side), non_slider, square)
             }
@@ -805,7 +786,8 @@ impl MoveGenerator {
             let from_square = bitboard_helpers::next_bit(&mut piece_bb) as u8;
             let attack_bb = match PieceCategory::from(piece) {
                 PieceCategory::Slider(slider) => {
-                    self.get_slider_attacks(slider, from_square, &occupancy)
+                    self.sliding_piece_attacks
+                        .get_slider_attack(slider, from_square, &occupancy)
                 }
                 PieceCategory::NonSlider(non_slider) => {
                     self.get_non_slider_attacks(us, non_slider, from_square)
@@ -839,29 +821,6 @@ impl MoveGenerator {
             NonSliderPiece::Knight => self.knight_attacks[from_square as usize],
             NonSliderPiece::Pawn => {
                 self.pawn_attacks[attacking_side as usize][from_square as usize]
-            }
-        }
-    }
-
-    fn get_slider_attacks(
-        &self,
-        piece: SliderPiece,
-        from_square: u8,
-        occupancy: &Bitboard,
-    ) -> Bitboard {
-        match piece {
-            SliderPiece::Rook => {
-                let index = self.rook_magics[from_square as usize].index(*occupancy);
-                self.rook_attacks[index]
-            }
-            SliderPiece::Bishop => {
-                let index = self.bishop_magics[from_square as usize].index(*occupancy);
-                self.bishop_attacks[index]
-            }
-            SliderPiece::Queen => {
-                let rook_index = self.rook_magics[from_square as usize].index(*occupancy);
-                let bishop_index = self.bishop_magics[from_square as usize].index(*occupancy);
-                self.rook_attacks[rook_index] ^ self.bishop_attacks[bishop_index]
             }
         }
     }
@@ -1741,28 +1700,6 @@ mod tests {
                 assert_eq!(attack & !bishop_bb_with_edges, 0);
             }
         }
-    }
-
-    #[test]
-    fn check_queen_attacks() {
-        let square = Squares::D8;
-        let bishop_bb = MoveGenerator::relevant_bishop_bits(square);
-        let rook_bb = MoveGenerator::relevant_rook_bits(square);
-        let queen_bb = bishop_bb | rook_bb;
-
-        let move_gen = MoveGenerator::new();
-        let queen_attacks =
-            move_gen.get_slider_attacks(SliderPiece::Queen, square, &Bitboard::default());
-        println!("queen attacks: \n{queen_attacks}");
-        println!("queen bb: \n{queen_bb}");
-
-        let attacks_without_edges = queen_attacks
-            & !FILE_BITBOARDS[File::A as usize]
-            & !FILE_BITBOARDS[File::H as usize]
-            & !RANK_BITBOARDS[Rank::R1 as usize];
-
-        println!("attacks without edges: \n{attacks_without_edges}");
-        assert_eq!(attacks_without_edges, queen_bb);
     }
 
     #[test]
