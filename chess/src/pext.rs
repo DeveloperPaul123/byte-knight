@@ -18,7 +18,7 @@ use std::arch::x86_64;
 /// Checks to see if the BMI2 instructions set is available on the current machine.
 ///
 /// Returns false if unavailable and true otherwise.
-fn has_bmi2() -> bool {
+pub(crate) fn has_bmi2() -> bool {
     #[cfg(target_arch = "x86_64")]
     {
         is_x86_feature_detected!("bmi2")
