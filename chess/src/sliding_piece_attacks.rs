@@ -3,7 +3,7 @@ use crate::{
     definitions::NumberOf,
     magics::{BISHOP_MAGIC_VALUES, MagicNumber, ROOK_MAGIC_VALUES},
     move_generation::MoveGenerator,
-    pext::has_bmi2,
+    pext::{Pext, has_bmi2},
     pieces::{Piece, SQUARE_NAME},
     slider_pieces::SliderPiece,
 };
@@ -16,6 +16,8 @@ pub(crate) struct SlidingPieceAttacks {
     pub(crate) bishop_magics: [MagicNumber; NumberOf::SQUARES],
     pub(crate) rook_attacks: Vec<Bitboard>,
     pub(crate) bishop_attacks: Vec<Bitboard>,
+    pub(crate) rook_pext: [Pext; NumberOf::SQUARES],
+    pub(crate) bishop_pext: [Pext; NumberOf::SQUARES],
     pub(crate) rook_pext_attacks: Vec<Bitboard>,
     pub(crate) bishop_pext_attacks: Vec<Bitboard>,
 }
@@ -29,8 +31,10 @@ impl SlidingPieceAttacks {
             bishop_magics: [MagicNumber::default(); NumberOf::SQUARES],
             rook_attacks: vec![Bitboard::default(); 102400], // 2^12 * 64
             bishop_attacks: vec![Bitboard::default(); 5248], // 2^10 * 64
-            rook_pext_attacks: vec![Bitboard::default(); 4096], // 2^12
-            bishop_pext_attacks: vec![Bitboard::default(); 1024], // 2^10
+            rook_pext: [Pext::default(); NumberOf::SQUARES],
+            bishop_pext: [Pext::default(); NumberOf::SQUARES],
+            rook_pext_attacks: vec![Bitboard::default(); 102400], // 2^12 * 64
+            bishop_pext_attacks: vec![Bitboard::default(); 5248], // 2^10 * 64
         };
 
         // Initialize the magic numbers and attack tables.
@@ -76,6 +80,9 @@ impl SlidingPieceAttacks {
 impl SlidingPieceAttacks {
     #[cfg(target_arch = "x86_64")]
     fn initialize_pext_tables(&mut self, piece: SliderPiece) {
+        use std::i64;
+        let mut offset = 0usize;
+
         assert!(piece == SliderPiece::Bishop || piece == SliderPiece::Rook);
         let relevant_bits_fn = if piece == SliderPiece::Rook {
             MoveGenerator::relevant_rook_bits
@@ -88,6 +95,8 @@ impl SlidingPieceAttacks {
             MoveGenerator::bishop_attacks
         };
 
+        let mut min_pext = i64::MAX;
+        let mut max_pext = i64::MIN;
         for square in 0..NumberOf::SQUARES as u8 {
             let relevant_bits = relevant_bits_fn(square);
 
@@ -98,20 +107,33 @@ impl SlidingPieceAttacks {
             } else {
                 &mut self.bishop_pext_attacks
             };
+
+            let pext_table = if piece == SliderPiece::Rook {
+                &mut self.rook_pext
+            } else {
+                &mut self.bishop_pext
+            };
+
+            let total_permutations = blocker_bitboards.len();
+
+            pext_table[square as usize] = Pext::new(relevant_bits, offset);
+            let current_pext = pext_table[square as usize];
             for i in 0..blocker_bitboards.len() {
-                #[cfg(target_arch = "x86_64")]
-                unsafe {
-                    use std::arch::x86_64::_pext_u64;
-                    let blocker = blocker_bitboards[i];
-                    let index = _pext_u64(blocker.as_number(), relevant_bits.as_number()) as usize;
-                    assert!(index < attack_table.len());
-                    attack_table[index] = attacks[i];
+                let blocker = blocker_bitboards[i];
+                let index = current_pext.index(&blocker);
+                if (index as i64) < min_pext {
+                    min_pext = index as i64;
                 }
-                #[cfg(not(target_arch = "x86_64"))]
-                {
-                    panic!("PEXT not supported on this architecture");
+                if (index as i64) > max_pext {
+                    max_pext = index as i64;
                 }
-            }
+                assert!(index < attack_table.len());
+
+                attack_table[index] = attacks[i];
+            } // blocker bitboards loop
+
+            offset += total_permutations;
+            println!("Min/max pext index {min_pext}/{max_pext}");
         }
     }
 
@@ -193,6 +215,7 @@ impl SlidingPieceAttacks {
         }
     }
 
+    #[inline(always)]
     fn get_attack(&self, piece: SliderPiece, from_square: u8, occupancy: &Bitboard) -> Bitboard {
         match piece {
             SliderPiece::Rook => {
@@ -212,38 +235,30 @@ impl SlidingPieceAttacks {
     }
 
     #[cfg(target_arch = "x86_64")]
+    #[inline(always)]
     fn get_attack_pext(
         &self,
         piece: SliderPiece,
         from_square: u8,
         occupancy: &Bitboard,
     ) -> Bitboard {
-        unsafe {
-            use std::arch::x86_64::_pext_u64;
-            return match piece {
-                SliderPiece::Rook => {
-                    let relevant_bits = MoveGenerator::relevant_rook_bits(from_square);
-                    let index =
-                        _pext_u64(occupancy.as_number(), relevant_bits.as_number()) as usize;
-                    self.rook_pext_attacks[index]
-                }
-                SliderPiece::Bishop => {
-                    let relevant_bits = MoveGenerator::relevant_bishop_bits(from_square);
-                    let index =
-                        _pext_u64(occupancy.as_number(), relevant_bits.as_number()) as usize;
-                    self.bishop_pext_attacks[index]
-                }
-                SliderPiece::Queen => {
-                    let rook_relevant_bits = MoveGenerator::relevant_rook_bits(from_square);
-                    let bishop_relevant_bits = MoveGenerator::relevant_bishop_bits(from_square);
-                    let rook_index =
-                        _pext_u64(occupancy.as_number(), rook_relevant_bits.as_number()) as usize;
-                    let bishop_index =
-                        _pext_u64(occupancy.as_number(), bishop_relevant_bits.as_number()) as usize;
-                    self.rook_pext_attacks[rook_index] ^ self.bishop_pext_attacks[bishop_index]
-                }
-            };
-        }
+        return match piece {
+            SliderPiece::Rook => {
+                let pext = self.rook_pext[from_square as usize];
+                let index = pext.index(occupancy);
+                self.rook_pext_attacks[index]
+            }
+            SliderPiece::Bishop => {
+                let pext = self.bishop_pext[from_square as usize];
+                let index = pext.index(occupancy);
+                self.bishop_pext_attacks[index]
+            }
+            SliderPiece::Queen => {
+                let rook_index = self.rook_pext[from_square as usize].index(occupancy);
+                let bishop_index = self.bishop_pext[from_square as usize].index(occupancy);
+                self.rook_pext_attacks[rook_index] ^ self.bishop_pext_attacks[bishop_index]
+            }
+        };
     }
 }
 
