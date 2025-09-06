@@ -39,6 +39,6 @@ pub mod pieces;
 pub mod rank;
 pub mod side;
 pub mod slider_pieces;
-pub(crate) mod sliding_piece_attacks;
+pub mod sliding_piece_attacks;
 pub mod square;
 pub mod zobrist;

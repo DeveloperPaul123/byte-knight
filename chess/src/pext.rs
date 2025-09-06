@@ -12,9 +12,6 @@
  *
  */
 
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64;
-
 use crate::bitboard::Bitboard;
 
 /// Checks to see if the BMI2 instructions set is available on the current machine.
@@ -45,16 +42,12 @@ impl Pext {
         }
     }
 
+    #[cfg(target_arch = "x86_64")]
     pub(crate) fn index(&self, occupancy: &Bitboard) -> usize {
-        #[cfg(target_arch = "x86_64")]
         unsafe {
             use std::arch::x86_64::_pext_u64;
             let index = _pext_u64(occupancy.as_number(), self.relevant_bits_mask) as usize;
             index + self.offset
-        }
-        #[cfg(not(target_arch = "x86_64"))]
-        {
-            panic!("Architecture does not support PEXT!")
         }
     }
 }

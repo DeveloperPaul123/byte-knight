@@ -29,7 +29,6 @@ use crate::{
     pieces::{Piece, SQUARE_NAME},
     rank::Rank,
     side::Side,
-    slider_pieces::SliderPiece,
     sliding_piece_attacks::SlidingPieceAttacks,
     square::{self, Square},
 };
@@ -293,7 +292,7 @@ impl MoveGenerator {
     }
 
     #[allow(dead_code)]
-    fn edges_from_square(square: u8) -> Bitboard {
+    pub(crate) fn edges_from_square(square: u8) -> Bitboard {
         let (file, rank) = square::from_square(square);
         MoveGenerator::edges(file, rank)
     }
@@ -1659,45 +1658,6 @@ mod tests {
                 if (bb) != 0 {
                     assert_eq!(bb & !rook_bb, 0);
                 }
-            }
-        }
-    }
-
-    #[test]
-    fn check_rook_attacks() {
-        for square in 0..NumberOf::SQUARES {
-            let rook_bb = MoveGenerator::relevant_rook_bits(square as u8);
-            let blockers = MoveGenerator::create_blocker_permutations(rook_bb);
-            let edges = MoveGenerator::edges_from_square(square as u8);
-            let rook_bb_with_edges = rook_bb | edges;
-
-            let attacks = MoveGenerator::rook_attacks(square as u8, &blockers);
-            assert!(attacks.len() <= blockers.len());
-
-            for attack in attacks {
-                // attack should be a subset of the rook bitboard with edges
-                // blockers does not include the edges
-                // but attacks do include them
-                assert_eq!(attack & !rook_bb_with_edges, 0);
-            }
-        }
-    }
-
-    #[test]
-    fn check_bishop_attacks() {
-        for square in 0..1 {
-            let bishop_bb = MoveGenerator::relevant_bishop_bits(square as u8);
-            let blockers = MoveGenerator::create_blocker_permutations(bishop_bb);
-            let edges = MoveGenerator::edges_from_square(square as u8);
-            let bishop_bb_with_edges = bishop_bb | edges;
-
-            let attacks = MoveGenerator::bishop_attacks(square as u8, &blockers);
-            assert!(attacks.len() <= blockers.len());
-
-            for attack in attacks {
-                println!("attack: \n{attack}");
-                // attack should be a subset of the bishop bitboard
-                assert_eq!(attack & !bishop_bb_with_edges, 0);
             }
         }
     }

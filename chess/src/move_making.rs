@@ -195,8 +195,9 @@ impl Board {
         let update_zobrist_hash = true;
 
         // en passant capture is handled separately
-        if captured_piece.is_some() && !mv.is_en_passant_capture() {
-            let cap = captured_piece.unwrap();
+        if !mv.is_en_passant_capture()
+            && let Some(cap) = captured_piece
+        {
             // remove the captured piece from the board
             self.remove_piece(them, cap, to, update_zobrist_hash);
             // reset half move clock
