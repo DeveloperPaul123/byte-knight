@@ -1,6 +1,7 @@
 /// Trait to define the node types in the search tree.
 pub trait NodeType {
     const PV: bool;
+    #[allow(dead_code)]
     const ROOT: bool;
 }
 

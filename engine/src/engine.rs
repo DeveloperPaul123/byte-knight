@@ -142,28 +142,28 @@ impl ByteKnight {
                         );
                     }
                     UciCommand::SetOption { name, value } => {
-                        if name.to_lowercase() == "hash" {
-                            if let Some(val) = value {
-                                // set the hash size, making sure it is within the bounds we have set.
-                                if let Ok(hash_size) = val.parse::<usize>() {
-                                    if hash_size < ttable::MIN_TABLE_SIZE_MB {
-                                        eprintln!(
-                                            "Hash size too small. Must be at least {} MB",
-                                            ttable::MIN_TABLE_SIZE_MB
-                                        );
-                                        continue;
-                                    } else if hash_size > ttable::MAX_TABLE_SIZE_MB {
-                                        eprintln!(
-                                            "Hash size too large. Must be at most {} MB",
-                                            ttable::MAX_TABLE_SIZE_MB
-                                        );
-                                        continue;
-                                    }
-
-                                    self.transposition_table = Arc::new(Mutex::new(
-                                        TranspositionTable::from_size_in_mb(hash_size),
-                                    ));
+                        if name.to_lowercase() == "hash"
+                            && let Some(val) = value
+                        {
+                            // set the hash size, making sure it is within the bounds we have set.
+                            if let Ok(hash_size) = val.parse::<usize>() {
+                                if hash_size < ttable::MIN_TABLE_SIZE_MB {
+                                    eprintln!(
+                                        "Hash size too small. Must be at least {} MB",
+                                        ttable::MIN_TABLE_SIZE_MB
+                                    );
+                                    continue;
+                                } else if hash_size > ttable::MAX_TABLE_SIZE_MB {
+                                    eprintln!(
+                                        "Hash size too large. Must be at most {} MB",
+                                        ttable::MAX_TABLE_SIZE_MB
+                                    );
+                                    continue;
                                 }
+
+                                self.transposition_table = Arc::new(Mutex::new(
+                                    TranspositionTable::from_size_in_mb(hash_size),
+                                ));
                             }
                         }
                     }
