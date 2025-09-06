@@ -13,3 +13,10 @@ arrayvec = "0.7.6"
 rand = { version = "0.9.0", features = ["small_rng"] }
 serde = { version = "1.0.215", features = ["derive"] }
 thiserror = "2.0.3"
+
+[dev-dependencies]
+criterion = { version = "0.3", features = ["html_reports"] }
+
+[[bench]]
+name = "sliding_piece_moves"
+harness = false
