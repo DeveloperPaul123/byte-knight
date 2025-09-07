@@ -1,0 +1,53 @@
+name: UCI Compliance
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        runs-on: [ubuntu-22.04]
+        rust: [stable, nightly]
+        build-type: [debug, release]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Rust ${{ matrix.rust }}
+        run: rustup default ${{ matrix.rust }}
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Checkout fastchess
+        uses: actions/checkout@v4
+        with:
+          repository: Disservin/fastchess
+          path: fast-chess
+
+      - name: Cache fastchess binary
+        id: cache-fastchess
+        uses: actions/cache@v4
+        with:
+          path: fast-chess/fastchess
+          key: fastchess-${{ runner.os }}-${{ hashFiles('fast-chess/Makefile') }}
+
+      - name: Build fastchess
+        if: steps.cache-fastchess.outputs.cache-hit != 'true'
+        run: |
+          make -j
+        working-directory: fast-chess
+
+      - name: Build byte-knight
+        run: just build ${{ matrix.build-type }}
+
+      - name: Run UCI compliance tests
+        run: |
+          chmod +x fast-chess/fastchess
+          ./fast-chess/fastchess --compliance ../target/${{ matrix.build-type }}/byte-knight
