@@ -50,4 +50,4 @@ jobs:
       - name: Run UCI compliance tests
         run: |
           chmod +x fast-chess/fastchess
-          ./fast-chess/fastchess --compliance ../target/${{ matrix.build-type }}/byte-knight
+          ./fast-chess/fastchess --compliance ./target/${{ matrix.build-type }}/byte-knight
