@@ -12,6 +12,8 @@
  *
  */
 
+use crate::bitboard::Bitboard;
+
 pub const SPACE: char = ' ';
 pub const NEWLINE: char = '\n';
 pub const DASH: char = '-';
@@ -151,3 +153,28 @@ impl Squares {
 }
 
 pub const DARK_SQUARES: u64 = 0xAA55AA55AA55AA55;
+
+type FileBitboards = [Bitboard; NumberOf::FILES];
+type RankBitboards = [Bitboard; NumberOf::RANKS];
+
+pub(crate) const FILE_BITBOARDS: FileBitboards = [
+    Bitboard::new(72340172838076673),
+    Bitboard::new(144680345676153346),
+    Bitboard::new(289360691352306692),
+    Bitboard::new(578721382704613384),
+    Bitboard::new(1157442765409226768),
+    Bitboard::new(2314885530818453536),
+    Bitboard::new(4629771061636907072),
+    Bitboard::new(9259542123273814144),
+];
+
+pub(crate) const RANK_BITBOARDS: RankBitboards = [
+    Bitboard::new(255),
+    Bitboard::new(65280),
+    Bitboard::new(16711680),
+    Bitboard::new(4278190080),
+    Bitboard::new(1095216660480),
+    Bitboard::new(280375465082880),
+    Bitboard::new(71776119061217280),
+    Bitboard::new(18374686479671623680),
+];

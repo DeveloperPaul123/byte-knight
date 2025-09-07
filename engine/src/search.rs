@@ -722,7 +722,7 @@ impl<'a> Search<'a> {
             }
         }
 
-        if best_move.is_some() {
+        if let Some(bm) = best_move {
             // store the best move in the transposition table
             let flag = if best <= original_alpha {
                 ttable::EntryFlag::UpperBound
@@ -738,7 +738,7 @@ impl<'a> Search<'a> {
                     0u8,
                     best,
                     flag,
-                    best_move.unwrap(),
+                    bm,
                 ));
         }
 

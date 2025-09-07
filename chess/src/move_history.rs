@@ -46,7 +46,7 @@ impl BoardHistory {
     }
 
     /// Get an iterator to the board history
-    pub fn iter(&self) -> std::slice::Iter<BoardState> {
+    pub fn iter(&self) -> std::slice::Iter<'_, BoardState> {
         self.board_states.iter()
     }
 }
