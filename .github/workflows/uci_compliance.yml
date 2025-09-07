@@ -10,15 +10,10 @@ env:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        runs-on: [ubuntu-22.04]
-        rust: [stable, nightly]
-        build-type: [debug, release]
     runs-on: ubuntu-22.04
     steps:
-      - name: Rust ${{ matrix.rust }}
-        run: rustup default ${{ matrix.rust }}
+      - name: Rust stable
+        run: rustup default stable
       - uses: actions/checkout@v4
         with:
           lfs: true
@@ -45,9 +40,9 @@ jobs:
         working-directory: fast-chess
 
       - name: Build byte-knight
-        run: just build ${{ matrix.build-type }}
+        run: just build release
 
       - name: Run UCI compliance tests
         run: |
           chmod +x fast-chess/fastchess
-          ./fast-chess/fastchess --compliance ./target/${{ matrix.build-type }}/byte-knight
+          ./fast-chess/fastchess --compliance ./target/release/byte-knight
