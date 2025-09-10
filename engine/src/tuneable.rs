@@ -35,3 +35,5 @@ pub(crate) const LMP_MAX_DEPTH: ScoreType = 300;
 pub(crate) const LMP_THRESHOLD_MULTIPLIER: ScoreType = 2;
 // LMP divisor (against the length of total moves * LMP multiplier)
 pub(crate) const LMP_THRESHOLD_DIVISOR: ScoreType = 3;
+
+pub(crate) const LMP_MIN_THRESHOLD_DEPTH: ScoreType = 10;
