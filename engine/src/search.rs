@@ -438,7 +438,8 @@ impl<'a> Search<'a> {
             // We assume our move ordering is just too good, so if we're under a certain depth
             // and have made more than a certain number of moves, we can assume that later moves
             // won't be as good, so we prune them.
-            if !Node::PV && !best_score.mated() {
+            if !Node::ROOT && !Node::PV && !board.is_in_check(&self.move_gen) && !best_score.mated()
+            {
                 let min_lmp_moves = LMP_THRESHOLD_MULTIPLIER as usize * total_move_count
                     / LMP_THRESHOLD_DIVISOR as usize;
                 if depth <= LMP_MAX_DEPTH && i >= min_lmp_moves {
