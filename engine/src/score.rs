@@ -79,6 +79,11 @@ impl Score {
     pub fn pow(&self, exp: u32) -> Score {
         Score(self.0.pow(exp))
     }
+
+    /// Returns true if the score indicates that you are being mated
+    pub fn mated(&self) -> bool {
+        self.0 <= -Score::MINIMUM_MATE.0
+    }
 }
 
 impl From<Score> for UciScore {
