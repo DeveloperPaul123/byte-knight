@@ -44,8 +44,8 @@ use crate::{
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
     tuneable::{
-        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMP_MAX_DEPTH, LMP_THRESHOLD_DIVISOR,
-        LMP_THRESHOLD_MULTIPLIER, MAX_RFP_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RFP_MARGIN,
+        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMP_MIN_THRESHOLD_DEPTH, MAX_RFP_DEPTH,
+        NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RFP_MARGIN,
     },
 };
 use ttable::TranspositionTable;
@@ -406,7 +406,6 @@ impl<'a> Search<'a> {
             };
         }
 
-        let total_move_count = move_list.len();
         let classify_res = MoveOrder::classify_all(
             board.side_to_move(),
             move_list.as_slice(),
@@ -440,9 +439,9 @@ impl<'a> Search<'a> {
             // won't be as good, so we prune them.
             if !Node::ROOT && !Node::PV && !board.is_in_check(&self.move_gen) && !best_score.mated()
             {
-                let min_lmp_moves = LMP_THRESHOLD_MULTIPLIER as usize * total_move_count
-                    / LMP_THRESHOLD_DIVISOR as usize;
-                if depth <= LMP_MAX_DEPTH && i >= min_lmp_moves {
+                let min_lmp_moves =
+                    LMP_MIN_THRESHOLD_DEPTH as usize + depth as usize * depth as usize;
+                if i >= min_lmp_moves {
                     break;
                 }
             }
