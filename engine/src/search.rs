@@ -439,8 +439,9 @@ impl<'a> Search<'a> {
             // won't be as good, so we prune them.
             if !Node::ROOT && !Node::PV && !board.is_in_check(&self.move_gen) && !best_score.mated()
             {
-                let min_lmp_moves = LMP_MIN_THRESHOLD_DEPTH + depth * depth;
-                if i >= min_lmp_moves as usize {
+                let min_lmp_moves =
+                    LMP_MIN_THRESHOLD_DEPTH as usize + depth as usize * depth as usize;
+                if i >= min_lmp_moves {
                     break;
                 }
             }
