@@ -13,10 +13,10 @@ jobs:
   build:
     strategy:
       matrix:
-        runs-on: [ubuntu-22.04]
+        os: [ubuntu-22.04, ubuntu-22.04-arm, macos-26]
         rust: [stable, nightly]
         build-type: [debug, release]
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Rust ${{ matrix.rust }}
         run: rustup default ${{ matrix.rust }}
