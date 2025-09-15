@@ -15,6 +15,7 @@ struct PextSlidingPieceAttacks {
     bishop_pext_attacks: Vec<Bitboard>,
 }
 
+#[cfg(target_arch = "x86_64")]
 impl Default for PextSlidingPieceAttacks {
     fn default() -> Self {
         Self::new()
