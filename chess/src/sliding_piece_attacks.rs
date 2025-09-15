@@ -8,83 +8,35 @@ use crate::{
     slider_pieces::SliderPiece,
 };
 
-pub struct SlidingPieceAttacks {
-    pub(crate) rook_magics: [MagicNumber; NumberOf::SQUARES],
-    pub(crate) bishop_magics: [MagicNumber; NumberOf::SQUARES],
-    pub(crate) rook_attacks: Vec<Bitboard>,
-    pub(crate) bishop_attacks: Vec<Bitboard>,
-    pub(crate) rook_pext: [Pext; NumberOf::SQUARES],
-    pub(crate) bishop_pext: [Pext; NumberOf::SQUARES],
-    pub(crate) rook_pext_attacks: Vec<Bitboard>,
-    pub(crate) bishop_pext_attacks: Vec<Bitboard>,
+struct PextSlidingPieceAttacks {
+    rook_pext: [Pext; NumberOf::SQUARES],
+    bishop_pext: [Pext; NumberOf::SQUARES],
+    rook_pext_attacks: Vec<Bitboard>,
+    bishop_pext_attacks: Vec<Bitboard>,
 }
 
-impl Default for SlidingPieceAttacks {
+impl Default for PextSlidingPieceAttacks {
     fn default() -> Self {
         Self::new()
     }
 }
 
-// Public API
-impl SlidingPieceAttacks {
-    /// Create a new instance of SlidingPieceAttacks with initialized magic numbers and attack tables.
-    pub fn new() -> Self {
-        let mut instance = SlidingPieceAttacks {
-            rook_magics: [MagicNumber::default(); NumberOf::SQUARES],
-            bishop_magics: [MagicNumber::default(); NumberOf::SQUARES],
-            rook_attacks: vec![Bitboard::default(); 102400], // 2^12 * 64
-            bishop_attacks: vec![Bitboard::default(); 5248], // 2^10 * 64
+#[cfg(target_arch = "x86_64")]
+impl PextSlidingPieceAttacks {
+    fn new() -> Self {
+        let mut instance = PextSlidingPieceAttacks {
             rook_pext: [Pext::default(); NumberOf::SQUARES],
             bishop_pext: [Pext::default(); NumberOf::SQUARES],
             rook_pext_attacks: vec![Bitboard::default(); 102400], // 2^12 * 64
             bishop_pext_attacks: vec![Bitboard::default(); 5248], // 2^10 * 64
         };
 
-        // Initialize the magic numbers and attack tables.
-        instance.initialize_magic_numbers(Piece::Rook);
-        instance.initialize_magic_numbers(Piece::Bishop);
-
-        // Initialize the PEXT tables if BMI2 is available.
-        if crate::pext::has_bmi2() {
-            instance.initialize_pext_tables(SliderPiece::Rook);
-            instance.initialize_pext_tables(SliderPiece::Bishop);
-        }
+        instance.initialize_pext_tables(SliderPiece::Rook);
+        instance.initialize_pext_tables(SliderPiece::Bishop);
 
         instance
     }
 
-    /// Get the attack bitboard for a sliding piece (rook, bishop, or queen) from a given square,
-    /// considering the current occupancy of the board.
-    ///
-    /// # Arguments
-    ///
-    /// - `piece` - The type of sliding piece (rook, bishop, or queen).
-    /// - `from_square` - The square from which the piece is attacking (0-63).
-    /// - `occupancy` - The current occupancy bitboard of the board.
-    ///
-    /// # Returns
-    ///
-    /// - A Bitboard representing the attack squares for the given piece from the specified square.
-    #[inline(always)]
-    pub fn get_slider_attack(
-        &self,
-        piece: SliderPiece,
-        from_square: u8,
-        occupancy: &Bitboard,
-    ) -> Bitboard {
-        #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
-        {
-            self.get_attack_pext(piece, from_square, occupancy)
-        }
-        #[cfg(not(target_arch = "x86_64"))]
-        {
-            self.get_attack(piece, from_square, occupancy)
-        }
-    }
-}
-
-// Private functions
-impl SlidingPieceAttacks {
     /// Initialize PEXT tables and the associated attack tables.
     ///
     /// # Arguments
@@ -147,6 +99,108 @@ impl SlidingPieceAttacks {
         }
     }
 
+    /// Get sliding piece attacks using PEXT bitboards.
+    ///
+    /// # Arguments
+    ///
+    /// - `piece` - The sliding piece to get the moves for.
+    /// - `from_square` - The square the moves are generated from.
+    /// - `occupancy` - The current occupancy of the board.
+    ///
+    /// # Returns
+    ///
+    /// A [`Bitboard`] of sliding piece attacks.
+    #[cfg(target_arch = "x86_64")]
+    #[inline(always)]
+    fn get_attack(&self, piece: SliderPiece, from_square: u8, occupancy: &Bitboard) -> Bitboard {
+        match piece {
+            SliderPiece::Rook => {
+                let pext = self.rook_pext[from_square as usize];
+                let index = pext.index(occupancy);
+                self.rook_pext_attacks[index]
+            }
+            SliderPiece::Bishop => {
+                let pext = self.bishop_pext[from_square as usize];
+                let index = pext.index(occupancy);
+                self.bishop_pext_attacks[index]
+            }
+            SliderPiece::Queen => {
+                let rook_index = self.rook_pext[from_square as usize].index(occupancy);
+                let bishop_index = self.bishop_pext[from_square as usize].index(occupancy);
+                self.rook_pext_attacks[rook_index] ^ self.bishop_pext_attacks[bishop_index]
+            }
+        }
+    }
+}
+
+pub struct SlidingPieceAttacks {
+    pub(crate) rook_magics: [MagicNumber; NumberOf::SQUARES],
+    pub(crate) bishop_magics: [MagicNumber; NumberOf::SQUARES],
+    pub(crate) rook_attacks: Vec<Bitboard>,
+    pub(crate) bishop_attacks: Vec<Bitboard>,
+    #[cfg(target_arch = "x86_64")]
+    pext_sliding_attacks: PextSlidingPieceAttacks,
+}
+
+impl Default for SlidingPieceAttacks {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// Public API
+impl SlidingPieceAttacks {
+    /// Create a new instance of SlidingPieceAttacks with initialized magic numbers and attack tables.
+    pub fn new() -> Self {
+        let mut instance = SlidingPieceAttacks {
+            rook_magics: [MagicNumber::default(); NumberOf::SQUARES],
+            bishop_magics: [MagicNumber::default(); NumberOf::SQUARES],
+            rook_attacks: vec![Bitboard::default(); 102400], // 2^12 * 64
+            bishop_attacks: vec![Bitboard::default(); 5248], // 2^10 * 64
+            #[cfg(target_arch = "x86_64")]
+            pext_sliding_attacks: PextSlidingPieceAttacks::new(),
+        };
+
+        // Initialize the magic numbers and attack tables.
+        instance.initialize_magic_numbers(Piece::Rook);
+        instance.initialize_magic_numbers(Piece::Bishop);
+
+        instance
+    }
+
+    /// Get the attack bitboard for a sliding piece (rook, bishop, or queen) from a given square,
+    /// considering the current occupancy of the board.
+    ///
+    /// # Arguments
+    ///
+    /// - `piece` - The type of sliding piece (rook, bishop, or queen).
+    /// - `from_square` - The square from which the piece is attacking (0-63).
+    /// - `occupancy` - The current occupancy bitboard of the board.
+    ///
+    /// # Returns
+    ///
+    /// - A Bitboard representing the attack squares for the given piece from the specified square.
+    #[inline(always)]
+    pub fn get_slider_attack(
+        &self,
+        piece: SliderPiece,
+        from_square: u8,
+        occupancy: &Bitboard,
+    ) -> Bitboard {
+        #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
+        {
+            self.pext_sliding_attacks
+                .get_attack(piece, from_square, occupancy)
+        }
+        #[cfg(not(target_arch = "x86_64"))]
+        {
+            self.get_attack(piece, from_square, occupancy)
+        }
+    }
+}
+
+// Private functions
+impl SlidingPieceAttacks {
     /// Initialize the magic numbers and the associated attack boards.
     #[allow(clippy::panic)]
     fn initialize_magic_numbers(&mut self, piece: Piece) {
@@ -255,44 +309,6 @@ impl SlidingPieceAttacks {
             }
         }
     }
-
-    /// Get sliding piece attacks using PEXT bitboards.
-    ///
-    /// # Arguments
-    ///
-    /// - `piece` - The sliding piece to get the moves for.
-    /// - `from_square` - The square the moves are generated from.
-    /// - `occupancy` - The current occupancy of the board.
-    ///
-    /// # Returns
-    ///
-    /// A [`Bitboard`] of sliding piece attacks.
-    #[cfg(target_arch = "x86_64")]
-    #[inline(always)]
-    fn get_attack_pext(
-        &self,
-        piece: SliderPiece,
-        from_square: u8,
-        occupancy: &Bitboard,
-    ) -> Bitboard {
-        match piece {
-            SliderPiece::Rook => {
-                let pext = self.rook_pext[from_square as usize];
-                let index = pext.index(occupancy);
-                self.rook_pext_attacks[index]
-            }
-            SliderPiece::Bishop => {
-                let pext = self.bishop_pext[from_square as usize];
-                let index = pext.index(occupancy);
-                self.bishop_pext_attacks[index]
-            }
-            SliderPiece::Queen => {
-                let rook_index = self.rook_pext[from_square as usize].index(occupancy);
-                let bishop_index = self.bishop_pext[from_square as usize].index(occupancy);
-                self.rook_pext_attacks[rook_index] ^ self.bishop_pext_attacks[bishop_index]
-            }
-        }
-    }
 }
 
 #[cfg(test)]
@@ -375,9 +391,9 @@ mod tests {
         let rook_bb = MoveGenerator::relevant_rook_bits(square);
         let queen_bb = bishop_bb | rook_bb;
 
-        let sliding_piece_attacks = super::SlidingPieceAttacks::new();
+        let sliding_piece_attacks = super::PextSlidingPieceAttacks::new();
         let queen_attacks =
-            sliding_piece_attacks.get_attack_pext(SliderPiece::Queen, square, &Bitboard::default());
+            sliding_piece_attacks.get_attack(SliderPiece::Queen, square, &Bitboard::default());
         println!("queen attacks: \n{queen_attacks}");
         println!("queen bb: \n{queen_bb}");
 
