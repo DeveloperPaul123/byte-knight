@@ -30,4 +30,4 @@ pub(crate) const LMR_OFFSET: f64 = 0.2;
 pub(crate) const LMR_SCALING_FACTOR: f64 = 2.0;
 
 // Minimum threshold depth for LMP to be considered
-pub(crate) const LMP_MIN_THRESHOLD_DEPTH: ScoreType = 10;
+pub(crate) const LMP_MIN_THRESHOLD_DEPTH: ScoreType = 8;
