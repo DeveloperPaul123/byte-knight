@@ -14,20 +14,7 @@
 
 use crate::bitboard::Bitboard;
 
-/// Checks to see if the BMI2 instructions set is available on the current machine.
-///
-/// Returns false if unavailable and true otherwise.
-pub(crate) fn has_bmi2() -> bool {
-    #[cfg(target_arch = "x86_64")]
-    {
-        is_x86_feature_detected!("bmi2")
-    }
-    #[cfg(not(target_arch = "x86_64"))]
-    {
-        false
-    }
-}
-
+/// Simple structure to help with PEXT index generation when computing sliding piece attacks.
 #[derive(Default, Debug, Clone, Copy)]
 pub(crate) struct Pext {
     pub relevant_bits_mask: u64,
@@ -35,6 +22,16 @@ pub(crate) struct Pext {
 }
 
 impl Pext {
+    /// Create a new [`Pext`] structure with the given relevant bits [`Bitboard`] and an index offset.
+    ///
+    /// # Arguments
+    ///
+    /// - relevant_bits: The "relevant" bits for this entry. Typically this is generated as a set of permutations for all the given move possibilities of a sliding piece from a specific board location. Think of rays cast to the edges of the chess board from a given square. This [`Bitboard`] should not include the edges.
+    /// - offset: The offset of the index for this PEXT entry to the corresponding attack table.
+    ///
+    /// # Returns
+    ///
+    /// - New Pext struct.
     pub(crate) fn new(relavent_bits: Bitboard, offset: usize) -> Self {
         Pext {
             relevant_bits_mask: relavent_bits.as_number(),
@@ -42,6 +39,15 @@ impl Pext {
         }
     }
 
+    /// Compute the index into the attack table for this Pext entry using the PEXT BMI2 instruction.
+    ///
+    /// # Arguments
+    ///
+    /// - occupancy: The current chess board occupancy as a [`Bitboard`].
+    ///
+    /// # Returns
+    ///
+    /// - A `usize` index that can be used directly in the attack table.
     #[cfg(target_arch = "x86_64")]
     pub(crate) fn index(&self, occupancy: &Bitboard) -> usize {
         unsafe {
