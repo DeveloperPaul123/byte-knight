@@ -13,7 +13,7 @@ members = ["engine", "chess"]
 engine = { path = "engine" }
 chess = { path = "chess" }
 anyhow = "1.0.98"
-clap = { version = "4.5.37", features = ["derive"] }
+clap = { version = "4.5.48", features = ["derive"] }
 colored = "3.0.0"
 console = { version = "0.15.11", features = ["windows-console-colors"] }
 csv = "1.3.1"
