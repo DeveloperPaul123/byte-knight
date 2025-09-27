@@ -35,5 +35,5 @@ jobs:
 
       - name: Run UCI compliance tests
         run: |
-          chmod +x fast-chess/fastchess
-          ./fast-chess/fastchess-linux/x86-64/fastchess --compliance ./target/release/byte-knight
+          chmod +x ./fast-chess/fastchess-linux-x86-64/fastchess
+          ./fast-chess/fastchess-linux-x86-64/fastchess --compliance ./target/release/byte-knight
