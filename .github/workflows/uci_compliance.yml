@@ -22,6 +22,8 @@ jobs:
 
       - name: Download fastchess
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh -R Disservin/fastchess release download v1.6.0-alpha -p "fastchess-linux-x86-64.tar"
           mkdir -p fast-chess
