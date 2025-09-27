@@ -20,24 +20,13 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v2
 
-      - name: Checkout fastchess
-        uses: actions/checkout@v4
-        with:
-          repository: Disservin/fastchess
-          path: fast-chess
-
-      - name: Cache fastchess binary
-        id: cache-fastchess
-        uses: actions/cache@v4
-        with:
-          path: fast-chess/fastchess
-          key: fastchess-${{ runner.os }}-${{ hashFiles('fast-chess/Makefile') }}
-
-      - name: Build fastchess
-        if: steps.cache-fastchess.outputs.cache-hit != 'true'
+      - name: Download fastchess
+        shell: bash
         run: |
-          make -j CXX=clang++
-        working-directory: fast-chess
+          gh -R Disservin/fastchess release download v1.6.0-alpha -p "fastchess-linux-x86-64.tar"
+          mkdir -p fast-chess
+          tar -xf fastchess-linux-x86-64.tar -C fast-chess
+          rm fastchess-linux-x86-64.tar
 
       - name: Build byte-knight
         run: just build release
@@ -45,4 +34,4 @@ jobs:
       - name: Run UCI compliance tests
         run: |
           chmod +x fast-chess/fastchess
-          ./fast-chess/fastchess --compliance ./target/release/byte-knight
+          ./fast-chess/fastchess-linux/x86-64/fastchess --compliance ./target/release/byte-knight
