@@ -36,7 +36,7 @@ jobs:
       - name: Build fastchess
         if: steps.cache-fastchess.outputs.cache-hit != 'true'
         run: |
-          make -j
+          make -j CXX=clang++
         working-directory: fast-chess
 
       - name: Build byte-knight
