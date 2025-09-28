@@ -12,7 +12,7 @@ members = ["engine", "chess"]
 [dependencies]
 engine = { path = "engine" }
 chess = { path = "chess" }
-anyhow = "1.0.98"
+anyhow = "1.0.100"
 clap = { version = "4.5.48", features = ["derive"] }
 colored = "3.0.0"
 console = { version = "0.16.1", features = ["windows-console-colors"] }
