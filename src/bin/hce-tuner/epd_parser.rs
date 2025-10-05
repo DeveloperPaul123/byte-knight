@@ -51,6 +51,7 @@ fn process_epd_line(line: &str) -> Result<(Board, f64)> {
 
 fn parse_epd_line(line: &str) -> Result<TuningPosition> {
     let (board, game_result) = process_epd_line(line)?;
+
     let mut w_indexes = Vec::new();
     let mut b_indexes = Vec::new();
     // loop through all pieces on the board and calculate the index into the parameter array
@@ -87,6 +88,22 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
             Side::Black => 1.0 - game_result,
         }
     };
+
+    // detect passed pawns
+    let pawn_eval = engine::pawn_structure::PawnEvaluator::new();
+    let _pawn_structure = pawn_eval.detect_pawn_structure(&board);
+    // for each passed pawn, add the passed pawn index
+    let white_passed_pawns_cnt =
+        _pawn_structure.passed_pawns[Side::White as usize].number_of_occupied_squares();
+    let black_passed_pawns_cnt =
+        _pawn_structure.passed_pawns[Side::Black as usize].number_of_occupied_squares();
+
+    for _idx in 0..white_passed_pawns_cnt {
+        w_indexes.push(Offsets::PASSED_PAWN as usize + Side::White as usize);
+    }
+    for _idx in 0..black_passed_pawns_cnt {
+        b_indexes.push(Offsets::PASSED_PAWN as usize + Side::Black as usize);
+    }
 
     let scaled_phase = phase as f64 / (GAME_PHASE_MAX as f64);
     let tuning_pos = TuningPosition::new(w_indexes, b_indexes, scaled_phase, result);
@@ -171,15 +188,15 @@ mod tests {
     fn test_epd_lines(lines: &[&str]) -> Vec<(TuningPosition, Board, f64)> {
         let mut results = Vec::new();
         for line in lines.iter() {
-            let position = super::parse_epd_line(line);
+            let position: Result<TuningPosition, anyhow::Error> = super::parse_epd_line(line);
             assert!(position.is_ok());
             let pos = position.unwrap();
             let (board, result) = process_epd_line(line).unwrap();
             let total_piece_count = board.all_pieces().as_number().count_ones();
-            assert_eq!(
+            assert!(
                 pos.parameter_indexes[Side::White as usize].len()
-                    + pos.parameter_indexes[Side::Black as usize].len(),
-                total_piece_count as usize
+                    + pos.parameter_indexes[Side::Black as usize].len()
+                    >= total_piece_count as usize
             );
             results.push((pos, board, result));
         }
