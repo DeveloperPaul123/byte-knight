@@ -16,6 +16,7 @@ use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
 
 use crate::{
     hce_values::{ByteKnightValues, GAME_PHASE_MAX, GAMEPHASE_INC},
+    pawn_structure::PawnEvaluator,
     phased_score::{PhaseType, PhasedScore},
     score::{LargeScoreType, Score, ScoreType},
     traits::{Eval, EvalValues},
@@ -27,11 +28,15 @@ where
     Values: EvalValues,
 {
     values: Values,
+    pawn_evaluator: PawnEvaluator,
 }
 
 impl<Values: EvalValues> Evaluation<Values> {
     pub fn new(values: Values) -> Self {
-        Evaluation { values }
+        Evaluation {
+            values,
+            pawn_evaluator: PawnEvaluator::new(),
+        }
     }
 
     pub fn values(&self) -> &Values {
@@ -73,12 +78,27 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         let mut eg: [i32; 2] = [0; 2];
         let mut game_phase = 0_i32;
 
+        let pawn_structure = self.pawn_evaluator.detect_pawn_structure(board);
+        let passed_pawns_white = pawn_structure.passed_pawns[Side::White as usize];
+        let passed_pawns_black = pawn_structure.passed_pawns[Side::Black as usize];
+
         let mut occupancy = board.all_pieces();
         // loop through occupied squares
         while occupancy.as_number() > 0 {
             let sq = bitboard_helpers::next_bit(&mut occupancy);
             let maybe_piece = board.piece_on_square(sq as u8);
             if let Some((piece, side)) = maybe_piece {
+                if piece == Piece::Pawn {
+                    // add passed pawn bonus if applicable
+                    let passed_pawn_bonus = self.values.passed_pawn_bonus();
+                    if passed_pawns_white.is_square_occupied(sq as u8) {
+                        mg[Side::White as usize] += passed_pawn_bonus.mg() as i32;
+                        eg[Side::White as usize] += passed_pawn_bonus.eg() as i32;
+                    } else if passed_pawns_black.is_square_occupied(sq as u8) {
+                        mg[Side::Black as usize] += passed_pawn_bonus.mg() as i32;
+                        eg[Side::Black as usize] += passed_pawn_bonus.eg() as i32;
+                    }
+                }
                 let phased_score: PhasedScore = self.values.psqt(sq as u8, piece, side);
                 mg[side as usize] += phased_score.mg() as i32;
                 eg[side as usize] += phased_score.eg() as i32;
