@@ -4,7 +4,7 @@ pub(crate) struct Offsets;
 
 pub const PARAMETER_COUNT: usize = Offsets::END as usize;
 const PSQT_SIZE: u16 = 384; // 64 * 6 (pieces)
-const PASSED_PAWN_SIZE: u16 = 2; // 64 squares * 2 sides
+const PASSED_PAWN_SIZE: u16 = 1; // 64 squares * 2 sides
 
 impl Offsets {
     pub const PSQT: u16 = 0;

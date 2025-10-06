@@ -99,10 +99,10 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         _pawn_structure.passed_pawns[Side::Black as usize].number_of_occupied_squares();
 
     for _idx in 0..white_passed_pawns_cnt {
-        w_indexes.push(Offsets::PASSED_PAWN as usize + Side::White as usize);
+        w_indexes.push(Offsets::PASSED_PAWN as usize);
     }
     for _idx in 0..black_passed_pawns_cnt {
-        b_indexes.push(Offsets::PASSED_PAWN as usize + Side::Black as usize);
+        b_indexes.push(Offsets::PASSED_PAWN as usize);
     }
 
     let scaled_phase = phase as f64 / (GAME_PHASE_MAX as f64);
@@ -329,6 +329,7 @@ mod tests {
                 Side::White => position.evaluate(&params),
                 Side::Black => -position.evaluate(&params),
             };
+            println!("pos: \n{}", board);
             println!("{expected_value} // {val}");
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
