@@ -71,9 +71,12 @@ impl PawnEvaluator {
             }
         }
 
-        PawnStructure {
-            passed_pawns: [passed_pawns_w, passed_pawns_b],
-        }
+        let mut structure = PawnStructure {
+            passed_pawns: Default::default(),
+        };
+        structure.passed_pawns[Side::White as usize] = passed_pawns_w;
+        structure.passed_pawns[Side::Black as usize] = passed_pawns_b;
+        structure
     }
 
     fn passed_pawn_mask(&self, side: Side, square: u8) -> Bitboard {

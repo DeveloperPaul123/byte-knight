@@ -157,7 +157,8 @@ mod tests {
     #[test]
     fn score_stability() {
         // These values were determined empirically by running this test and manually copy/pasting the results.
-        // If any changes are made to the evaluation function, these values will need to be updated or the test will need to be augmented with the new evaluation values.
+        // If any changes are made to the evaluation function, these values will need to be updated or the test
+        // will need to be augmented with the new evaluation values.
 
         // standard EPD suite FEN positions
         let positions = [
@@ -297,7 +298,7 @@ mod tests {
             12, 2, 0, 0, -397, 476, -2, 0, 5, 397, -476, -22, -43, 718, -744, 27, 43, -718, 744, 0,
             -6, 0, 6, -1094, -1192, -37, 1072, -1192, 37, 204, 222, -204, -222, 90, -204, -222,
             204, 222, -90, 23, 23, 0, 0, 0, 15, -15, -13, 0, 0, 0, -15, 15, 13, -15, 15, 8, 9, -8,
-            -9, -214, -7, 15, -15, -8, -9, 8, 9, 214, 7, -3, 2, 3, -2, 7, -7, 0, 3, -2, -3, 2, -7,
+            -9, -244, -7, 15, -15, -8, -9, 8, 9, 244, 7, -3, 2, 3, -2, 7, -7, 0, 3, -2, -3, 2, -7,
             7, 0, -11, 9, 31, 53, 11, -9, -31, -53, 41, 25,
         ];
 
