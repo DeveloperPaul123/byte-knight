@@ -10,6 +10,8 @@ use textplots::{Chart, Plot, Shape};
 use tuner::Tuner;
 use tuner_score::TuningScore;
 use tuning_position::TuningPosition;
+
+use crate::offsets::Offsets;
 mod epd_parser;
 mod math;
 mod offsets;
@@ -89,6 +91,13 @@ fn print_params(params: &Parameters) {
         println!("    ],");
     }
     println!("];");
+    println!();
+
+    // Print out the passed pawn bonus value
+    println!(
+        "pub const PASSED_PAWN_BONUS: PhasedScore = {:?};",
+        params[Offsets::PASSED_PAWN as usize]
+    );
 }
 
 fn plot_k(tuner: &Tuner) {
