@@ -9,5 +9,5 @@ pub trait Eval<Board> {
 pub trait EvalValues {
     type ReturnScore;
     fn psqt(&self, square: u8, piece: Piece, side: Side) -> Self::ReturnScore;
-    fn passed_pawn_bonus(&self) -> Self::ReturnScore;
+    fn passed_pawn_bonus(&self, square: u8, side: Side) -> Self::ReturnScore;
 }

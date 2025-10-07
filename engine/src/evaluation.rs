@@ -79,8 +79,6 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         let mut game_phase = 0_i32;
 
         let pawn_structure = self.pawn_evaluator.detect_pawn_structure(board);
-        let passed_pawns_white = pawn_structure.passed_pawns[Side::White as usize];
-        let passed_pawns_black = pawn_structure.passed_pawns[Side::Black as usize];
 
         let mut occupancy = board.all_pieces();
         // loop through occupied squares
@@ -90,13 +88,10 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
             if let Some((piece, side)) = maybe_piece {
                 if piece == Piece::Pawn {
                     // add passed pawn bonus if applicable
-                    let passed_pawn_bonus = self.values.passed_pawn_bonus();
-                    if passed_pawns_white.is_square_occupied(sq as u8) {
-                        mg[Side::White as usize] += passed_pawn_bonus.mg() as i32;
-                        eg[Side::White as usize] += passed_pawn_bonus.eg() as i32;
-                    } else if passed_pawns_black.is_square_occupied(sq as u8) {
-                        mg[Side::Black as usize] += passed_pawn_bonus.mg() as i32;
-                        eg[Side::Black as usize] += passed_pawn_bonus.eg() as i32;
+                    let passed_pawn_bonus = self.values.passed_pawn_bonus(sq as u8, side);
+                    if pawn_structure.passed_pawns[side as usize].is_square_occupied(sq as u8) {
+                        mg[side as usize] += passed_pawn_bonus.mg() as i32;
+                        eg[side as usize] += passed_pawn_bonus.eg() as i32;
                     }
                 }
                 let phased_score: PhasedScore = self.values.psqt(sq as u8, piece, side);
