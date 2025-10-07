@@ -50,7 +50,12 @@ impl Parameters {
                 params[64 * piece as usize + sq] = s;
             }
         }
-        params[Offsets::PASSED_PAWN as usize] = PASSED_PAWN_BONUS.into();
+
+        // Add passed pawn bonuses
+        for (idx, val) in PASSED_PAWN_BONUS.iter().enumerate() {
+            params[Offsets::PASSED_PAWN as usize + idx] = (*val).into();
+        }
+
         params
     }
 
@@ -63,7 +68,12 @@ impl Parameters {
                 params[64 * piece as usize + sq] = TuningScore::new(val, val);
             }
         }
-        params[Offsets::PASSED_PAWN as usize] = PASSED_PAWN_BONUS.into();
+
+        // Add passed pawn bonuses
+        for (idx, val) in PASSED_PAWN_BONUS.iter().enumerate() {
+            params[Offsets::PASSED_PAWN as usize + idx] = (*val).into();
+        }
+
         params
     }
 

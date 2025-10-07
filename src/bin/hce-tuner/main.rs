@@ -94,10 +94,15 @@ fn print_params(params: &Parameters) {
     println!();
 
     // Print out the passed pawn bonus value
-    println!(
-        "pub const PASSED_PAWN_BONUS: PhasedScore = {:?};",
-        params[Offsets::PASSED_PAWN as usize]
-    );
+    println!("pub const PASSED_PAWN_BONUS: [PhasedScore; NumberOf::PASSED_PAWN_RANKS] = [",);
+
+    for rank in 0..NumberOf::PASSED_PAWN_RANKS {
+        let idx = Offsets::PASSED_PAWN as usize + rank;
+        let val = params.as_slice()[idx];
+        println!("    {val:?}, ");
+    }
+
+    println!("];")
 }
 
 fn plot_k(tuner: &Tuner) {

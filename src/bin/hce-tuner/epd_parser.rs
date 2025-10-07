@@ -91,18 +91,20 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
 
     // detect passed pawns
     let pawn_eval = engine::pawn_structure::PawnEvaluator::new();
-    let _pawn_structure = pawn_eval.detect_pawn_structure(&board);
-    // for each passed pawn, add the passed pawn index
-    let white_passed_pawns_cnt =
-        _pawn_structure.passed_pawns[Side::White as usize].number_of_occupied_squares();
-    let black_passed_pawns_cnt =
-        _pawn_structure.passed_pawns[Side::Black as usize].number_of_occupied_squares();
+    let pawn_structure = pawn_eval.detect_pawn_structure(&board);
+    let mut white_pawns_bb = pawn_structure.passed_pawns[Side::White as usize];
+    let mut black_pawns_bb = pawn_structure.passed_pawns[Side::Black as usize];
 
-    for _idx in 0..white_passed_pawns_cnt {
-        w_indexes.push(Offsets::PASSED_PAWN as usize);
+    while white_pawns_bb.as_number() > 0 {
+        let white_pawn_idx = bitboard_helpers::next_bit(&mut white_pawns_bb);
+        let index = Offsets::offset_for_passed_pawn(white_pawn_idx, Side::White);
+        w_indexes.push(index);
     }
-    for _idx in 0..black_passed_pawns_cnt {
-        b_indexes.push(Offsets::PASSED_PAWN as usize);
+
+    while black_pawns_bb.as_number() > 0 {
+        let black_pawn_idx = bitboard_helpers::next_bit(&mut black_pawns_bb);
+        let index = Offsets::offset_for_passed_pawn(black_pawn_idx, Side::Black);
+        b_indexes.push(index);
     }
 
     let scaled_phase = phase as f64 / (GAME_PHASE_MAX as f64);

@@ -4,7 +4,7 @@ pub(crate) struct Offsets;
 
 pub const PARAMETER_COUNT: usize = Offsets::END as usize;
 const PSQT_SIZE: u16 = 384; // 64 * 6 (pieces)
-const PASSED_PAWN_SIZE: u16 = 1; // 64 squares * 2 sides
+const PASSED_PAWN_SIZE: u16 = NumberOf::PASSED_PAWN_RANKS as u16;
 
 impl Offsets {
     pub const PSQT: u16 = 0;
@@ -16,10 +16,18 @@ impl Offsets {
             + (piece as usize * NumberOf::SQUARES)
             + square::flip_if(side == Side::White, square as u8) as usize
     }
+
+    pub(crate) fn offset_for_passed_pawn(square: usize, side: Side) -> usize {
+        let (_file, rank) = square::from_square(square::flip_if(side == Side::White, square as u8));
+        // Note: File and rank are 0 based
+        Offsets::PASSED_PAWN as usize + (rank - 1) as usize
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use chess::{file::File, rank::Rank, square::Square};
+
     use super::*;
 
     #[test]
@@ -31,5 +39,17 @@ mod tests {
         assert_eq!(353, offset);
         let offset = Offsets::offset_for_piece_and_square(sq, piece, Side::White);
         assert_eq!(345, offset);
+    }
+
+    #[test]
+    fn offset_pawn_calculation() {
+        let file = File::C;
+        let rank = Rank::R2;
+
+        let sq = Square::from_file_rank(file.to_char(), rank.as_number()).unwrap();
+        let offset = Offsets::offset_for_passed_pawn(sq.to_square_index() as usize, Side::Black);
+        assert_eq!(Offsets::PASSED_PAWN as usize, offset);
+        let offset = Offsets::offset_for_passed_pawn(sq.to_square_index() as usize, Side::White);
+        assert_eq!(389, offset);
     }
 }
