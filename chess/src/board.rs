@@ -12,16 +12,19 @@
  *
  */
 
+use std::fmt::Display;
 use std::iter::zip;
 
 use crate::bitboard_helpers;
 use crate::board_state::BoardState;
 use crate::definitions::{CastlingAvailability, MAX_MOVE_RULE, MAX_REPETITION_COUNT, SPACE};
 use crate::fen::FenError;
+use crate::file::File;
 use crate::move_generation::MoveGenerator;
 use crate::move_history::BoardHistory;
 use crate::move_list::MoveList;
 use crate::moves::Move;
+use crate::rank::Rank;
 use crate::square::Square;
 use crate::zobrist::{ZobristHash, ZobristRandomValues};
 
@@ -53,6 +56,50 @@ impl Clone for Board {
 impl Default for Board {
     fn default() -> Self {
         Board::default_board()
+    }
+}
+
+impl Display for Board {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        const FILES: &str = "   a b c d e f g h\n";
+        const LINES: &str = "  +----------------+\n";
+
+        write!(f, "{}", FILES)?;
+        write!(f, "{}", LINES)?;
+
+        for rank in (0..8).rev() {
+            write!(f, "{} |", rank + 1)?;
+            for file in 0..8 {
+                let square =
+                    Square::new(File::try_from(file).unwrap(), Rank::try_from(rank).unwrap());
+                if let Some((piece, side)) = self.piece_on_square(square.to_square_index()) {
+                    let piece_char = match piece {
+                        Piece::King => 'K',
+                        Piece::Queen => 'Q',
+                        Piece::Rook => 'R',
+                        Piece::Bishop => 'B',
+                        Piece::Knight => 'N',
+                        Piece::Pawn => 'P',
+                    };
+                    let display_char = if side == Side::White {
+                        piece_char
+                    } else {
+                        piece_char.to_ascii_lowercase()
+                    };
+                    write!(f, "{} ", display_char)?;
+                } else {
+                    write!(f, ". ")?;
+                }
+
+                if file == 7 {
+                    write!(f, "|")?;
+                }
+            }
+            writeln!(f)?;
+        }
+        write!(f, "{}", LINES)?;
+        write!(f, "{}", FILES)?;
+        Ok(())
     }
 }
 

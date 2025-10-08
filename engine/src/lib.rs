@@ -13,6 +13,7 @@ pub mod input_handler;
 mod lmr;
 mod move_order;
 pub(crate) mod node_types;
+pub mod pawn_structure;
 pub mod phased_score;
 pub(crate) mod principle_variation;
 pub mod score;
