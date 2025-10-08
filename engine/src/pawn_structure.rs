@@ -36,8 +36,8 @@ impl PawnEvaluator {
         let mut passed_pawns_b = Bitboard::default();
 
         // We need mutable copies to iterate through the pawns since next_bit modifies the bitboard
-        let mut white_pawns_mut = white_pawns.clone();
-        let mut black_pawns_mut = black_pawns.clone();
+        let mut white_pawns_mut = white_pawns;
+        let mut black_pawns_mut = black_pawns;
 
         if white_pawns.number_of_occupied_squares() > 0 {
             // Initialize the first pawn square
@@ -97,13 +97,13 @@ impl PawnEvaluator {
 
         let ranks: [Bitboard; NumberOf::RANKS] = [
             RANK_1.into(),
-            (RANK_1 << 1 * NumberOf::FILES).into(),
-            (RANK_1 << 2 * NumberOf::FILES).into(),
-            (RANK_1 << 3 * NumberOf::FILES).into(),
-            (RANK_1 << 4 * NumberOf::FILES).into(),
-            (RANK_1 << 5 * NumberOf::FILES).into(),
-            (RANK_1 << 6 * NumberOf::FILES).into(),
-            (RANK_1 << 7 * NumberOf::FILES).into(),
+            (RANK_1 << NumberOf::FILES).into(),
+            (RANK_1 << (2 * NumberOf::FILES)).into(),
+            (RANK_1 << (3 * NumberOf::FILES)).into(),
+            (RANK_1 << (4 * NumberOf::FILES)).into(),
+            (RANK_1 << (5 * NumberOf::FILES)).into(),
+            (RANK_1 << (6 * NumberOf::FILES)).into(),
+            (RANK_1 << (7 * NumberOf::FILES)).into(),
         ];
 
         for sq in 0..NumberOf::SQUARES as u8 {
@@ -138,6 +138,12 @@ impl PawnEvaluator {
             self.passed_pawn_masks[Side::White as usize][sq as usize] = mask_w;
             self.passed_pawn_masks[Side::Black as usize][sq as usize] = mask_b;
         }
+    }
+}
+
+impl Default for PawnEvaluator {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
