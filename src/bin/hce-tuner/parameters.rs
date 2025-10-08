@@ -6,10 +6,13 @@ use chess::{
     side::Side,
     square,
 };
-use engine::hce_values::PSQTS;
+use engine::hce_values::{PASSED_PAWN_BONUS, PSQTS};
 
 use crate::{
-    math, offsets::PARAMETER_COUNT, tuner_score::TuningScore, tuning_position::TuningPosition,
+    math,
+    offsets::{Offsets, PARAMETER_COUNT},
+    tuner_score::TuningScore,
+    tuning_position::TuningPosition,
 };
 
 /// Set of parameters that serve as input for tuning.
@@ -47,6 +50,12 @@ impl Parameters {
                 params[64 * piece as usize + sq] = s;
             }
         }
+
+        // Add passed pawn bonuses
+        for (idx, val) in PASSED_PAWN_BONUS.iter().enumerate() {
+            params[Offsets::PASSED_PAWN as usize + idx] = (*val).into();
+        }
+
         params
     }
 
@@ -59,6 +68,12 @@ impl Parameters {
                 params[64 * piece as usize + sq] = TuningScore::new(val, val);
             }
         }
+
+        // Add passed pawn bonuses
+        for (idx, val) in PASSED_PAWN_BONUS.iter().enumerate() {
+            params[Offsets::PASSED_PAWN as usize + idx] = (*val).into();
+        }
+
         params
     }
 

@@ -51,6 +51,7 @@ fn process_epd_line(line: &str) -> Result<(Board, f64)> {
 
 fn parse_epd_line(line: &str) -> Result<TuningPosition> {
     let (board, game_result) = process_epd_line(line)?;
+
     let mut w_indexes = Vec::new();
     let mut b_indexes = Vec::new();
     // loop through all pieces on the board and calculate the index into the parameter array
@@ -87,6 +88,24 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
             Side::Black => 1.0 - game_result,
         }
     };
+
+    // detect passed pawns
+    let pawn_eval = engine::pawn_structure::PawnEvaluator::new();
+    let pawn_structure = pawn_eval.detect_pawn_structure(&board);
+    let mut white_pawns_bb = pawn_structure.passed_pawns[Side::White as usize];
+    let mut black_pawns_bb = pawn_structure.passed_pawns[Side::Black as usize];
+
+    while white_pawns_bb.as_number() > 0 {
+        let white_pawn_idx = bitboard_helpers::next_bit(&mut white_pawns_bb);
+        let index = Offsets::offset_for_passed_pawn(white_pawn_idx, Side::White);
+        w_indexes.push(index);
+    }
+
+    while black_pawns_bb.as_number() > 0 {
+        let black_pawn_idx = bitboard_helpers::next_bit(&mut black_pawns_bb);
+        let index = Offsets::offset_for_passed_pawn(black_pawn_idx, Side::Black);
+        b_indexes.push(index);
+    }
 
     let scaled_phase = phase as f64 / (GAME_PHASE_MAX as f64);
     let tuning_pos = TuningPosition::new(w_indexes, b_indexes, scaled_phase, result);
@@ -171,15 +190,15 @@ mod tests {
     fn test_epd_lines(lines: &[&str]) -> Vec<(TuningPosition, Board, f64)> {
         let mut results = Vec::new();
         for line in lines.iter() {
-            let position = super::parse_epd_line(line);
+            let position: Result<TuningPosition, anyhow::Error> = super::parse_epd_line(line);
             assert!(position.is_ok());
             let pos = position.unwrap();
             let (board, result) = process_epd_line(line).unwrap();
             let total_piece_count = board.all_pieces().as_number().count_ones();
-            assert_eq!(
+            assert!(
                 pos.parameter_indexes[Side::White as usize].len()
-                    + pos.parameter_indexes[Side::Black as usize].len(),
-                total_piece_count as usize
+                    + pos.parameter_indexes[Side::Black as usize].len()
+                    >= total_piece_count as usize
             );
             results.push((pos, board, result));
         }
@@ -312,6 +331,7 @@ mod tests {
                 Side::White => position.evaluate(&params),
                 Side::Black => -position.evaluate(&params),
             };
+            println!("pos: \n{}", board);
             println!("{expected_value} // {val}");
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
