@@ -1,0 +1,38 @@
+name: UCI Compliance
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Rust stable
+        run: rustup default stable
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Download fastchess
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download --repo Disservin/fastchess -p "fastchess-linux-x86-64";
+          mkdir fast-chess && mv fastchess-linux-x86-64 fast-chess
+          ./fast-chess/fastchess-linux-x86-64/fastchess -v
+
+      - name: Build byte-knight
+        run: just build release
+
+      - name: Run UCI compliance tests
+        run: |
+          chmod +x ./fast-chess/fastchess-linux-x86-64/fastchess
+          ./fast-chess/fastchess-linux-x86-64/fastchess --compliance ./target/release/byte-knight
