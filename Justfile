@@ -133,6 +133,6 @@ format:
 
 [doc('Run the HCE tuner on the given input book')]
 [group('dev')]
-hce-tune book:
+hce-tune book epochs: (build-native-release "hce-tuner")
     echo "Running HCE tuner..."
-    cargo run --release --bin hce-tune -- -i {{ book }} -o {{ book }}.tuned -t 4
+    ./target/release/hce-tuner tune -i {{ book }} -e {{ epochs }} -p engine-values
