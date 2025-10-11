@@ -25,10 +25,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh -R Disservin/fastchess release download v1.6.0-alpha -p "fastchess-linux-x86-64.tar"
-          mkdir -p fast-chess
-          tar -xf fastchess-linux-x86-64.tar -C fast-chess
-          rm fastchess-linux-x86-64.tar
+          gh run download --repo Disservin/fastchess -p "fastchess-linux-x86-64";
+          mkdir fast-chess && mv fastchess-linux-x86-64 fast-chess
+          ./fast-chess/fastchess-linux-x86-64/fastchess -v
 
       - name: Build byte-knight
         run: just build release
