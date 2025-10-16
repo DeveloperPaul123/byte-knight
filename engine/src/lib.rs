@@ -11,6 +11,7 @@ pub mod history_table;
 mod inplace_incremental_sort;
 pub mod input_handler;
 mod lmr;
+pub mod log_level;
 mod move_order;
 pub(crate) mod node_types;
 pub mod pawn_structure;
