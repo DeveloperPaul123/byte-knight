@@ -14,6 +14,7 @@
 
 use std::{
     fmt::Display,
+    marker::PhantomData,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
@@ -36,6 +37,7 @@ use crate::{
     history_table::{self, HistoryTable},
     inplace_incremental_sort::InplaceIncrementalSort,
     lmr,
+    log_level::LogLevel,
     move_order::MoveOrder,
     node_types::{NodeType, NonPvNode, PvNode, RootNode},
     principle_variation::PrincipleVariation,
@@ -51,12 +53,13 @@ use crate::{
 use ttable::TranspositionTable;
 
 /// Result for a search.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct SearchResult {
     pub score: Score,
     pub best_move: Option<Move>,
     pub nodes: u64,
     pub depth: u8,
+    pub pv: PrincipleVariation,
 }
 
 impl Default for SearchResult {
@@ -66,6 +69,7 @@ impl Default for SearchResult {
             best_move: None,
             nodes: 0,
             depth: 1,
+            pv: PrincipleVariation::new(),
         }
     }
 }
@@ -152,7 +156,7 @@ impl Display for SearchParameters {
     }
 }
 
-pub struct Search<'search_lifetime> {
+pub struct Search<'search_lifetime, Log> {
     transposition_table: &'search_lifetime mut TranspositionTable,
     history_table: &'search_lifetime mut HistoryTable,
     move_gen: MoveGenerator,
@@ -161,9 +165,11 @@ pub struct Search<'search_lifetime> {
     eval: ByteKnightEvaluation,
     stop_flag: Option<Arc<AtomicBool>>,
     lmr_table: Table<f64, 32_000>,
+    /// Marker for the level of logging to print.
+    log: PhantomData<Log>,
 }
 
-impl<'a> Search<'a> {
+impl<'a, Log: LogLevel> Search<'a, Log> {
     pub fn new(
         parameters: &SearchParameters,
         ttable: &'a mut TranspositionTable,
@@ -173,7 +179,7 @@ impl<'a> Search<'a> {
         let mut table = Table::<f64, 32_000>::new(MAX_DEPTH as usize, MAX_MOVE_LIST_SIZE);
         table.fill(lmr::formula);
 
-        Search {
+        Self {
             transposition_table: ttable,
             history_table,
             move_gen: MoveGenerator::new(),
@@ -182,6 +188,7 @@ impl<'a> Search<'a> {
             eval: ByteKnightEvaluation::default(),
             stop_flag: None,
             lmr_table: table,
+            log: PhantomData,
         }
     }
 
@@ -203,9 +210,11 @@ impl<'a> Search<'a> {
     ) -> SearchResult {
         self.stop_flag = stop_flag;
 
-        let info = UciInfo::default().string(format!("searching {}", self.parameters));
-        let message = UciResponse::info(info);
-        println!("{message}");
+        if Log::DEBUG {
+            let info = UciInfo::default().string(format!("searching {}", self.parameters));
+            let message = UciResponse::info(info);
+            println!("{message}");
+        }
 
         let result = self.iterative_deepening(board);
         // search ended, reset our node count
@@ -268,6 +277,10 @@ impl<'a> Search<'a> {
 
         'deepening: while self.parameters.start_time.elapsed() <= self.parameters.soft_timeout
             && best_result.depth <= self.parameters.max_depth
+            && !self
+                .stop_flag
+                .as_ref()
+                .is_some_and(|f| f.load(Ordering::Relaxed))
         {
             // create an aspiration window around the best result so far
             let mut aspiration_window =
@@ -311,19 +324,26 @@ impl<'a> Search<'a> {
                 .transposition_table
                 .get_entry(board.zobrist_hash())
                 .map(|e| e.board_move);
+            best_result.pv = pv;
 
             // verify the PV as a sanity check, but only in debug
-            debug_assert!(self.verify_pv_moves(&pv, board).is_ok(), "PV invalid");
-
-            // send UCI info
-            self.send_info(
-                best_result.depth,
-                self.nodes,
-                best_result.score,
-                (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32()).trunc(),
-                self.parameters.start_time.elapsed().as_millis() as u64,
-                &pv,
+            debug_assert!(
+                self.verify_pv_moves(&best_result.pv, board).is_ok(),
+                "PV invalid"
             );
+
+            if Log::INFO {
+                // send UCI info
+                self.send_info(
+                    best_result.depth,
+                    self.nodes,
+                    best_result.score,
+                    (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32())
+                        .trunc(),
+                    self.parameters.start_time.elapsed().as_millis() as u64,
+                    &best_result.pv,
+                );
+            }
 
             // increment depth for next iteration
             best_result.depth += 1;
@@ -331,6 +351,19 @@ impl<'a> Search<'a> {
 
         // update total nodes for the current search
         best_result.nodes = self.nodes;
+
+        if Log::INFO {
+            // Send one last info line with the final result
+            // send UCI info
+            self.send_info(
+                best_result.depth,
+                self.nodes,
+                best_result.score,
+                (self.nodes as f32 / self.parameters.start_time.elapsed().as_secs_f32()).trunc(),
+                self.parameters.start_time.elapsed().as_millis() as u64,
+                &best_result.pv,
+            );
+        }
 
         // return our best result so far
         best_result
@@ -769,6 +802,7 @@ mod tests {
 
     use crate::{
         evaluation::ByteKnightEvaluation,
+        log_level::LogDebug,
         score::Score,
         search::{Search, SearchParameters},
         ttable::TranspositionTable,
@@ -779,7 +813,7 @@ mod tests {
     fn run_search_tests(test_pairs: &[(&str, &str)], config: SearchParameters) {
         let mut ttable = TranspositionTable::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
 
         for (fen, expected_move) in test_pairs {
             let mut board = Board::from_fen(fen).unwrap();
@@ -802,7 +836,7 @@ mod tests {
 
         let mut ttable = TranspositionTable::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board.clone(), None);
         // b6a7
         assert_eq!(
@@ -822,7 +856,7 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
 
         assert_eq!(res.best_move.unwrap().to_long_algebraic(), "b8a8")
@@ -875,7 +909,7 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_none());
         assert_eq!(res.score, Score::DRAW);
@@ -893,7 +927,7 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
 
         assert!(res.best_move.is_some());
@@ -910,7 +944,7 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -927,7 +961,7 @@ mod tests {
 
         let mut ttable = Default::default();
         let mut history_table = Default::default();
-        let mut search = Search::new(&config, &mut ttable, &mut history_table);
+        let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
         let res = search.search(&mut board, None);
         assert!(res.best_move.is_some());
         println!("{}", res.best_move.unwrap().to_long_algebraic());
@@ -987,7 +1021,7 @@ mod tests {
 
             let mut ttable = Default::default();
             let mut history_table = Default::default();
-            let mut search = Search::new(&config, &mut ttable, &mut history_table);
+            let mut search = Search::<LogDebug>::new(&config, &mut ttable, &mut history_table);
             let res = search.search(&mut board, None);
 
             assert!(res.best_move.is_some());

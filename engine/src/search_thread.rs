@@ -28,6 +28,7 @@ use uci_parser::{UciMove, UciResponse};
 
 use crate::{
     history_table::HistoryTable,
+    log_level::{LogDebug, LogInfo, LogLevel},
     search::{Search, SearchParameters},
     ttable::TranspositionTable,
 };
@@ -60,6 +61,7 @@ pub(crate) enum SearchThreadValue {
         SearchParameters,
         Arc<Mutex<TranspositionTable>>,
         Arc<Mutex<HistoryTable>>,
+        bool,
     ),
     Exit,
 }
@@ -92,13 +94,18 @@ impl SearchThread {
                 'search_loop: loop {
                     let value = receiver.recv().unwrap();
                     match value {
-                        SearchThreadValue::Params(mut board, params, ttable, history) => {
+                        SearchThreadValue::Params(mut board, params, ttable, history, is_debug) => {
                             let mut tt = ttable.lock().unwrap();
                             let mut hist_table = history.lock().unwrap();
                             let flag = stop_flag.clone();
                             is_searching.store(true, Ordering::Relaxed);
-                            let result = Search::new(&params, &mut tt, &mut hist_table)
-                                .search(&mut board, Some(flag));
+                            let result = if is_debug {
+                                Search::<LogDebug>::new(&params, &mut tt, &mut hist_table)
+                                    .search(&mut board, Some(flag))
+                            } else {
+                                Search::<LogInfo>::new(&params, &mut tt, &mut hist_table)
+                                    .search(&mut board, Some(flag))
+                            };
                             is_searching.store(false, Ordering::Relaxed);
                             let best_move = result.best_move;
                             let move_output = UciResponse::BestMove {
@@ -143,7 +150,7 @@ impl SearchThread {
     }
 
     /// Starts a new search with the given parameters and board state.
-    pub(crate) fn start_search(
+    pub(crate) fn start_search<Log: LogLevel>(
         &self,
         board: &Board,
         params: SearchParameters,
@@ -157,6 +164,7 @@ impl SearchThread {
                 params,
                 ttable,
                 history_table,
+                Log::DEBUG,
             ))
             .unwrap();
     }

@@ -24,6 +24,7 @@ use crate::{
     defs::About,
     history_table::HistoryTable,
     input_handler::{CommandProxy, EngineCommand, InputHandler},
+    log_level::{LogDebug, LogInfo, LogLevel},
     search::SearchParameters,
     search_thread::SearchThread,
     ttable::{self, TranspositionTable},
@@ -133,13 +134,11 @@ impl ByteKnight {
 
                         // create the search parameters
                         let search_params = SearchParameters::new(search_options, &board);
-                        // send them and the current board to the search thread
-                        self.search_thread.start_search(
-                            &board,
-                            search_params,
-                            self.transposition_table.clone(),
-                            self.history_table.clone(),
-                        );
+                        if self.debug {
+                            self.start_search::<LogDebug>(board.clone(), search_params);
+                        } else {
+                            self.start_search::<LogInfo>(board.clone(), search_params);
+                        }
                     }
                     UciCommand::SetOption { name, value } => {
                         if name.to_lowercase() == "hash"
@@ -197,6 +196,16 @@ impl ByteKnight {
         }
 
         Ok(())
+    }
+
+    fn start_search<Log: LogLevel>(&self, board: Board, params: SearchParameters) {
+        // send them and the current board to the search thread
+        self.search_thread.start_search::<Log>(
+            &board,
+            params,
+            Arc::clone(&self.transposition_table),
+            Arc::clone(&self.history_table),
+        );
     }
 }
 
