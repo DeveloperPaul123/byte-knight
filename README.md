@@ -25,9 +25,9 @@ New features are tested via my [OpenBench](https://github.com/AndyGrant/OpenBenc
 ## Board/Game Representation
 
 - Bitboard board representation
-- Magic bitboards for sliding piece attacks
+- "Magic" bitboards or PEXT for sliding piece attacks
 - Zobrist hashing with board state history
-- Legal move generator
+- Legal and pseudo-legal move generator
 
 ## Search
 
@@ -41,10 +41,11 @@ New features are tested via my [OpenBench](https://github.com/AndyGrant/OpenBenc
 - [Late Move Reductions](https://www.chessprogramming.org/Late_Move_Reductions)
 - [Internal Iterative Reductions](https://www.chessprogramming.org/Internal_Iterative_Reductions)
 - [Null Move Pruning](https://www.chessprogramming.org/Null_Move_Pruning)
-- [Late Move Reductions](https://www.chessprogramming.org/Late_Move_Reductions)
+- [Late Move Pruning](https://cosmo.tardis.ac/files/2023-02-20-viri-wiki.html)
 - [Time control](https://www.chessprogramming.org/Time_Management)
   - Basic hard/soft limits
 - Move ordering
+  - [TT Moves](https://www.chessprogramming.org/Transposition_Table#Priority_by_Move_Ordering_Position)
   - [MVV/LVA](https://www.chessprogramming.org/MVV-LVA) with transposition table priority
   - [History heuristic](https://www.chessprogramming.org/History_Heuristic) with history gravity
 
