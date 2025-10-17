@@ -17,22 +17,37 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: true
+
       - name: Install just
         uses: extractions/setup-just@v2
 
-      - name: Download fastchess
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Checkout fastchess
+        uses: actions/checkout@v4
+        with:
+          repository: Disservin/fastchess
+          path: fast-chess
+
+      - name: Get fastchess commit hash
+        id: fastchess-commit
+        run: echo "sha=$(cd fast-chess && git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Cache fastchess binary
+        uses: actions/cache@v4
+        with:
+          path: fast-chess/fastchess
+          key: fastchess-${{ runner.os }}-${{ steps.fastchess-commit.outputs.sha }}
+          restore-keys: |
+            fastchess-${{ runner.os }}-
+
+      - name: Build fastchess
         run: |
-          gh run download --repo Disservin/fastchess -p "fastchess-linux-x86-64";
-          mkdir fast-chess && mv fastchess-linux-x86-64 fast-chess
-          ./fast-chess/fastchess-linux-x86-64/fastchess -v
+          cd fast-chess
+          make -j CXX=clang++
 
       - name: Build byte-knight
-        run: just build release
+        run: just build-native-release byte-knight
 
       - name: Run UCI compliance tests
         run: |
-          chmod +x ./fast-chess/fastchess-linux-x86-64/fastchess
-          ./fast-chess/fastchess-linux-x86-64/fastchess --compliance ./target/release/byte-knight
+          chmod +x ./fast-chess/fastchess
+          ./fast-chess/fastchess --compliance ./target/release/byte-knight
