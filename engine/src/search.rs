@@ -46,8 +46,8 @@ use crate::{
     traits::Eval,
     ttable::{self, TranspositionTableEntry},
     tuneable::{
-        IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH, LMP_MIN_THRESHOLD_DEPTH, MAX_RFP_DEPTH,
-        NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RFP_MARGIN,
+        FUTILITY_COEFF, FUTILITY_DEPTH, FUTILITY_OFFSET, IIR_DEPTH_REDUCTION, IIR_MIN_DEPTH,
+        LMP_MIN_THRESHOLD_DEPTH, MAX_RFP_DEPTH, NMP_DEPTH_REDUCTION, NMP_MIN_DEPTH, RFP_MARGIN,
     },
 };
 use ttable::TranspositionTable;
@@ -475,6 +475,18 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 let min_lmp_moves =
                     LMP_MIN_THRESHOLD_DEPTH as usize + depth as usize * depth as usize;
                 if i >= min_lmp_moves {
+                    break;
+                }
+
+                // Futility pruning
+                // If we are at a shallow depth and have already found a good score, we start skipping moves
+                let static_eval = self.eval.eval(board);
+                let fp_margin =
+                    min_lmp_moves.cast_signed() as ScoreType * FUTILITY_COEFF + FUTILITY_OFFSET;
+                if mv.is_quiet()
+                    && min_lmp_moves < FUTILITY_DEPTH as usize
+                    && static_eval + fp_margin <= alpha_use
+                {
                     break;
                 }
             }
