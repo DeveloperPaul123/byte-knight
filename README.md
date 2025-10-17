@@ -14,6 +14,12 @@ You can challenge `byte-knight` yourself on [Lichess](https://lichess.org/@/byte
 
 New features are tested via my [OpenBench](https://github.com/AndyGrant/OpenBench) [intance](https://developerpaul123.pythonanywhere.com) using [SPRT](https://github.com/jw1912/SPRT/blob/main/SPRT.md#how-sprt-actually-works) testing.
 
+# Strength
+
+| Version | [CCRL 40/15](https://computerchess.org.uk/ccrl/4040/) | [CCRL Blitz](https://computerchess.org.uk/ccrl/404/) |
+| ------- | --------------- | --------------- |
+| [3.0.0](https://github.com/DeveloperPaul123/byte-knight/releases/v3.0.0) | 2386 | 2307 |
+
 # Features
 
 ## Board/Game Representation
