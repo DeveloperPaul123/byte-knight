@@ -4,8 +4,8 @@ use arrayvec::ArrayVec;
 use chess::{definitions::MAX_MOVES, moves::Move};
 
 /// Represents the [Principle Variation](https://www.chessprogramming.org/Principal_Variation) during a search.
-#[derive(Debug)]
-pub(crate) struct PrincipleVariation {
+#[derive(Debug, Clone)]
+pub struct PrincipleVariation {
     data: ArrayVec<Move, MAX_MOVES>,
 }
 

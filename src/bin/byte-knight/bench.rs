@@ -13,7 +13,10 @@
  */
 
 use chess::board::Board;
-use engine::search::{Search, SearchParameters};
+use engine::{
+    log_level::LogNone,
+    search::{Search, SearchParameters},
+};
 
 const BENCHMARKS: [&str; 56] = [
     // From [Stormphrax](https://github.com/Ciekce/Stormphrax/blob/correct_ep_handling/src/bench.cpp#L29) and
@@ -102,6 +105,11 @@ pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
         None => BENCHMARKS.into_iter().map(|s| s.to_string()).collect(),
     };
 
+    println!(
+        "Running fixed depth (d={depth}) search on {} positions.",
+        benchmark_strings.len()
+    );
+
     let config = SearchParameters {
         max_depth: depth,
         ..Default::default()
@@ -110,16 +118,26 @@ pub(crate) fn bench(depth: u8, epd_file: &Option<String>) {
     let mut nodes = 0u64;
     let mut tt = Default::default();
     let mut hist = Default::default();
-    let mut search = Search::new(&config, &mut tt, &mut hist);
+    let mut search = Search::<LogNone>::new(&config, &mut tt, &mut hist);
 
-    for bench in benchmark_strings {
+    let max_fen_width = benchmark_strings.iter().map(|s| s.len()).max().unwrap();
+
+    for (idx, bench) in benchmark_strings.iter().enumerate() {
         let fen: &str = bench.split(';').next().unwrap();
         let mut board = Board::from_fen(fen).unwrap();
 
         let result = search.search(&mut board, None);
         nodes += result.nodes;
-    }
 
-    let nps = (nodes as f64 / config.start_time.elapsed().as_secs_f64()).trunc();
-    println!("{nodes} nodes {nps} nps");
+        println!(
+            "{:>2}/{:>2}: {:<max_fen_width$} => {}",
+            idx + 1,
+            benchmark_strings.len(),
+            fen,
+            result.nodes
+        );
+    }
+    let elapsed_time = config.start_time.elapsed().as_secs_f64();
+    let nps = (nodes as f64 / elapsed_time).trunc();
+    println!("{nodes} nodes / {elapsed_time}s => {nps} nps");
 }

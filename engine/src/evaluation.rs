@@ -16,6 +16,7 @@ use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
 
 use crate::{
     hce_values::{ByteKnightValues, GAME_PHASE_MAX, GAMEPHASE_INC},
+    pawn_structure::PawnEvaluator,
     phased_score::{PhaseType, PhasedScore},
     score::{LargeScoreType, Score, ScoreType},
     traits::{Eval, EvalValues},
@@ -27,11 +28,15 @@ where
     Values: EvalValues,
 {
     values: Values,
+    pawn_evaluator: PawnEvaluator,
 }
 
 impl<Values: EvalValues> Evaluation<Values> {
     pub fn new(values: Values) -> Self {
-        Evaluation { values }
+        Evaluation {
+            values,
+            pawn_evaluator: PawnEvaluator::new(),
+        }
     }
 
     pub fn values(&self) -> &Values {
@@ -73,12 +78,22 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
         let mut eg: [i32; 2] = [0; 2];
         let mut game_phase = 0_i32;
 
+        let pawn_structure = self.pawn_evaluator.detect_pawn_structure(board);
+
         let mut occupancy = board.all_pieces();
         // loop through occupied squares
         while occupancy.as_number() > 0 {
             let sq = bitboard_helpers::next_bit(&mut occupancy);
             let maybe_piece = board.piece_on_square(sq as u8);
             if let Some((piece, side)) = maybe_piece {
+                if piece == Piece::Pawn {
+                    // add passed pawn bonus if applicable
+                    let passed_pawn_bonus = self.values.passed_pawn_bonus(sq as u8, side);
+                    if pawn_structure.passed_pawns[side as usize].is_square_occupied(sq as u8) {
+                        mg[side as usize] += passed_pawn_bonus.mg() as i32;
+                        eg[side as usize] += passed_pawn_bonus.eg() as i32;
+                    }
+                }
                 let phased_score: PhasedScore = self.values.psqt(sq as u8, piece, side);
                 mg[side as usize] += phased_score.mg() as i32;
                 eg[side as usize] += phased_score.eg() as i32;
@@ -137,7 +152,8 @@ mod tests {
     #[test]
     fn score_stability() {
         // These values were determined empirically by running this test and manually copy/pasting the results.
-        // If any changes are made to the evaluation function, these values will need to be updated or the test will need to be augmented with the new evaluation values.
+        // If any changes are made to the evaluation function, these values will need to be updated or the test
+        // will need to be augmented with the new evaluation values.
 
         // standard EPD suite FEN positions
         let positions = [
@@ -272,13 +288,13 @@ mod tests {
         ];
 
         let scores: [ScoreType; 128] = [
-            0, 34, 589, 597, -589, -597, 1142, -1142, 512, 538, -512, -538, 0, 7, 15, 12, -7, -15,
-            -12, -589, -597, 589, 597, -1142, 1142, -512, -538, 512, 538, 0, -7, -15, -12, 7, 15,
-            12, 2, 0, 0, -397, 476, -2, 0, 5, 397, -476, -22, -43, 718, -744, 27, 43, -718, 744, 0,
-            -6, 0, 6, -1094, -1192, -37, 1072, -1192, 37, 204, 222, -204, -222, 90, -204, -222,
-            204, 222, -90, 23, 23, 0, 0, 0, 15, -15, -13, 0, 0, 0, -15, 15, 13, -15, 15, 8, 9, -8,
-            -9, -214, -7, 15, -15, -8, -9, 8, 9, 214, 7, -3, 2, 3, -2, 7, -7, 0, 3, -2, -3, 2, -7,
-            7, 0, -11, 9, 31, 53, 11, -9, -31, -53, 41, 25,
+            0, 37, 673, 682, -673, -682, 1303, -1303, 588, 618, -588, -618, 0, 7, 17, 14, -7, -17,
+            -14, -673, -682, 673, 682, -1303, 1303, -588, -618, 588, 618, 0, -7, -17, -14, 7, 17,
+            14, 1, -1, 0, -454, 542, -1, 1, 7, 454, -542, -23, -47, 821, -850, 30, 47, -821, 850,
+            0, -7, 0, 7, -1251, -1362, -48, 1224, -1362, 48, 230, 251, -230, -251, 81, -230, -251,
+            230, 251, -81, 23, 23, 0, 0, 0, 16, -16, -17, 0, 0, 0, -16, 16, 17, -17, 21, 9, 10, -9,
+            -10, -268, -8, 17, -21, -9, -10, 9, 10, 268, 8, -1, 4, 1, -4, 8, -8, 0, 1, -4, -1, 4,
+            -8, 8, 0, -13, 12, 39, 63, 13, -12, -39, -63, 49, 27,
         ];
 
         let eval = ByteKnightEvaluation::default();

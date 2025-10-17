@@ -5,14 +5,9 @@ edition = "2024"
 
 
 [dependencies]
-chess = { path = "../chess" }
-anyhow = "1.0.93"
-itertools = "0.14.0"
-uci-parser = { version = "1.1.0", features = [
-    "parse-go-perft",
-    "parse-position-kiwipete",
-    "types",
-    "clamp-negatives",
-] }
-rand = { version = "0.9.2", features = ["small_rng"] }
-arrayvec = "0.7.6"
+chess = { workspace = true }
+anyhow = { workspace = true }
+itertools = { workspace = true }
+uci-parser = { workspace = true, features = ["parse-go-perft", "parse-position-kiwipete", "types", "clamp-negatives"] }
+rand = { workspace = true, features = ["small_rng"] }
+arrayvec = { workspace = true }
