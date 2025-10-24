@@ -17,11 +17,11 @@ use crate::{
     bitboard_helpers,
     board::Board,
     definitions::{
-        BISHOP_BLOCKER_PERMUTATIONS, FILE_BITBOARDS, NumberOf, QUEEN_OFFSETS, RANK_BITBOARDS,
-        ROOK_BLOCKER_PERMUTATIONS, Squares,
+        NumberOf, Squares, BISHOP_BLOCKER_PERMUTATIONS, FILE_BITBOARDS, QUEEN_OFFSETS,
+        RANK_BITBOARDS, ROOK_BLOCKER_PERMUTATIONS,
     },
     file::File,
-    magics::{BISHOP_MAGIC_VALUES, MagicNumber, ROOK_MAGIC_VALUES},
+    magics::{MagicNumber, BISHOP_MAGIC_VALUES, ROOK_MAGIC_VALUES},
     move_list::MoveList,
     moves::{Move, MoveDescriptor, MoveType, PromotionDescriptor},
     non_slider_piece::NonSliderPiece,
@@ -299,7 +299,7 @@ impl MoveGenerator {
 
     fn orthogonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
         let mut attacks = Bitboard::default();
-        let bb = Bitboard::new(1u64 << square);
+        let bb = Bitboard::from_square(square);
         let not_a_file = !FILE_BITBOARDS[File::A as usize];
         let not_h_file = !FILE_BITBOARDS[File::H as usize];
 
@@ -348,7 +348,7 @@ impl MoveGenerator {
 
     fn diagonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
         let mut attacks = Bitboard::default();
-        let bb = Bitboard::new(1u64 << square);
+        let bb = Bitboard::from_square(square);
         let not_a_file = !FILE_BITBOARDS[File::A as usize];
         let not_h_file = !FILE_BITBOARDS[File::H as usize];
 
@@ -861,11 +861,19 @@ impl MoveGenerator {
                     match us {
                         Side::White => {
                             let (value, did_overflow) = to_square.overflowing_add(direction);
-                            if did_overflow { None } else { Some(value) }
+                            if did_overflow {
+                                None
+                            } else {
+                                Some(value)
+                            }
                         }
                         Side::Black => {
                             let (value, did_overflow) = to_square.overflowing_sub(direction);
-                            if did_overflow { None } else { Some(value) }
+                            if did_overflow {
+                                None
+                            } else {
+                                Some(value)
+                            }
                         }
                     }
                 } else {
