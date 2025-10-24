@@ -149,6 +149,8 @@ impl Default for PawnEvaluator {
 
 #[cfg(test)]
 mod tests {
+    use chess::{bitboard::Bitboard, definitions::Squares, side::Side};
+
     use crate::pawn_structure::PawnEvaluator;
 
     #[test]
@@ -158,5 +160,25 @@ mod tests {
         let structure = pawn_eval.detect_pawn_structure(&board);
         assert_eq!(structure.passed_pawns[0].as_number(), 0);
         assert_eq!(structure.passed_pawns[1].as_number(), 0);
+    }
+
+    #[test]
+    fn passed_pawn_detection() {
+        let pawn_eval = PawnEvaluator::new();
+        // White has two isolated pawns (c3 and d5).
+        let fen = "8/8/8/3P4/8/2P5/8/8 w - - 0 1";
+        let board = chess::board::Board::from_fen(fen).unwrap();
+        println!("{}", board);
+        let board = chess::board::Board::from_fen(fen).unwrap();
+        let structure = pawn_eval.detect_pawn_structure(&board);
+        println!(
+            "White passed pawns:\n{}",
+            structure.passed_pawns[Side::White as usize]
+        );
+        assert_eq!(
+            structure.passed_pawns[Side::White as usize].as_number(),
+            (Bitboard::from_square(Squares::C3) | Bitboard::from_square(Squares::D5)).as_number()
+        );
+        assert_eq!(structure.passed_pawns[Side::Black as usize].as_number(), 0);
     }
 }
