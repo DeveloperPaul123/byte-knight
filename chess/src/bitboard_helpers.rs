@@ -36,7 +36,7 @@ use crate::bitboard::Bitboard;
 /// assert_eq!(bb.as_number(), 0);
 ///
 /// ```
-///  
+///
 /// ```
 /// use chess::bitboard::Bitboard;
 /// use chess::bitboard_helpers::next_bit;
@@ -54,8 +54,17 @@ pub fn next_bit(bitboard: &mut Bitboard) -> usize {
     square as usize
 }
 
+pub fn north_fill(bitboard: &Bitboard) -> Bitboard {
+    let mut b = *bitboard;
+    b |= b << 8;
+    b |= b << 16;
+    b |= b << 32;
+    b
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::definitions::Squares;
 
     #[test]
     fn test_next_bit() {
@@ -71,5 +80,33 @@ mod tests {
                 assert_eq!(next_bit(&mut bb), i);
             }
         }
+    }
+
+    #[test]
+    fn test_north_fill() {
+        use super::*;
+        let bb = Bitboard::new(0x00000000000000FF);
+
+        let test_bbs = [
+            Bitboard::new(0x00000000000000FF),
+            Bitboard::new(0x000000000000FFFF),
+            Bitboard::new(0x00000000FFFFFFFF),
+            Bitboard::new(0xFFFFFFFFFFFFFFFF),
+            Bitboard::from_square(Squares::C3) | Bitboard::from_square(Squares::E6),
+        ];
+
+        for bb in test_bbs {
+            let filled = north_fill(&bb);
+            println!("{}", bb);
+            println!("filled");
+            println!("{}", filled);
+            println!("+-------+");
+        }
+
+        println!("{}", bb);
+        let filled = north_fill(&bb);
+        println!("+-------+");
+        println!("{}", filled);
+        assert_eq!(filled.as_number(), 0xFFFFFFFFFFFFFFFF);
     }
 }
