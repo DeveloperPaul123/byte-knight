@@ -142,6 +142,7 @@ mod tests {
 
     #[test]
     fn passed_pawn_detection() {
+        // Test suite adapted from https://www.stmintz.com/ccc/index.php?id=98943
         let test_suite = &[
             // Simple case, white has passed pawns on c3, d5
             (
@@ -181,22 +182,97 @@ mod tests {
             (
                 "r1b5/p2k1r1p/3P2pP/1ppR4/2P2p2/2P5/P1B4P/4R1K1 w - -",
                 PawnStructure {
+                    passed_pawns: [Squares::D6.into(), Squares::F4.into()],
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "6r1/1p3k2/pPp4R/K1P1p1p1/1P2Pp1p/5P1P/6P1/8 w - -",
+                PawnStructure {
                     passed_pawns: Default::default(),
                     doubled_pawns: Default::default(),
                 },
             ),
-            // "6r1/1p3k2/pPp4R/K1P1p1p1/1P2Pp1p/5P1P/6P1/8 w - - bm Rxc6",
-            // "1k2b3/4bpp1/p2pp1P1/1p3P2/2q1P3/4B3/PPPQN2r/1K1R4 w - - bm f6",
-            // "2kr3r/ppp1qpp1/2p5/2b2b2/2P1pPP1/1P2P1p1/PBQPB3/RN2K1R1 b Q - bm Rh1",
-            // "6k1/2q3p1/1n2Pp1p/pBp2P2/Pp2P3/1P1Q1KP1/8/8 w - - bm e5",
-            // "5r2/pp1RRrk1/4Qq1p/1PP3p1/8/4B3/1b3P1P/6K1 w - - bm Rxf7 Qxf7",
-            // "6k1/1q2rpp1/p6p/P7/1PB1n3/5Q2/6PP/5R1K w - - bm b5",
-            // "3r2k1/p6p/b2r2p1/2qPQp2/2P2P2/8/6BP/R4R1K w - - bm Rxa6",
-            // "8/6Bp/6p1/2k1p3/4PPP1/1pb4P/8/2K5 b - - bm b2",
-            // "2r1rbk1/p1Bq1ppp/Ppn1b3/1Npp4/B7/3P2Q1/1PP2PPP/R4RK1 w - - bm Nxa7",
-            // "r4rk1/ppq3pp/2p1Pn2/4p1Q1/8/2N5/PP4PP/2KR1R2 w - - bm Rxf6;",
-            // "6k1/p4pp1/Pp2r3/1QPq3p/8/6P1/2P2P1P/1R4K1 w - - bm cxb6",
-            // "8/2k5/2p5/2pb2K1/pp4P1/1P1R4/P7/8 b - - bm Bxb3",
+            (
+                "1k2b3/4bpp1/p2pp1P1/1p3P2/2q1P3/4B3/PPPQN2r/1K1R4 w - -",
+                PawnStructure {
+                    passed_pawns: Default::default(),
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "2kr3r/ppp1qpp1/2p5/2b2b2/2P1pPP1/1P2P1p1/PBQPB3/RN2K1R1 b Q -",
+                PawnStructure {
+                    passed_pawns: [Default::default(), Squares::G3.into()],
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "6k1/2q3p1/1n2Pp1p/pBp2P2/Pp2P3/1P1Q1KP1/8/8 w - -",
+                PawnStructure {
+                    passed_pawns: [Squares::E6.into(), Default::default()],
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "5r2/pp1RRrk1/4Qq1p/1PP3p1/8/4B3/1b3P1P/6K1 w - -",
+                PawnStructure {
+                    passed_pawns: Default::default(),
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "6k1/1q2rpp1/p6p/P7/1PB1n3/5Q2/6PP/5R1K w - -",
+                PawnStructure {
+                    passed_pawns: Default::default(),
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "3r2k1/p6p/b2r2p1/2qPQp2/2P2P2/8/6BP/R4R1K w - -",
+                PawnStructure {
+                    passed_pawns: [
+                        Bitboard::from_square(Squares::C4) | Squares::D5.into(),
+                        Squares::A7.into(),
+                    ],
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "8/6Bp/6p1/2k1p3/4PPP1/1pb4P/8/2K5 b - -",
+                PawnStructure {
+                    passed_pawns: [Default::default(), Squares::B3.into()],
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "2r1rbk1/p1Bq1ppp/Ppn1b3/1Npp4/B7/3P2Q1/1PP2PPP/R4RK1 w - -",
+                PawnStructure {
+                    passed_pawns: Default::default(),
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "r4rk1/ppq3pp/2p1Pn2/4p1Q1/8/2N5/PP4PP/2KR1R2 w - -",
+                PawnStructure {
+                    passed_pawns: [Squares::E6.into(), Squares::E5.into()],
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "6k1/p4pp1/Pp2r3/1QPq3p/8/6P1/2P2P1P/1R4K1 w - -",
+                PawnStructure {
+                    passed_pawns: Default::default(),
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "8/2k5/2p5/2pb2K1/pp4P1/1P1R4/P7/8 b - -",
+                PawnStructure {
+                    passed_pawns: [Squares::G4.into(), Default::default()],
+                    doubled_pawns: Default::default(),
+                },
+            ),
             // "2r5/1r5k/1P3p2/PR2pP1p/4P2p/2p1BP2/1p2n3/4R2K b - - bm Nd4",
             // "8/1R2P3/6k1/3B4/2P2P2/1p2r3/1Kb4p/8 w - - bm Be6",
             // "1q1r3k/3P1pp1/ppBR1n1p/4Q2P/P4P2/8/5PK1/8 w - - bm Rxf6",
@@ -206,17 +282,18 @@ mod tests {
             // "8/6k1/p4p2/P3q2p/7P/5Q2/5PK1/8 w - - bm Qg3",
             // "8/8/6p1/3Pkp2/4P3/2K5/6P1/n7 w - - bm d6",
             // // Special case, white has passed and double pawns on d4, d5
-            (
-                "8/r5kp/p2RB1p1/3P4/1p1P4/nP4P1/P3K2P/8 b - - 0 36",
-                PawnStructure {
-                    passed_pawns: Default::default(),
-                    doubled_pawns: Default::default(),
-                },
-            ),
+            // (
+            //     "8/r5kp/p2RB1p1/3P4/1p1P4/nP4P1/P3K2P/8 b - - 0 36",
+            //     PawnStructure {
+            //         passed_pawns: Default::default(),
+            //         doubled_pawns: Default::default(),
+            //     },
+            // ),
         ];
         let pawn_eval = PawnEvaluator::new();
 
         for (fen, expected_structure) in test_suite {
+            println!("{fen}");
             let board = Board::from_fen(fen).unwrap();
             println!("{}", board);
             let structure = pawn_eval.detect_pawn_structure(&board);
@@ -232,8 +309,8 @@ mod tests {
             let expected_pp_w = expected_structure.passed_pawns[Side::White as usize];
             let expected_pp_b = expected_structure.passed_pawns[Side::Black as usize];
 
-            // assert_eq!(structure.passed_pawns[Side::White as usize], expected_pp_w);
-            // assert_eq!(structure.passed_pawns[Side::Black as usize], expected_pp_b);
+            assert_eq!(structure.passed_pawns[Side::White as usize], expected_pp_w);
+            assert_eq!(structure.passed_pawns[Side::Black as usize], expected_pp_b);
         }
     }
 }
