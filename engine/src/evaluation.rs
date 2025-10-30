@@ -15,7 +15,7 @@
 use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
 
 use crate::{
-    hce_values::{ByteKnightValues, GAME_PHASE_MAX, GAMEPHASE_INC},
+    hce_values::{ByteKnightValues, GAMEPHASE_INC, GAME_PHASE_MAX},
     pawn_structure::PawnEvaluator,
     phased_score::{PhaseType, PhasedScore},
     score::{LargeScoreType, Score, ScoreType},
