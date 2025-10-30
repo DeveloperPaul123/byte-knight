@@ -16,8 +16,9 @@ use std::fmt::Display;
 
 /// Represents a side to play in chess.
 #[repr(usize)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Side {
+    #[default]
     White = 0,
     Black = 1,
 }
@@ -45,12 +46,6 @@ impl Side {
     #[must_use]
     pub fn is_black(&self) -> bool {
         matches!(self, Self::Black)
-    }
-}
-
-impl Default for Side {
-    fn default() -> Self {
-        Self::White
     }
 }
 
