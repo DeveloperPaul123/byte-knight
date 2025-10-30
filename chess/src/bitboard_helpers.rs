@@ -165,7 +165,7 @@ mod tests {
     use crate::{
         bitboard::Bitboard,
         bitboard_helpers,
-        definitions::{Squares, RANK_BITBOARDS},
+        definitions::{RANK_BITBOARDS, Squares},
         rank::Rank,
     };
 

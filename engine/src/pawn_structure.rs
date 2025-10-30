@@ -2,7 +2,7 @@ use chess::{
     bitboard::Bitboard,
     bitboard_helpers,
     board::Board,
-    definitions::{NumberOf, FILE_BITBOARDS, RANK_BITBOARDS},
+    definitions::{FILE_BITBOARDS, NumberOf, RANK_BITBOARDS},
     pieces::Piece,
     side::Side,
     square,
