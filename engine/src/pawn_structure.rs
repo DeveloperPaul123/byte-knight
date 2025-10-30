@@ -141,7 +141,7 @@ mod tests {
     }
 
     #[test]
-    fn passed_pawn_detection() {
+    fn full_test_suite() {
         // Test suite adapted from https://www.stmintz.com/ccc/index.php?id=98943
         let test_suite = &[
             // Simple case, white has passed pawns on c3, d5
@@ -273,44 +273,107 @@ mod tests {
                     doubled_pawns: Default::default(),
                 },
             ),
-            // "2r5/1r5k/1P3p2/PR2pP1p/4P2p/2p1BP2/1p2n3/4R2K b - - bm Nd4",
-            // "8/1R2P3/6k1/3B4/2P2P2/1p2r3/1Kb4p/8 w - - bm Be6",
-            // "1q1r3k/3P1pp1/ppBR1n1p/4Q2P/P4P2/8/5PK1/8 w - - bm Rxf6",
-            // "6k1/5pp1/pb1r3p/8/2q1P3/1p3N1P/1P3PP1/2R1Q1K1 b - - bm Qc2",
-            // "8/Bpk5/8/P2K4/8/8/8/8 w - - bm Kd4",
-            // "1r6/5k2/p4p1K/5R2/7P/8/6P1/8 w - - bm Kh7",
-            // "8/6k1/p4p2/P3q2p/7P/5Q2/5PK1/8 w - - bm Qg3",
-            // "8/8/6p1/3Pkp2/4P3/2K5/6P1/n7 w - - bm d6",
-            // // Special case, white has passed and double pawns on d4, d5
-            // (
-            //     "8/r5kp/p2RB1p1/3P4/1p1P4/nP4P1/P3K2P/8 b - - 0 36",
-            //     PawnStructure {
-            //         passed_pawns: Default::default(),
-            //         doubled_pawns: Default::default(),
-            //     },
-            // ),
+            (
+                // Note: In this position, black has doubled passed pawns on the H file
+                "2r5/1r5k/1P3p2/PR2pP1p/4P2p/2p1BP2/1p2n3/4R2K b - -",
+                PawnStructure {
+                    passed_pawns: [
+                        Bitboard::from_square(Squares::B6) | Squares::A5.into(),
+                        Bitboard::from_square(Squares::H5)
+                            | Squares::H4.into()
+                            | Squares::B2.into()
+                            | Squares::C3.into(),
+                    ],
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "8/1R2P3/6k1/3B4/2P2P2/1p2r3/1Kb4p/8 w - -",
+                PawnStructure {
+                    passed_pawns: [
+                        Bitboard::from_square(Squares::C4)
+                            | Squares::E7.into()
+                            | Squares::F4.into(),
+                        Bitboard::from_square(Squares::B3) | Squares::H2.into(),
+                    ],
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "1q1r3k/3P1pp1/ppBR1n1p/4Q2P/P4P2/8/5PK1/8 w - -",
+                PawnStructure {
+                    passed_pawns: [Bitboard::from_square(Squares::D7), Default::default()],
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "6k1/5pp1/pb1r3p/8/2q1P3/1p3N1P/1P3PP1/2R1Q1K1 b - -",
+                PawnStructure {
+                    passed_pawns: [Default::default(), Default::default()],
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "8/Bpk5/8/P2K4/8/8/8/8 w - -",
+                PawnStructure {
+                    passed_pawns: [Default::default(), Default::default()],
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "1r6/5k2/p4p1K/5R2/7P/8/6P1/8 w - -",
+                PawnStructure {
+                    passed_pawns: [Squares::H4.into(), Squares::A6.into()],
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "8/6k1/p4p2/P3q2p/7P/5Q2/5PK1/8 w - -",
+                PawnStructure {
+                    passed_pawns: [Default::default(), Default::default()],
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            (
+                "8/8/6p1/3Pkp2/4P3/2K5/6P1/n7 w - -",
+                PawnStructure {
+                    passed_pawns: [Squares::D5.into(), Default::default()],
+                    doubled_pawns: Default::default(),
+                },
+            ),
+            // Special case, white has passed and double pawns on d4, d5
+            (
+                "8/r5kp/p2RB1p1/3P4/1p1P4/nP4P1/P3K2P/8 b - - 0 36",
+                PawnStructure {
+                    passed_pawns: [
+                        Bitboard::from_square(Squares::D4) | Squares::D5.into(),
+                        Default::default(),
+                    ],
+                    doubled_pawns: Default::default(),
+                },
+            ),
         ];
         let pawn_eval = PawnEvaluator::new();
 
         for (fen, expected_structure) in test_suite {
-            println!("{fen}");
             let board = Board::from_fen(fen).unwrap();
-            println!("{}", board);
             let structure = pawn_eval.detect_pawn_structure(&board);
-            println!(
-                "White passed pawns:\n{}",
-                structure.passed_pawns[Side::White as usize]
-            );
-            println!(
-                "Black passed pawns:\n{}",
-                structure.passed_pawns[Side::Black as usize]
-            );
 
             let expected_pp_w = expected_structure.passed_pawns[Side::White as usize];
             let expected_pp_b = expected_structure.passed_pawns[Side::Black as usize];
 
-            assert_eq!(structure.passed_pawns[Side::White as usize], expected_pp_w);
-            assert_eq!(structure.passed_pawns[Side::Black as usize], expected_pp_b);
+            assert_eq!(
+                structure.passed_pawns[Side::White as usize],
+                expected_pp_w,
+                "Detected pawn structure for {} did not match expected.",
+                Side::White
+            );
+            assert_eq!(
+                structure.passed_pawns[Side::Black as usize],
+                expected_pp_b,
+                "Detected pawn structure for {} did not match expected.",
+                Side::Black
+            );
         }
     }
 }
