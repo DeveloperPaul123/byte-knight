@@ -132,6 +132,7 @@ pub fn south_fill(bitboard: &Bitboard) -> Bitboard {
 /// let bb = Bitboard::from_square(Squares::A1) | Bitboard::from_square(Squares::C3);
 /// let filled = east_fill(&bb);
 /// // Should fill eastward on each rank without wrapping to the next rank
+/// assert_eq!(filled.as_number(), 0x00000000000000FF | 0x0000000000FC0000);
 /// ```
 pub fn east_fill(bitboard: &Bitboard) -> Bitboard {
     // Mask to exclude H-file to prevent wrap-around
@@ -147,6 +148,21 @@ pub fn east_fill(bitboard: &Bitboard) -> Bitboard {
     b
 }
 
+/// Fills all bits to the west of the given bitboard without wrap-around.
+/// # Arguments
+/// * `bitboard` - The bitboard to fill to the west.
+/// # Returns
+/// A new bitboard with all bits to the west filled.
+/// # Examples
+/// ```
+/// use chess::bitboard::Bitboard;
+/// use chess::bitboard_helpers::west_fill;
+/// use chess::definitions::Squares;
+/// let bb = Bitboard::from_square(Squares::H2) | Bitboard::from_square(Squares::D4);
+/// let filled = west_fill(&bb);
+/// // Should fill eastward on each rank without wrapping to the next rank
+/// assert_eq!(filled.as_number(), 0x000000000000FF00 | 0x000000000F000000);
+/// ```
 pub fn west_fill(bitboard: &Bitboard) -> Bitboard {
     let not_a_file: Bitboard = !FILE_BITBOARDS[File::A as usize];
 
@@ -165,7 +181,7 @@ mod tests {
     use crate::{
         bitboard::Bitboard,
         bitboard_helpers,
-        definitions::{RANK_BITBOARDS, Squares},
+        definitions::{Squares, RANK_BITBOARDS},
         rank::Rank,
     };
 
