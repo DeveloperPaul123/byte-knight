@@ -2,7 +2,7 @@ use chess::{
     bitboard::Bitboard,
     bitboard_helpers,
     board::Board,
-    definitions::{FILE_BITBOARDS, NumberOf, RANK_BITBOARDS},
+    definitions::{NumberOf, FILE_BITBOARDS, RANK_BITBOARDS},
     pieces::Piece,
     side::Side,
     square,
@@ -32,44 +32,49 @@ impl PawnEvaluator {
         let white_pawns = *board.piece_bitboard(Piece::Pawn, Side::White);
         let black_pawns = *board.piece_bitboard(Piece::Pawn, Side::Black);
 
-        // let white_pawns_ne_fill = (white_pawns_north_fill & not_h_file) << 9;
-        // let white_pawns_nw_fill = (white_pawns_north_fill & not_a_file) << 7;
-
-        // let black_pawns_se_fill = (black_pawns_south_fill & not_a_file) >> 9;
-        // let black_pawns_sw_fill = (black_pawns_south_fill & not_h_file) >> 7;
-
-        // let white_adjacent = white_pawns_ne_fill | white_pawns_nw_fill;
-        // let black_adjacent = black_pawns_se_fill | black_pawns_sw_fill;
-
+        // Create masks for the passed pawns mask. We start with the pawns themselves and make a copy.
         let mut white_passed_pawns_mask = white_pawns;
         let mut black_passed_pawns_mask = black_pawns;
+
+        // Mutable copies to iterate through
         let mut wp_mut = white_pawns;
         let mut bp_mut = black_pawns;
+
+        // Loop through white pawns
         while wp_mut.as_number() > 0 {
             let sq = bitboard_helpers::next_bit(&mut wp_mut);
+            // Add the passed pawn mask for this square
             white_passed_pawns_mask |= self.passed_pawn_mask(Side::White, sq as u8);
         }
 
+        // Loop through the white pawns
         while bp_mut.as_number() > 0 {
             let sq = bitboard_helpers::next_bit(&mut bp_mut);
+            // Add the passed pawn mask for this square
             black_passed_pawns_mask |= self.passed_pawn_mask(Side::Black, sq as u8);
         }
 
-        // Passed pawns are where our respective filled masks as NOT occupied and we have OUR pawns
+        // At this points our black/white passed pawns masks have all the squares that would block passed pawns and include the location of the pawns themselves.
+        // To find the actual passed pawns, we invert the masks and AND them with our respective pawns.
+        // So white passed pawns are where we have an overlap (&) of the inverse of the black pawns mask and the white pawns.
         let white_passed_pawns = !black_passed_pawns_mask & white_pawns;
         let black_passed_pawns = !white_passed_pawns_mask & black_pawns;
 
+        // Simple doubled pawn detection. Shift the pawns one rank forward (white) or backward (black) and use north/south fill to find all squares behind them.
         let shifted_white_pawns = white_pawns << 8;
         let shifted_black_pawns = black_pawns >> 8;
 
+        // Now fill to find all squares behind the shifted pawns and AND with the original pawns to find doubled pawns.
         let white_doubled_pawns = bitboard_helpers::north_fill(&shifted_white_pawns) & white_pawns;
         let black_double_pawns = bitboard_helpers::south_fill(&shifted_black_pawns) & black_pawns;
 
+        // Construct the pawn structure
         let mut structure = PawnStructure {
             passed_pawns: Default::default(),
             doubled_pawns: Default::default(),
         };
 
+        // I do it this way to make it more explicit which side is which instead of relying on array order.
         structure.passed_pawns[Side::White as usize] = white_passed_pawns;
         structure.passed_pawns[Side::Black as usize] = black_passed_pawns;
 
