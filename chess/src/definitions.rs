@@ -159,7 +159,7 @@ pub const DARK_SQUARES: u64 = 0xAA55AA55AA55AA55;
 type FileBitboards = [Bitboard; NumberOf::FILES];
 type RankBitboards = [Bitboard; NumberOf::RANKS];
 
-pub(crate) const FILE_BITBOARDS: FileBitboards = [
+pub const FILE_BITBOARDS: FileBitboards = [
     Bitboard::new(72340172838076673),
     Bitboard::new(144680345676153346),
     Bitboard::new(289360691352306692),
@@ -170,7 +170,7 @@ pub(crate) const FILE_BITBOARDS: FileBitboards = [
     Bitboard::new(9259542123273814144),
 ];
 
-pub(crate) const RANK_BITBOARDS: RankBitboards = [
+pub const RANK_BITBOARDS: RankBitboards = [
     Bitboard::new(255),
     Bitboard::new(65280),
     Bitboard::new(16711680),

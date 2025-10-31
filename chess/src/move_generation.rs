@@ -299,7 +299,7 @@ impl MoveGenerator {
 
     fn orthogonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
         let mut attacks = Bitboard::default();
-        let bb = Bitboard::new(1u64 << square);
+        let bb = Bitboard::from_square(square);
         let not_a_file = !FILE_BITBOARDS[File::A as usize];
         let not_h_file = !FILE_BITBOARDS[File::H as usize];
 
@@ -348,7 +348,7 @@ impl MoveGenerator {
 
     fn diagonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
         let mut attacks = Bitboard::default();
-        let bb = Bitboard::new(1u64 << square);
+        let bb = Bitboard::from_square(square);
         let not_a_file = !FILE_BITBOARDS[File::A as usize];
         let not_h_file = !FILE_BITBOARDS[File::H as usize];
 
