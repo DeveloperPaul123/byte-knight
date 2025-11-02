@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::{Result, anyhow};
 use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
-use engine::{hce_values::GAME_PHASE_MAX, hce_values::GAMEPHASE_INC};
+use engine::{hce_values::GAME_PHASE_INC, hce_values::GAME_PHASE_MAX};
 
 use crate::{offsets::Offsets, tuning_position::TuningPosition};
 
@@ -62,8 +62,8 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         let mut b_bb = *board.piece_bitboard(piece, Side::Black);
 
         // update game phase
-        phase += w_bb.as_number().count_ones() as usize * GAMEPHASE_INC[piece as usize] as usize;
-        phase += b_bb.as_number().count_ones() as usize * GAMEPHASE_INC[piece as usize] as usize;
+        phase += w_bb.as_number().count_ones() as usize * GAME_PHASE_INC[piece as usize] as usize;
+        phase += b_bb.as_number().count_ones() as usize * GAME_PHASE_INC[piece as usize] as usize;
         while w_bb.as_number() > 0 {
             let sq = bitboard_helpers::next_bit(&mut w_bb);
             // note we still have to flip the square for the white side
