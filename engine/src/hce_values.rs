@@ -14,7 +14,7 @@ use crate::{
 /// Game phase increment for each piece
 /// Ordered to match the indexing of [`Piece`]
 /// King, Queen, Rook, Bishop, Knight, Pawn
-pub const GAMEPHASE_INC: [ScoreType; 6] = [0, 4, 2, 1, 1, 0];
+pub const GAME_PHASE_INC: [ScoreType; 6] = [0, 4, 2, 1, 1, 0];
 
 /// Maximum game phase
 pub const GAME_PHASE_MAX: i32 = 24;
