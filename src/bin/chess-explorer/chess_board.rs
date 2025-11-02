@@ -1,5 +1,5 @@
 use chess::{board::Board, side::Side, square};
-use gpui::{div, img, prelude::*, px, rgb, rgba, Context, Rgba, Window};
+use gpui::{Context, Rgba, Window, div, img, prelude::*, px, rgb, rgba};
 
 use chess::pieces::Piece;
 
@@ -14,7 +14,7 @@ impl ChessPiece {
         Self { piece, side }
     }
 
-    fn to_svg_path(&self) -> String {
+    fn to_svg_path(self) -> String {
         let piece_char = match self.side {
             Side::White => self.piece.as_char().to_ascii_lowercase(),
             Side::Black => self.piece.as_char().to_ascii_uppercase(),
@@ -36,11 +36,10 @@ pub(crate) struct ChessBoard {
 
 impl ChessBoard {
     pub(crate) fn new(board: Board) -> Self {
-        let board = Self {
-            board: board,
+        Self {
+            board,
             selected_square: None,
-        };
-        board
+        }
     }
 
     fn update_selected_square(&mut self, rank: usize, file: usize, cx: &mut Context<Self>) {
@@ -119,11 +118,7 @@ impl Render for ChessBoard {
                                             .bg(bg_color)
                                             .border_6()
                                             .border_color(selected_color)
-                                            .text_color(if is_light {
-                                                rgb(0x000000)
-                                            } else {
-                                                rgb(0x000000)
-                                            })
+                                            .text_color(rgb(0x000000))
                                             .text_size(px(40.0))
                                             .cursor_pointer()
                                             .on_mouse_down(

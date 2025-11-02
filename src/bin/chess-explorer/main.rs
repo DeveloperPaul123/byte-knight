@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use chess::board::Board;
-use gpui::{px, size, App, AppContext, Application, Bounds, WindowBounds, WindowOptions};
+use gpui::{App, AppContext, Application, Bounds, WindowBounds, WindowOptions, px, size};
 
 mod assets;
 mod chess_board;
@@ -46,7 +46,7 @@ fn main() {
                         );
 
                         let maybe_board = Board::from_fen(&fen_str);
-                        if !maybe_board.is_ok() {
+                        if maybe_board.is_err() {
                             panic!("Invalid FEN string: {}", fen_str);
                         }
 

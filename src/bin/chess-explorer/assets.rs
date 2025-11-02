@@ -2,9 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use gpui::{
-    AssetSource, SharedString,
-};
+use gpui::{AssetSource, SharedString};
 
 pub(crate) struct Assets {
     pub(crate) base_directory: PathBuf,
