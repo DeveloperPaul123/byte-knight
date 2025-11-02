@@ -28,6 +28,10 @@ serde = "1.0.228"
 textplots = "0.8.7"
 thiserror = "2.0.17"
 uci-parser = "1.1.0"
+gpui = "0.2.2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+cocoa = "0.25"
 
 [dependencies]
 engine = { workspace = true }
@@ -37,6 +41,7 @@ clap = { workspace = true, features = ["derive"] }
 colored = { workspace = true }
 console = { workspace = true, features = ["windows-console-colors"] }
 csv = { workspace = true }
+gpui = { workspace = true }
 indicatif = { workspace = true, features = ["rayon"] }
 rand = { workspace = true, features = ["small_rng"] }
 rand_chacha = { workspace = true }
