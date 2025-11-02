@@ -6,8 +6,9 @@ A small GUI for exploring chess games and positions.
 
 ### Chess Piece Graphics
 
-**Pixel Chess Pieces**
+#### Pixel Chess Pieces
+
 - **Author**: therealqtpi
 - **License**: AGPL-3.0-or-later
-- **Source**: https://github.com/lichess-org/lila/tree/master/public/piece/pixel
+- **Source**: <https://github.com/lichess-org/lila/tree/master/public/piece/pixel>
 - **Location**: `/assets/pieces`
