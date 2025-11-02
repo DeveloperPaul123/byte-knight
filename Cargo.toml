@@ -7,7 +7,8 @@ authors = ["Paul Tsouchlos <developer.paul.123@gmail.com>"]
 license = "GPL-3.0"
 
 [workspace]
-members = ["engine", "chess"]
+members = ["engine", "chess", "tools/chess-explorer"]
+default-members = ["engine", "chess"]
 
 [workspace.dependencies]
 anyhow = "1.0.100"

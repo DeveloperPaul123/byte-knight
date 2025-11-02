@@ -22,13 +22,13 @@ build-native-release target:
 [group('dev')]
 build config="debug":
     echo "Building the project..."
-    cargo build --workspace --all-features {{ if config == "release" { "--release" } else { "" } }}
+    cargo build --workspace {{ if config == "release" { "--release" } else { "" } }}
 
 [doc('Build and run tests (default is debug)')]
 [group('dev')]
 test config="debug":
     echo "Running tests..."
-    cargo test --workspace --all-features {{ if config == "release" { "--release" } else { "" } }} -- --include-ignored
+    cargo test --workspace {{ if config == "release" { "--release" } else { "" } }} -- --include-ignored
 
 export LLVM_PROFILE_FILE := "./target/coverage/byte_knight-%p-%m.profraw"
 
@@ -67,7 +67,7 @@ coverage-report:
 [doc('Run clippy')]
 [group('dev')]
 lint:
-    cargo clippy --all --all-features --tests -- -D warnings
+    cargo clippy --all --tests -- -D warnings
 
 [doc('Run sarch benchmark - required before committing for OpenBench.')]
 [group('chess')]
@@ -115,16 +115,16 @@ release target:
 
 [doc('Caches the release binary to bk-main for testing.')]
 [group('dev')]
-cache-main: (build "release")
+cache-main: (build-native-release "byte-knight")
     echo "Caching binary for testing..."
     cp target/release/byte-knight ./bk-main
 
 [doc('Run the engine against itself. Requires @cache-main to be run first and fastchess to be installed.')]
 [group('chess')]
 [group('dev')]
-compare-to-main engine1: (build "release")
-    echo "Comparing {{ engine1 }} to bk-main"
-    fastchess -engine cmd="{{ engine1 }}" name="dev" -engine cmd="./bk-main" name="bk-main" -openings file="./data/Pohl.epd" format=epd order=random -each tc=10+0.1 -rounds 200 -repeat -concurrency 8 -sprt elo0=0 elo1=5 alpha=0.05 beta=0.1 model=normalized -output format=cutechess
+compare-to-main: (build-native-release "byte-knight")
+    echo "Comparing byte-knight to bk-main"
+    fastchess -engine cmd="./target/release/byte-knight" name="dev" -engine cmd="./bk-main" name="bk-main" -openings file="./data/Pohl.epd" format=epd order=random -each tc=10+0.1 -rounds 200 -repeat -concurrency 8 -sprt elo0=0 elo1=5 alpha=0.05 beta=0.1 model=normalized -output format=cutechess
 
 [doc('Format all Rust code')]
 [group('dev')]
