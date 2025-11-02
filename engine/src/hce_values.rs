@@ -91,12 +91,12 @@ pub const PSQTS : [[PhasedScore; NumberOf::SQUARES]; NumberOf::PIECE_TYPES] = [
 ];
 
 pub const PASSED_PAWN_BONUS: [PhasedScore; NumberOf::PASSED_PAWN_RANKS] = [
-    S( -24,    6),
-    S(   2,  122),
-    S(   8,   54),
-    S( -16,   27),
-    S( -18,    4),
-    S( -13,   -2),
+    S(-24, 6),
+    S(2, 122),
+    S(8, 54),
+    S(-16, 27),
+    S(-18, 4),
+    S(-13, -2),
 ];
 
 const RANK_1: u8 = 1;
