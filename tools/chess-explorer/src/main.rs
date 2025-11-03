@@ -20,11 +20,7 @@ struct Cli {
 // Main entry point
 fn main() {
     let cli = Cli::parse();
-    let base_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("src")
-        .join("bin")
-        .join("chess-explorer")
-        .join("assets");
+    let base_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets");
 
     Application::new()
         .with_assets(Assets {
@@ -50,7 +46,10 @@ fn main() {
                             panic!("Invalid FEN string: {}", fen_str);
                         }
 
-                        ChessBoard::new(maybe_board.unwrap())
+                        let board = maybe_board.unwrap();
+                        println!("{}", board);
+
+                        ChessBoard::new(board)
                     })
                 },
             )
