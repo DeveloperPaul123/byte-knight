@@ -93,6 +93,12 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
                         mg[side as usize] += passed_pawn_bonus.mg() as i32;
                         eg[side as usize] += passed_pawn_bonus.eg() as i32;
                     }
+
+                    let doubled_pawn_value = self.values.doubled_pawn_value(sq as u8, side);
+                    if pawn_structure.doubled_pawns[side as usize].is_square_occupied(sq as u8) {
+                        mg[side as usize] += doubled_pawn_value.mg() as i32;
+                        eg[side as usize] += doubled_pawn_value.eg() as i32;
+                    }
                 }
                 let phased_score: PhasedScore = self.values.psqt(sq as u8, piece, side);
                 mg[side as usize] += phased_score.mg() as i32;
@@ -101,6 +107,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
                 game_phase += GAME_PHASE_INC[piece as usize] as i32;
             }
         }
+
         let stm_idx = side_to_move as usize;
         let opposite = Side::opposite(side_to_move) as usize;
         let mg_score = mg[stm_idx] - mg[opposite];
