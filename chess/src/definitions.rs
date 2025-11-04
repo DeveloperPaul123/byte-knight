@@ -57,6 +57,7 @@ impl NumberOf {
     pub const CASTLING_OPTIONS: usize = 16;
     // Passed pawns cannot be on ranks 1 or 8
     pub const PASSED_PAWN_RANKS: usize = 6;
+    pub const DOUBLED_PAWN_FILES: usize = 8;
 }
 
 pub const EMPTY: u64 = 0;

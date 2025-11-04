@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn offsets() {
-        assert_eq!(Offsets::END, 390);
+        assert_eq!(Offsets::END, 398);
     }
 
     #[test]
