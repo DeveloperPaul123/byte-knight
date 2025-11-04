@@ -107,6 +107,22 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         b_indexes.push(index);
     }
 
+    // detect doubled pawns
+    let mut white_doubled_bb = pawn_structure.doubled_pawns[Side::White as usize];
+    let mut black_doubled_bb = pawn_structure.doubled_pawns[Side::Black as usize];
+
+    while white_doubled_bb.as_number() > 0 {
+        let white_doubled_idx = bitboard_helpers::next_bit(&mut white_doubled_bb);
+        let index = Offsets::offset_for_doubled_pawn(white_doubled_idx, Side::White);
+        w_indexes.push(index);
+    }
+
+    while black_doubled_bb.as_number() > 0 {
+        let black_doubled_idx = bitboard_helpers::next_bit(&mut black_doubled_bb);
+        let index = Offsets::offset_for_doubled_pawn(black_doubled_idx, Side::Black);
+        b_indexes.push(index);
+    }
+
     let scaled_phase = phase as f64 / (GAME_PHASE_MAX as f64);
     let tuning_pos = TuningPosition::new(w_indexes, b_indexes, scaled_phase, result);
 

@@ -15,15 +15,10 @@ impl ChessPiece {
     }
 
     fn to_svg_path(self) -> String {
-        let piece_char = match self.side {
-            Side::White => self.piece.as_char().to_ascii_lowercase(),
-            Side::Black => self.piece.as_char().to_ascii_uppercase(),
-        };
-
         format!(
             "pieces/{}{}.svg",
             format!("{}", self.side).to_ascii_lowercase(),
-            piece_char
+            self.piece.as_char().to_ascii_uppercase()
         )
     }
 }

@@ -6,7 +6,7 @@ use chess::{
     side::Side,
     square,
 };
-use engine::hce_values::{PASSED_PAWN_BONUS, PSQTS};
+use engine::hce_values::{DOUBLED_PAWN_VALUES, PASSED_PAWN_BONUS, PSQTS};
 
 use crate::{
     math,
@@ -54,6 +54,11 @@ impl Parameters {
         // Add passed pawn bonuses
         for (idx, val) in PASSED_PAWN_BONUS.iter().enumerate() {
             params[Offsets::PASSED_PAWN as usize + idx] = (*val).into();
+        }
+
+        // Add doubled pawn values
+        for (idx, val) in DOUBLED_PAWN_VALUES.iter().enumerate() {
+            params[Offsets::DOUBLED_PAWN as usize + idx] = (*val).into();
         }
 
         params
