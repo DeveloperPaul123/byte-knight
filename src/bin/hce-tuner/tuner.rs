@@ -22,7 +22,7 @@ impl<'a> Tuner<'a> {
             weights: initial_params,
             momentum: Parameters::default(),
             velocity: Parameters::default(),
-            learning_rate: 0.05,
+            learning_rate: 0.04,
             beta1: 0.9,
             beta2: 0.999,
             max_epochs,
@@ -105,7 +105,7 @@ impl<'a> Tuner<'a> {
     pub(crate) fn compute_k(&self) -> f64 {
         let mut k = 0.009;
         let delta = 0.00001;
-        let goal = 0.000001;
+        let goal = 0.00000001;
         let mut dev = 1f64;
 
         while dev.abs() > goal {
