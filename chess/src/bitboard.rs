@@ -61,6 +61,10 @@ impl Bitboard {
         Bitboard { data: 1 << square }
     }
 
+    pub const fn filled() -> Self {
+        Bitboard { data: u64::MAX }
+    }
+
     /// Check if a square is occupied.
     pub fn is_square_occupied(&self, square: u8) -> bool {
         self.data & (1 << square) != 0
