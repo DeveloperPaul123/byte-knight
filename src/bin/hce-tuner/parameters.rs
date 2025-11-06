@@ -2,11 +2,11 @@ use std::ops::{Add, Index, IndexMut};
 
 use chess::{
     definitions::NumberOf,
-    pieces::{ALL_PIECES, Piece},
+    pieces::{Piece, ALL_PIECES},
     side::Side,
     square,
 };
-use engine::hce_values::{DOUBLED_PAWN_VALUES, PASSED_PAWN_BONUS, PSQTS};
+use engine::hce_values::{DOUBLED_PAWN_VALUES, ISOLATED_PAWN_VALUES, PASSED_PAWN_BONUS, PSQTS};
 
 use crate::{
     math,
@@ -59,6 +59,10 @@ impl Parameters {
         // Add doubled pawn values
         for (idx, val) in DOUBLED_PAWN_VALUES.iter().enumerate() {
             params[Offsets::DOUBLED_PAWN as usize + idx] = (*val).into();
+        }
+
+        for (idx, val) in ISOLATED_PAWN_VALUES.iter().enumerate() {
+            params[Offsets::ISOLATED_PAWN as usize + idx] = (*val).into();
         }
 
         params
