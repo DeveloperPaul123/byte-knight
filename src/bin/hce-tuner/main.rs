@@ -109,7 +109,7 @@ fn print_params(params: &Parameters) {
     // Print out the doubled pawn penalty values
     println!("pub const DOUBLED_PAWN_VALUES: [PhasedScore; NumberOf::DOUBLED_PAWN_FILES] = [");
 
-    for file in 0..NumberOf::DOUBLED_PAWN_FILES {
+    for file in 0..NumberOf::FILES {
         let idx = Offsets::DOUBLED_PAWN as usize + file;
         let val = params.as_slice()[idx];
         println!("    {val:?}, ");

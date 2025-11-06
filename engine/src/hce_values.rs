@@ -99,7 +99,7 @@ pub const PASSED_PAWN_BONUS: [PhasedScore; NumberOf::PASSED_PAWN_RANKS] = [
     S(-14, -2),
 ];
 
-pub const DOUBLED_PAWN_VALUES: [PhasedScore; NumberOf::DOUBLED_PAWN_FILES] = [
+pub const DOUBLED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [
     S(-21, -46),
     S(-3, -38),
     S(-16, -35),
@@ -108,6 +108,17 @@ pub const DOUBLED_PAWN_VALUES: [PhasedScore; NumberOf::DOUBLED_PAWN_FILES] = [
     S(-17, -35),
     S(-20, -34),
     S(-24, -51),
+];
+
+pub const ISOLATED_PAWN_VALUES: [PhasedScore; NumberOf::FILES] = [
+    S(-1, -2),
+    S(-1, -2),
+    S(-1, -2),
+    S(-1, -2),
+    S(-1, -2),
+    S(-1, -2),
+    S(-1, -2),
+    S(-1, -2),
 ];
 
 const RANK_1: u8 = 1;
@@ -130,5 +141,10 @@ impl EvalValues for ByteKnightValues {
     fn doubled_pawn_value(&self, square: u8, side: Side) -> Self::ReturnScore {
         let (file, _rank) = square::from_square(square::flip_if(side == Side::White, square));
         DOUBLED_PAWN_VALUES[file as usize]
+    }
+
+    fn isolated_pawn_value(&self, square: u8, side: Side) -> Self::ReturnScore {
+        let (file, _rank) = square::from_square(square::flip_if(side == Side::White, square));
+        ISOLATED_PAWN_VALUES[file as usize]
     }
 }

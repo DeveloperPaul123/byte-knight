@@ -99,6 +99,12 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
                         mg[side as usize] += doubled_pawn_value.mg() as i32;
                         eg[side as usize] += doubled_pawn_value.eg() as i32;
                     }
+
+                    let isolated_pawn_value = self.values.isolated_pawn_value(sq as u8, side);
+                    if pawn_structure.isolated_pawns[side as usize].is_square_occupied(sq as u8) {
+                        mg[side as usize] += isolated_pawn_value.mg() as i32;
+                        eg[side as usize] += isolated_pawn_value.eg() as i32;
+                    }
                 }
                 let phased_score: PhasedScore = self.values.psqt(sq as u8, piece, side);
                 mg[side as usize] += phased_score.mg() as i32;
