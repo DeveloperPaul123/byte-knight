@@ -3,7 +3,7 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
 use engine::{hce_values::GAME_PHASE_INC, hce_values::GAME_PHASE_MAX};
 
@@ -362,7 +362,8 @@ mod tests {
                 Side::White => position.evaluate(&params),
                 Side::Black => -position.evaluate(&params),
             };
-            println!("pos: \n{}", board);
+
+            println!("pos: {}\n{}", board.to_fen(), board);
             println!("{expected_value} // {val}");
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }
