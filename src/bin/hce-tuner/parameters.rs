@@ -2,7 +2,7 @@ use std::ops::{Add, Index, IndexMut};
 
 use chess::{
     definitions::NumberOf,
-    pieces::{Piece, ALL_PIECES},
+    pieces::{ALL_PIECES, Piece},
     side::Side,
     square,
 };
