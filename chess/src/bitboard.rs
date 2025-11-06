@@ -61,6 +61,7 @@ impl Bitboard {
         Bitboard { data: 1 << square }
     }
 
+    /// Create a filled Bitboard.
     pub const fn filled() -> Self {
         Bitboard { data: u64::MAX }
     }
@@ -444,5 +445,11 @@ mod tests {
             let bb = Bitboard::from_square(sq);
             assert_eq!(map.get(&bb), Some(&sq));
         }
+    }
+
+    #[test]
+    fn filled() {
+        let bb = Bitboard::filled();
+        assert_eq!(bb.data, u64::MAX);
     }
 }
