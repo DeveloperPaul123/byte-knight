@@ -3,7 +3,7 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use chess::{bitboard_helpers, board::Board, pieces::Piece, side::Side};
 use engine::{hce_values::GAME_PHASE_INC, hce_values::GAME_PHASE_MAX};
 
@@ -120,6 +120,21 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
     while black_doubled_bb.as_number() > 0 {
         let black_doubled_idx = bitboard_helpers::next_bit(&mut black_doubled_bb);
         let index = Offsets::offset_for_doubled_pawn(black_doubled_idx, Side::Black);
+        b_indexes.push(index);
+    }
+
+    let mut isolated_white_bb = pawn_structure.isolated_pawns[Side::White as usize];
+    let mut isolated_black_bb = pawn_structure.isolated_pawns[Side::Black as usize];
+
+    while isolated_white_bb.as_number() > 0 {
+        let isolated_white_idx = bitboard_helpers::next_bit(&mut isolated_white_bb);
+        let index = Offsets::offset_for_isolated_pawn(isolated_white_idx, Side::White);
+        w_indexes.push(index);
+    }
+
+    while isolated_black_bb.as_number() > 0 {
+        let isolated_black_idx = bitboard_helpers::next_bit(&mut isolated_black_bb);
+        let index = Offsets::offset_for_isolated_pawn(isolated_black_idx, Side::Black);
         b_indexes.push(index);
     }
 
