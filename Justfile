@@ -22,13 +22,13 @@ build-native-release target:
 [group('dev')]
 build config="debug":
     echo "Building the project..."
-    cargo build --workspace {{ if config == "release" { "--release" } else { "" } }}
+    cargo build --workspace --all-targets {{ if config == "release" { "--release" } else { "" } }}
 
 [doc('Build and run tests (default is debug)')]
 [group('dev')]
 test config="debug":
     echo "Running tests..."
-    cargo test --workspace {{ if config == "release" { "--release" } else { "" } }} -- --include-ignored
+    cargo test --workspace --all-targets {{ if config == "release" { "--release" } else { "" } }} -- --include-ignored
 
 export LLVM_PROFILE_FILE := "./target/coverage/byte_knight-%p-%m.profraw"
 

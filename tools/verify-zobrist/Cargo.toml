@@ -1,0 +1,20 @@
+[package]
+name = "verify-zobrist"
+edition = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+
+[dependencies]
+chess = { workspace = true }
+console = { workspace = true }
+indicatif = { workspace = true }
+rayon = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+anyhow = { workspace = true }
+csv = { workspace = true }
+
+[[bin]]
+name = "verify-zobrist"
+path = "src/main.rs"
+test = false

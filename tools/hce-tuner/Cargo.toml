@@ -1,0 +1,21 @@
+[package]
+name = "hce-tuner"
+version = "0.1.0"
+edition = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+
+[dependencies]
+chess = { workspace = true }
+engine = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+rayon = { workspace = true }
+indicatif = { workspace = true, features = ["rayon"] }
+textplots = { workspace = true }
+
+[[bin]]
+name = "hce-tuner"
+path = "src/main.rs"
+test = false
