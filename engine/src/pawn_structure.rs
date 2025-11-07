@@ -11,6 +11,7 @@ use chess::{
 pub struct PawnStructure {
     pub passed_pawns: [Bitboard; 2],
     pub doubled_pawns: [Bitboard; 2],
+    pub isolated_pawns: [Bitboard; 2],
 }
 
 impl PawnStructure {
@@ -19,21 +20,26 @@ impl PawnStructure {
         black_passed_pawns: Bitboard,
         white_doubled_pawns: Bitboard,
         black_doubled_pawns: Bitboard,
+        white_isolated_pawns: Bitboard,
+        black_isolated_pawns: Bitboard,
     ) -> Self {
         PawnStructure {
             passed_pawns: [white_passed_pawns, black_passed_pawns],
             doubled_pawns: [white_doubled_pawns, black_doubled_pawns],
+            isolated_pawns: [white_isolated_pawns, black_isolated_pawns],
         }
     }
 }
 pub struct PawnEvaluator {
     passed_pawn_masks: [[Bitboard; NumberOf::SQUARES]; NumberOf::SIDES],
+    adjacent_file_masks: [Bitboard; NumberOf::FILES],
 }
 
 impl PawnEvaluator {
     pub fn new() -> Self {
         let mut eval = PawnEvaluator {
             passed_pawn_masks: [[Bitboard::default(); NumberOf::SQUARES]; NumberOf::SIDES],
+            adjacent_file_masks: [Bitboard::default(); NumberOf::FILES],
         };
 
         eval.initialize_pawn_masks();
@@ -53,11 +59,19 @@ impl PawnEvaluator {
         let mut wp_mut = white_pawns;
         let mut bp_mut = black_pawns;
 
+        let mut white_isolated_pawns = Bitboard::default();
+        let mut black_isolated_pawns = Bitboard::default();
+
         // Loop through white pawns
         while wp_mut.as_number() > 0 {
             let sq = bitboard_helpers::next_bit(&mut wp_mut);
             // Add the passed pawn mask for this square
             white_passed_pawns_mask |= self.passed_pawn_mask(Side::White, sq as u8);
+
+            let (file, _rank) = square::from_square(sq as u8);
+            if (self.adjacent_file_masks[file as usize] & white_pawns).as_number() == 0 {
+                white_isolated_pawns |= Bitboard::from_square(sq as u8);
+            }
         }
 
         // Loop through the white pawns
@@ -65,6 +79,11 @@ impl PawnEvaluator {
             let sq = bitboard_helpers::next_bit(&mut bp_mut);
             // Add the passed pawn mask for this square
             black_passed_pawns_mask |= self.passed_pawn_mask(Side::Black, sq as u8);
+
+            let (file, _rank) = square::from_square(sq as u8);
+            if (self.adjacent_file_masks[file as usize] & black_pawns).as_number() == 0 {
+                black_isolated_pawns |= Bitboard::from_square(sq as u8);
+            }
         }
 
         // At this points our black/white passed pawns masks have all the squares that would block passed pawns and include the location of the pawns themselves.
@@ -96,6 +115,8 @@ impl PawnEvaluator {
             black_passed_pawns,
             white_doubled_pawns,
             black_doubled_pawns,
+            white_isolated_pawns,
+            black_isolated_pawns,
         )
     }
 
@@ -104,6 +125,17 @@ impl PawnEvaluator {
     }
 
     fn initialize_pawn_masks(&mut self) {
+        for file in 0..NumberOf::FILES as u8 {
+            let mut mask = Bitboard::default();
+            if file > 0 {
+                mask |= FILE_BITBOARDS[(file - 1) as usize];
+            }
+            if file < (NumberOf::FILES as u8 - 1) {
+                mask |= FILE_BITBOARDS[(file + 1) as usize];
+            }
+            self.adjacent_file_masks[file as usize] = mask;
+        }
+
         for sq in 0..NumberOf::SQUARES as u8 {
             let (file, rank) = square::from_square(sq);
 
@@ -173,6 +205,7 @@ mod tests {
                         Bitboard::default(),
                     ],
                     doubled_pawns: Default::default(),
+                    isolated_pawns: [Default::default(), Default::default()],
                 },
             ),
             (
@@ -180,6 +213,7 @@ mod tests {
                 PawnStructure {
                     passed_pawns: [Default::default(), Default::default()],
                     doubled_pawns: [Bitboard::from_square(Squares::B2), Default::default()],
+                    isolated_pawns: [Default::default(), Default::default()],
                 },
             ),
             (
@@ -190,6 +224,7 @@ mod tests {
                         Bitboard::from_square(Squares::E6) | Squares::F7.into(),
                     ],
                     doubled_pawns: Default::default(),
+                    isolated_pawns: [Squares::B2.into(), Default::default()],
                 },
             ),
             (
@@ -197,6 +232,7 @@ mod tests {
                 PawnStructure {
                     passed_pawns: [Squares::A7.into(), Squares::C5.into()],
                     doubled_pawns: Default::default(),
+                    isolated_pawns: [Squares::A7.into(), Default::default()],
                 },
             ),
             (
@@ -207,6 +243,12 @@ mod tests {
                         Bitboard::from_square(Squares::C3) | Squares::H2.into(),
                         Default::default(),
                     ],
+                    isolated_pawns: [
+                        Bitboard::from_square(Squares::A2)
+                            | Squares::H2.into()
+                            | Squares::H6.into(),
+                        Default::default(),
+                    ],
                 },
             ),
             (
@@ -214,6 +256,7 @@ mod tests {
                 PawnStructure {
                     passed_pawns: Default::default(),
                     doubled_pawns: [Bitboard::from_square(Squares::B4), Default::default()],
+                    isolated_pawns: [Default::default(), Default::default()],
                 },
             ),
             (
@@ -221,6 +264,7 @@ mod tests {
                 PawnStructure {
                     passed_pawns: Default::default(),
                     doubled_pawns: Default::default(),
+                    isolated_pawns: [Default::default(), Default::default()],
                 },
             ),
             (
@@ -231,6 +275,7 @@ mod tests {
                         Default::default(),
                         Bitboard::from_square(Squares::C7) | Squares::G7.into(),
                     ],
+                    isolated_pawns: [Default::default(), Default::default()],
                 },
             ),
             (
@@ -238,6 +283,7 @@ mod tests {
                 PawnStructure {
                     passed_pawns: [Squares::E6.into(), Default::default()],
                     doubled_pawns: [Squares::E4.into(), Default::default()],
+                    isolated_pawns: [Default::default(), Default::default()],
                 },
             ),
             (
@@ -245,6 +291,10 @@ mod tests {
                 PawnStructure {
                     passed_pawns: Default::default(),
                     doubled_pawns: Default::default(),
+                    isolated_pawns: [
+                        Bitboard::from_square(Squares::F2) | Squares::H2.into(),
+                        Default::default(),
+                    ],
                 },
             ),
             (
@@ -252,6 +302,7 @@ mod tests {
                 PawnStructure {
                     passed_pawns: Default::default(),
                     doubled_pawns: Default::default(),
+                    isolated_pawns: [Default::default(), Squares::A6.into()],
                 },
             ),
             (
@@ -262,6 +313,10 @@ mod tests {
                         Squares::A7.into(),
                     ],
                     doubled_pawns: Default::default(),
+                    isolated_pawns: [
+                        Bitboard::from_square(Squares::F4) | Squares::H2.into(),
+                        Squares::A7.into(),
+                    ],
                 },
             ),
             (
@@ -269,6 +324,10 @@ mod tests {
                 PawnStructure {
                     passed_pawns: [Default::default(), Squares::B3.into()],
                     doubled_pawns: Default::default(),
+                    isolated_pawns: [
+                        Default::default(),
+                        Bitboard::from_square(Squares::B3) | Squares::E5.into(),
+                    ],
                 },
             ),
             (
@@ -276,6 +335,7 @@ mod tests {
                 PawnStructure {
                     passed_pawns: Default::default(),
                     doubled_pawns: Default::default(),
+                    isolated_pawns: [Default::default(), Default::default()],
                 },
             ),
             (
@@ -283,6 +343,7 @@ mod tests {
                 PawnStructure {
                     passed_pawns: [Squares::E6.into(), Squares::E5.into()],
                     doubled_pawns: Default::default(),
+                    isolated_pawns: [Squares::E6.into(), Squares::E5.into()],
                 },
             ),
             (
@@ -290,6 +351,12 @@ mod tests {
                 PawnStructure {
                     passed_pawns: Default::default(),
                     doubled_pawns: [Squares::C2.into(), Default::default()],
+                    isolated_pawns: [
+                        Bitboard::from_square(Squares::A6)
+                            | Squares::C2.into()
+                            | Squares::C5.into(),
+                        Default::default(),
+                    ],
                 },
             ),
             (
@@ -297,6 +364,7 @@ mod tests {
                 PawnStructure {
                     passed_pawns: [Squares::G4.into(), Default::default()],
                     doubled_pawns: [Default::default(), Squares::C6.into()],
+                    isolated_pawns: [Squares::G4.into(), Default::default()],
                 },
             ),
             (
@@ -310,6 +378,10 @@ mod tests {
                             | Squares::C3.into(),
                     ],
                     doubled_pawns: [Squares::F3.into(), Squares::H5.into()],
+                    isolated_pawns: [
+                        Default::default(),
+                        Bitboard::from_square(Squares::H4) | Squares::H5.into(),
+                    ],
                 },
             ),
             (
@@ -322,6 +394,10 @@ mod tests {
                         Bitboard::from_square(Squares::B3) | Squares::H2.into(),
                     ],
                     doubled_pawns: Default::default(),
+                    isolated_pawns: [
+                        Squares::C4.into(),
+                        Bitboard::from_square(Squares::B3) | Squares::H2.into(),
+                    ],
                 },
             ),
             (
@@ -329,6 +405,14 @@ mod tests {
                 PawnStructure {
                     passed_pawns: [Bitboard::from_square(Squares::D7), Default::default()],
                     doubled_pawns: [Squares::F2.into(), Default::default()],
+                    isolated_pawns: [
+                        Bitboard::from_square(Squares::A4)
+                            | Squares::D7.into()
+                            | Squares::F2.into()
+                            | Squares::F4.into()
+                            | Squares::H5.into(),
+                        Default::default(),
+                    ],
                 },
             ),
             (
@@ -336,6 +420,7 @@ mod tests {
                 PawnStructure {
                     passed_pawns: [Default::default(), Default::default()],
                     doubled_pawns: Default::default(),
+                    isolated_pawns: [Squares::B2.into(), Default::default()],
                 },
             ),
             (
@@ -343,6 +428,7 @@ mod tests {
                 PawnStructure {
                     passed_pawns: [Default::default(), Default::default()],
                     doubled_pawns: Default::default(),
+                    isolated_pawns: [Squares::A5.into(), Squares::B7.into()],
                 },
             ),
             (
@@ -350,6 +436,10 @@ mod tests {
                 PawnStructure {
                     passed_pawns: [Squares::H4.into(), Squares::A6.into()],
                     doubled_pawns: Default::default(),
+                    isolated_pawns: [
+                        Default::default(),
+                        Bitboard::from_square(Squares::A6) | Squares::F6.into(),
+                    ],
                 },
             ),
             (
@@ -357,6 +447,14 @@ mod tests {
                 PawnStructure {
                     passed_pawns: [Default::default(), Default::default()],
                     doubled_pawns: Default::default(),
+                    isolated_pawns: [
+                        Bitboard::from_square(Squares::A5)
+                            | Squares::F2.into()
+                            | Squares::H4.into(),
+                        Bitboard::from_square(Squares::A6)
+                            | Squares::F6.into()
+                            | Squares::H5.into(),
+                    ],
                 },
             ),
             (
@@ -364,6 +462,7 @@ mod tests {
                 PawnStructure {
                     passed_pawns: [Squares::D5.into(), Default::default()],
                     doubled_pawns: Default::default(),
+                    isolated_pawns: [Squares::G2.into(), Default::default()],
                 },
             ),
             // Special case, white has passed and double pawns on d4, d5
@@ -372,6 +471,10 @@ mod tests {
                 PawnStructure {
                     passed_pawns: [Squares::D5.into(), Default::default()],
                     doubled_pawns: [Squares::D4.into(), Default::default()],
+                    isolated_pawns: [
+                        Bitboard::from_square(Squares::D4) | Squares::D5.into(),
+                        Default::default(),
+                    ],
                 },
             ),
         ];
@@ -382,17 +485,12 @@ mod tests {
             let board = Board::from_fen(fen).unwrap();
             let structure = pawn_eval.detect_pawn_structure(&board);
 
-            println!("Board: {}\n{}", board.to_fen(), board);
-            println!(
-                "---\n{}---\n{}",
-                structure.doubled_pawns[Side::White as usize],
-                structure.doubled_pawns[Side::Black as usize]
-            );
-
             let expected_pp_w = expected_structure.passed_pawns[Side::White as usize];
             let expected_pp_b = expected_structure.passed_pawns[Side::Black as usize];
             let expected_dp_w = expected_structure.doubled_pawns[Side::White as usize];
             let expected_dp_b = expected_structure.doubled_pawns[Side::Black as usize];
+            let expected_ip_w = expected_structure.isolated_pawns[Side::White as usize];
+            let expected_ip_b = expected_structure.isolated_pawns[Side::Black as usize];
 
             assert_eq!(
                 structure.passed_pawns[Side::White as usize],
@@ -417,6 +515,19 @@ mod tests {
                 structure.doubled_pawns[Side::Black as usize],
                 expected_dp_b,
                 "Detected doubled pawn structure for {} did not match expected.",
+                Side::Black
+            );
+
+            assert_eq!(
+                structure.isolated_pawns[Side::White as usize],
+                expected_ip_w,
+                "Detected isolated pawn structure for {} did not match expected.",
+                Side::White
+            );
+            assert_eq!(
+                structure.isolated_pawns[Side::Black as usize],
+                expected_ip_b,
+                "Detected isolated pawn structure for {} did not match expected.",
                 Side::Black
             );
         }

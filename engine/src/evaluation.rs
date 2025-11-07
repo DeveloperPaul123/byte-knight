@@ -99,6 +99,12 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
                         mg[side as usize] += doubled_pawn_value.mg() as i32;
                         eg[side as usize] += doubled_pawn_value.eg() as i32;
                     }
+
+                    let isolated_pawn_value = self.values.isolated_pawn_value(sq as u8, side);
+                    if pawn_structure.isolated_pawns[side as usize].is_square_occupied(sq as u8) {
+                        mg[side as usize] += isolated_pawn_value.mg() as i32;
+                        eg[side as usize] += isolated_pawn_value.eg() as i32;
+                    }
                 }
                 let phased_score: PhasedScore = self.values.psqt(sq as u8, piece, side);
                 mg[side as usize] += phased_score.mg() as i32;
@@ -295,13 +301,13 @@ mod tests {
         ];
 
         let scores: [ScoreType; 128] = [
-            0, 22, 659, 668, -659, -668, 1276, -1276, 578, 606, -578, -606, 0, 7, 17, 15, -7, -17,
-            -15, -659, -668, 659, 668, -1276, 1276, -578, -606, 578, 606, 0, -7, -17, -15, 7, 17,
-            15, 1, -1, 0, -440, 531, -1, 1, 5, 440, -531, -21, -43, 808, -839, 29, 43, -808, 839,
-            0, -5, 0, 5, -1226, -1337, -48, 1199, -1337, 48, 214, 239, -214, -239, -16, -214, -239,
-            214, 239, 16, 17, 17, 0, 0, 0, 19, -19, -10, 0, 0, 0, -19, 19, 10, -13, 9, 11, 12, -11,
-            -12, -281, 2, 13, -9, -11, -12, 11, 12, 281, -2, 3, 7, -3, -7, 10, -10, 0, -3, -7, 3,
-            7, -10, 10, 0, -9, 11, 37, 59, 9, -11, -37, -59, 39, 27,
+            0, 19, 649, 657, -649, -657, 1255, -1255, 568, 594, -568, -594, 0, 8, 17, 15, -8, -17,
+            -15, -649, -657, 649, 657, -1255, 1255, -568, -594, 568, 594, 0, -8, -17, -15, 8, 17,
+            15, 2, -2, 0, -431, 523, -2, 2, 7, 431, -523, -23, -42, 793, -825, 30, 42, -793, 825,
+            0, -7, 0, 7, -1206, -1315, -46, 1180, -1315, 46, 207, 236, -207, -236, -12, -207, -236,
+            207, 236, 12, -4, -4, 0, 0, 0, 20, -20, -8, 0, 0, 0, -20, 20, 8, -11, 7, 2, 1, -2, -1,
+            -291, 2, 11, -7, -2, -1, 2, 1, 291, -2, -6, -4, 6, 4, -2, 2, 0, 6, 4, -6, -4, 2, -2, 0,
+            -12, 12, 40, 65, 12, -12, -40, -65, 2, 27,
         ];
 
         let eval = ByteKnightEvaluation::default();

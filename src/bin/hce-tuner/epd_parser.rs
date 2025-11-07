@@ -123,6 +123,21 @@ fn parse_epd_line(line: &str) -> Result<TuningPosition> {
         b_indexes.push(index);
     }
 
+    let mut isolated_white_bb = pawn_structure.isolated_pawns[Side::White as usize];
+    let mut isolated_black_bb = pawn_structure.isolated_pawns[Side::Black as usize];
+
+    while isolated_white_bb.as_number() > 0 {
+        let isolated_white_idx = bitboard_helpers::next_bit(&mut isolated_white_bb);
+        let index = Offsets::offset_for_isolated_pawn(isolated_white_idx, Side::White);
+        w_indexes.push(index);
+    }
+
+    while isolated_black_bb.as_number() > 0 {
+        let isolated_black_idx = bitboard_helpers::next_bit(&mut isolated_black_bb);
+        let index = Offsets::offset_for_isolated_pawn(isolated_black_idx, Side::Black);
+        b_indexes.push(index);
+    }
+
     let scaled_phase = phase as f64 / (GAME_PHASE_MAX as f64);
     let tuning_pos = TuningPosition::new(w_indexes, b_indexes, scaled_phase, result);
 
@@ -347,7 +362,8 @@ mod tests {
                 Side::White => position.evaluate(&params),
                 Side::Black => -position.evaluate(&params),
             };
-            println!("pos: \n{}", board);
+
+            println!("pos: {}\n{}", board.to_fen(), board);
             println!("{expected_value} // {val}");
             assert!((expected_value.0 as f64 - val).abs().round() <= 1.0)
         }

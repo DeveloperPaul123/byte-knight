@@ -11,4 +11,5 @@ pub trait EvalValues {
     fn psqt(&self, square: u8, piece: Piece, side: Side) -> Self::ReturnScore;
     fn passed_pawn_bonus(&self, square: u8, side: Side) -> Self::ReturnScore;
     fn doubled_pawn_value(&self, square: u8, side: Side) -> Self::ReturnScore;
+    fn isolated_pawn_value(&self, square: u8, side: Side) -> Self::ReturnScore;
 }

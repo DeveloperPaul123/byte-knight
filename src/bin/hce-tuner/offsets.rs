@@ -5,13 +5,15 @@ pub(crate) struct Offsets;
 pub const PARAMETER_COUNT: usize = Offsets::END as usize;
 const PSQT_SIZE: u16 = 384; // 64 * 6 (pieces)
 const PASSED_PAWN_SIZE: u16 = NumberOf::PASSED_PAWN_RANKS as u16;
-const DOUBLED_PAWN_SIZE: u16 = NumberOf::DOUBLED_PAWN_FILES as u16;
+const DOUBLED_PAWN_SIZE: u16 = NumberOf::FILES as u16;
+const ISOLATED_PAWN_SIZE: u16 = NumberOf::FILES as u16;
 
 impl Offsets {
     pub const PSQT: u16 = 0;
     pub const PASSED_PAWN: u16 = Offsets::PSQT + PSQT_SIZE;
     pub const DOUBLED_PAWN: u16 = Offsets::PASSED_PAWN + PASSED_PAWN_SIZE;
-    pub const END: u16 = Offsets::DOUBLED_PAWN + DOUBLED_PAWN_SIZE;
+    pub const ISOLATED_PAWN: u16 = Offsets::DOUBLED_PAWN + DOUBLED_PAWN_SIZE;
+    pub const END: u16 = Offsets::ISOLATED_PAWN + ISOLATED_PAWN_SIZE;
 
     pub(crate) fn offset_for_piece_and_square(square: usize, piece: Piece, side: Side) -> usize {
         Offsets::PSQT as usize
@@ -28,6 +30,11 @@ impl Offsets {
     pub(crate) fn offset_for_doubled_pawn(square: usize, side: Side) -> usize {
         let (file, _rank) = square::from_square(square::flip_if(side == Side::White, square as u8));
         Offsets::DOUBLED_PAWN as usize + file as usize
+    }
+
+    pub(crate) fn offset_for_isolated_pawn(square: usize, side: Side) -> usize {
+        let (file, _rank) = square::from_square(square::flip_if(side == Side::White, square as u8));
+        Offsets::ISOLATED_PAWN as usize + file as usize
     }
 }
 
@@ -71,6 +78,19 @@ mod tests {
         assert_eq!(
             Offsets::DOUBLED_PAWN as usize + file as usize,
             double_offset_2
+        );
+
+        let isolated_offset =
+            Offsets::offset_for_isolated_pawn(sq.to_square_index() as usize, Side::White);
+        assert_eq!(
+            Offsets::ISOLATED_PAWN as usize + file as usize,
+            isolated_offset
+        );
+        let isolated_offset_2 =
+            Offsets::offset_for_isolated_pawn(sq.to_square_index() as usize, Side::Black);
+        assert_eq!(
+            Offsets::ISOLATED_PAWN as usize + file as usize,
+            isolated_offset_2
         );
     }
 }
