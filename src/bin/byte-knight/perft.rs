@@ -44,7 +44,14 @@ where
     Ok(reader.lines().map(|l| l.unwrap()).collect())
 }
 
-fn process_epd_file(path: &str, move_generation: &MoveGenerator) {
+/// Process an EPD file and run perft tests on each position.
+/// This function assumes the EPD file has fen strings followed by perft information like "D1 20; D2 400; D3 8902".
+/// See also the `stardard.epd` file in the data directory of this project.
+///
+/// # Arguments
+/// - `path` - The path to the EPD file.
+/// - `move_generation` - The move generator to use for perft calculations.
+pub(crate) fn process_epd_file(path: &str, move_generation: &MoveGenerator) {
     let mut all_failures = Vec::new();
     let lines = read_lines(path).unwrap();
     let now = std::time::Instant::now();
@@ -84,40 +91,4 @@ fn process_epd_file(path: &str, move_generation: &MoveGenerator) {
     for (fen, depth, expected, actual) in all_failures.iter().flatten() {
         println!("{fen:<30}: {depth:2} {expected:^10} != {actual:^10}",);
     }
-}
-
-fn main() {
-    let args = Args::parse();
-    let mut board = Board::from_fen(&args.fen).unwrap();
-    let move_generation = MoveGenerator::new();
-    if args.epd_file.is_some() {
-        let path = args.epd_file.as_ref().unwrap();
-        process_epd_file(path, &move_generation);
-    } else if args.split_perft {
-        println!("running split perft at depth {}", args.depth);
-        let move_results =
-            perft::split_perft(&mut board, &move_generation, args.depth, args.print_moves).unwrap();
-        for res in &move_results {
-            println!("{}: {}", res.mv.to_long_algebraic(), res.nodes);
-        }
-        println!();
-        // print the total nodes
-        println!("{}", move_results.iter().map(|r| r.nodes).sum::<u64>());
-    } else {
-        for i in 1..args.depth + 1 {
-            let now = std::time::Instant::now();
-            let nodes = perft::perft(&mut board, &move_generation, i, false).unwrap();
-            let elapsed = now.elapsed();
-            let nps = nodes as f64 / elapsed.as_secs_f64();
-            println!(
-                "perft {} = {:>12} {:.2} sec {:>12} nps",
-                i,
-                nodes,
-                elapsed.as_secs_f64(),
-                nps.round()
-            );
-        }
-    };
-
-    // println!("{:?}", result);
 }
