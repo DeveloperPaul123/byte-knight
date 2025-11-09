@@ -386,7 +386,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let alpha_original = alpha;
         let mut alpha_use = alpha;
 
-        if depth == 0 {
+        if depth <= 0 {
             return self.quiescence::<Node>(board, alpha, beta, pv);
         }
 
@@ -461,9 +461,21 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let mut best_score = -Score::INF;
         let mut best_move = tt_move;
 
-        let lmr_reduction = 1;
         // loop through all moves
         for (i, mv) in move_iter.into_iter().enumerate() {
+            let lmr_table_value = self.lmr_table.at(depth as usize, i);
+            assert!(
+                lmr_table_value.is_some(),
+                "LMR table uninitialized for d[{depth}] mv[{i}]"
+            );
+            let base_reduction = if let Some(table_val) = lmr_table_value {
+                *table_val
+            } else {
+                1f64
+            };
+            let lmr_reduction = (1f64 + base_reduction).floor() as i16;
+            let lmr_depth = depth.saturating_sub(lmr_reduction);
+
             // Move-loop pruning techniques
 
             // LMP - Late Move Pruning
@@ -477,14 +489,16 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if i >= min_lmp_moves {
                     break;
                 }
+            }
 
-                // Futility pruning
-                // If we are at a shallow depth and have already found a good score, we start skipping moves
+            // Futility pruning
+            // If we are at a shallow depth and have already found a good score, we start skipping moves
+            if !Node::ROOT && !Node::PV && !board.is_in_check(&self.move_gen) && !best_score.mated()
+            {
                 let static_eval = self.eval.eval(board);
-                let fp_margin =
-                    min_lmp_moves.cast_signed() as ScoreType * FUTILITY_COEFF + FUTILITY_OFFSET;
+                let fp_margin = lmr_depth as ScoreType * FUTILITY_COEFF + FUTILITY_OFFSET;
                 if mv.is_quiet()
-                    && min_lmp_moves < FUTILITY_DEPTH as usize
+                    && lmr_depth < FUTILITY_DEPTH
                     && static_eval + fp_margin <= alpha_use
                 {
                     break;
@@ -502,10 +516,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 if Node::PV && i == 0 {
                     -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
                 } else {
-                    let reduction = if mv.is_quiet() &&  depth >= 3 && board.full_move_number() >= 3 {
-                        let lmr_table_val = self.lmr_table.at(depth as usize, i);
-                        assert!(lmr_table_val.is_some(), "LMR table not initialized.");
-                        (lmr_reduction as f64 + lmr_table_val.unwrap()).floor() as i16
+                    // Late move reduction
+                    // We assume that the first moves tried are the best ones.
+                    // Moves searched later in a position are searched to a reduced depth
+                    let reduction = if mv.is_quiet() && depth >= 3 && board.full_move_number() >= 3 {
+                        lmr_reduction
                     } else {
                         1
                     };
