@@ -1,14 +1,20 @@
 [package]
 name = "byte-knight"
 version = "3.0.0"
-# 2024 isn't stable yet
+edition = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+
+[workspace]
+members = ["engine", "chess", "tools/*"]
+resolver = "3"
+
+[workspace.package]
 edition = "2024"
 authors = ["Paul Tsouchlos <developer.paul.123@gmail.com>"]
 license = "GPL-3.0"
-
-[workspace]
-members = ["engine", "chess", "tools/chess-explorer"]
-default-members = ["engine", "chess"]
+repository = "https://github.com/DeveloperPaul123/byte-knight"
 
 [workspace.dependencies]
 anyhow = "1.0.100"
@@ -33,18 +39,9 @@ uci-parser = "1.1.0"
 [dependencies]
 engine = { workspace = true }
 chess = { workspace = true }
-anyhow = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 colored = { workspace = true }
-console = { workspace = true, features = ["windows-console-colors"] }
-csv = { workspace = true }
-indicatif = { workspace = true, features = ["rayon"] }
-rand = { workspace = true, features = ["small_rng"] }
-rand_chacha = { workspace = true }
 rayon = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
-thiserror = { workspace = true }
-textplots = { workspace = true }
 
 [profile.dev]
 opt-level = 1

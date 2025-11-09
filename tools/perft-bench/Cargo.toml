@@ -1,0 +1,15 @@
+[package]
+name = "perft-bench"
+edition = {workspace = true}
+authors = { workspace = true }
+license = { workspace = true }
+
+[dependencies]
+chess = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+colored = { workspace = true }
+
+[[bin]]
+name = "perft-bench"
+path = "src/main.rs"
+test = false
