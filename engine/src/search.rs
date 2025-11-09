@@ -468,6 +468,9 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             };
             let lmr_reduction = (1f64 + base_reduction).floor() as i16;
             let _lmr_depth = depth.saturating_sub(lmr_reduction);
+            let is_in_check = board.is_in_check(&self.move_gen);
+            let is_root = Node::ROOT;
+            let is_pv = Node::PV;
 
             // Move-loop pruning techniques
 
@@ -475,8 +478,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // We assume our move ordering is just too good, so if we're under a certain depth
             // and have made more than a certain number of moves, we can assume that later moves
             // won't be as good, so we prune them.
-            if !Node::ROOT && !Node::PV && !board.is_in_check(&self.move_gen) && !best_score.mated()
-            {
+            if !is_root && !is_pv && !is_in_check && !best_score.mated() {
                 let min_lmp_moves =
                     LMP_MIN_THRESHOLD_DEPTH as usize + depth as usize * depth as usize;
                 if i >= min_lmp_moves {
