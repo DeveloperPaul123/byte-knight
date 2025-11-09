@@ -93,13 +93,13 @@ fn main() {
                 epd_file,
             } => {
                 let move_gen = MoveGenerator::new();
-                let mut board = &mut chess::board::Board::from_fen(&fen).unwrap();
-                if epd_file.is_some() {
-                    perft::process_epd_file(&epd_file.unwrap(), &move_gen);
+                let board = &mut chess::board::Board::from_fen(&fen).unwrap();
+                if let Some(epd) = epd_file {
+                    perft::process_epd_file(&epd, &move_gen);
                 } else {
                     for i in 1..depth + 1 {
                         let now = std::time::Instant::now();
-                        let nodes = chess::perft::perft(&mut board, &move_gen, i, false).unwrap();
+                        let nodes = chess::perft::perft(board, &move_gen, i, false).unwrap();
                         let elapsed = now.elapsed();
                         let nps = nodes as f64 / elapsed.as_secs_f64();
                         println!(
@@ -119,9 +119,9 @@ fn main() {
             } => {
                 println!("running split perft at depth {}", depth);
                 let move_gen = MoveGenerator::new();
-                let mut board = &mut chess::board::Board::from_fen(&fen).unwrap();
+                let board = &mut chess::board::Board::from_fen(&fen).unwrap();
                 let move_results =
-                    chess::perft::split_perft(&mut board, &move_gen, depth, print_moves).unwrap();
+                    chess::perft::split_perft(board, &move_gen, depth, print_moves).unwrap();
                 for res in &move_results {
                     println!("{}: {}", res.mv.to_long_algebraic(), res.nodes);
                 }
