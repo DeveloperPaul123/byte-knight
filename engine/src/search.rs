@@ -386,7 +386,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         let alpha_original = alpha;
         let mut alpha_use = alpha;
 
-        if depth == 0 {
+        if depth <= 0 {
             return self.quiescence::<Node>(board, alpha, beta, pv);
         }
 
