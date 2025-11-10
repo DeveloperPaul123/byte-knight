@@ -71,6 +71,7 @@ impl ByteKnight {
         );
         let stdout: io::Stdout = io::stdout();
         let mut board = Board::default_board();
+        let move_gen = chess::move_generation::MoveGenerator::new();
         'engine_loop: while let Ok(command) = &self.input_handler.receiver().recv() {
             let mut stdout = stdout.lock();
 
@@ -190,6 +191,12 @@ impl ByteKnight {
                         if let Ok(ht) = self.history_table.lock() {
                             ht.print_for_side(board.side_to_move());
                         }
+                    }
+                    EngineCommand::Perft(depth) => {
+                        let nodes =
+                            chess::perft::perft(&mut board, &move_gen, *depth as usize, false)
+                                .unwrap();
+                        writeln!(stdout, "info nodes {}", nodes).unwrap();
                     }
                 },
             }

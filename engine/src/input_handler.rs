@@ -28,15 +28,33 @@ use uci_parser::UciCommand;
 pub(crate) enum EngineCommand {
     HashInfo,
     History,
+    Perft(u16),
+}
+
+fn split_args(s: &str) -> Vec<String> {
+    s.split_whitespace()
+        .map(|part| part.trim().to_string())
+        .collect()
 }
 
 impl FromStr for EngineCommand {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
+        let args = split_args(s);
+        if args.is_empty() {
+            return Err(anyhow::anyhow!("Empty command"));
+        }
+        let cmd = args[0].as_str();
+        let depth = if args.len() > 1 {
+            args[1].parse::<u16>().unwrap_or(4)
+        } else {
+            4
+        };
+        match cmd {
             "hash" => Ok(EngineCommand::HashInfo),
             "history" => Ok(EngineCommand::History),
+            "perft" => Ok(EngineCommand::Perft(depth)),
             _ => Err(anyhow::anyhow!("Invalid engine command")),
         }
     }
@@ -90,11 +108,11 @@ impl InputHandler {
                                 break;
                             }
                         } else {
-                            eprintln!("Invalid UCI command: {line}");
+                            eprintln!("info error: invalid command: {line}");
                         }
                     }
                 } else {
-                    eprintln!("Error reading from stdin");
+                    eprintln!("info error: failed to read from stdin");
                 }
             }
         });
