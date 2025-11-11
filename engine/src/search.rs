@@ -453,25 +453,32 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
         // sort moves by MVV/LVA
         let move_iter = InplaceIncrementalSort::new(move_list.as_mut_slice(), &mut order_list);
 
-        // initialize best move and best score
-        // we ensured we have moves earlier
-        // let mut best_move = Some(*sorted_moves[0]);
-
-        // really "bad" initial score
+        // Really "bad" initial score
         let mut best_score = -Score::INF;
         let mut best_move = tt_move;
 
-        let lmr_reduction = 1;
-        // loop through all moves
+        // Loop through all moves
         for (i, mv) in move_iter.into_iter().enumerate() {
+            // Calculate the LMR reduction and depth which will be used later in FP
+            let lmr_table_value = self.lmr_table.at(depth as usize, i);
+            let base_reduction = if let Some(table_val) = lmr_table_value {
+                *table_val
+            } else {
+                1f64
+            };
+            let lmr_reduction = (1f64 + base_reduction).floor() as i16;
+            let _lmr_depth = depth.saturating_sub(lmr_reduction);
+            let is_in_check = board.is_in_check(&self.move_gen);
+            let is_root = Node::ROOT;
+            let is_pv = Node::PV;
+
             // Move-loop pruning techniques
 
             // LMP - Late Move Pruning
             // We assume our move ordering is just too good, so if we're under a certain depth
             // and have made more than a certain number of moves, we can assume that later moves
             // won't be as good, so we prune them.
-            if !Node::ROOT && !Node::PV && !board.is_in_check(&self.move_gen) && !best_score.mated()
-            {
+            if !is_root && !is_pv && !is_in_check && !best_score.mated() {
                 let min_lmp_moves =
                     LMP_MIN_THRESHOLD_DEPTH as usize + depth as usize * depth as usize;
                 if i >= min_lmp_moves {
@@ -491,9 +498,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                     -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
                 } else {
                     let reduction = if mv.is_quiet() &&  depth >= 3 && board.full_move_number() >= 3 {
-                        let lmr_table_val = self.lmr_table.at(depth as usize, i);
-                        assert!(lmr_table_val.is_some(), "LMR table not initialized.");
-                        (lmr_reduction as f64 + lmr_table_val.unwrap()).floor() as i16
+                        lmr_reduction
                     } else {
                         1
                     };
