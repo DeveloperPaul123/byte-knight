@@ -3,9 +3,6 @@
  * Part of the byte-knight project
  * Created Date: Wednesday, December 11th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
- * -----
- * Last Modified: Fri Apr 25 2025
- * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
@@ -31,3 +28,7 @@ pub(crate) const LMR_SCALING_FACTOR: f64 = 2.0;
 
 // Minimum threshold depth for LMP to be considered
 pub(crate) const LMP_MIN_THRESHOLD_DEPTH: ScoreType = 6;
+
+pub(crate) const FUTILITY_COEFF: ScoreType = 100;
+pub(crate) const FUTILITY_OFFSET: ScoreType = 200;
+pub(crate) const FUTILITY_MAX_DEPTH: ScoreType = 8;
