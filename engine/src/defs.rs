@@ -14,11 +14,11 @@
 
 #[rustfmt::skip]
 const BANNER: &str = r#"
- _         _           _        _      _   _   
-| |__ _  _| |_ ___ ___| |___ _ (_)__ _| |_| |_ 
+ _         _           _        _      _   _
+| |__ _  _| |_ ___ ___| |___ _ (_)__ _| |_| |_
 | '_ \ || |  _/ -_)___| / / ' \| / _` | ' \  _|
 |_.__/\_, |\__\___|   |_\_\_||_|_\__, |_||_\__|
-      |__/                       |___/         
+      |__/                       |___/
 "#;
 
 pub struct About;
@@ -32,3 +32,4 @@ impl About {
 }
 
 pub(crate) const MAX_DEPTH: u8 = 128;
+pub(crate) const MAX_KILLERS_PER_PLY: usize = 2;
