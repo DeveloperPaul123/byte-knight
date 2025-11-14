@@ -425,6 +425,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             return score;
         }
 
+        // don't bother searching if the board is in a draw state
+        if board.is_draw() {
+            return Score::DRAW;
+        }
+
         // get all legal moves
         let mut move_list = MoveList::new();
         let mut order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
