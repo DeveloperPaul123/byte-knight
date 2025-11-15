@@ -425,11 +425,6 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             return score;
         }
 
-        // don't bother searching if the board is in a draw state
-        if board.is_draw() {
-            return Score::DRAW;
-        }
-
         // get all legal moves
         let mut move_list = MoveList::new();
         let mut order_list = ArrayVec::<MoveOrder, MAX_MOVE_LIST_SIZE>::new();
@@ -497,7 +492,11 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
 
             // make the move
             board.make_move_unchecked(&mv).unwrap();
-            let score : Score =
+            let mut score = Score::DRAW;
+
+            // Don't bother searching drawn positions
+            if !board.is_draw() {
+                score =
                 // Principal Variation Search (PVS)
                 if Node::PV && i == 0 {
                     -self.negamax::<PvNode>(board, depth - 1, ply + 1, -beta, -alpha_use, &mut local_pv)
@@ -517,6 +516,7 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                         temp_score
                     }
                 };
+            }
 
             // undo the move
             board.unmake_move().unwrap();
