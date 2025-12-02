@@ -609,14 +609,6 @@ impl MoveGenerator {
                 self.get_non_slider_attacks(Side::opposite(attacking_side), non_slider, square)
             }
         }
-        // TODO(PT): Remove this old code
-        // if piece.is_slider() {
-        //     self.get_slider_attacks(piece, square, occupancy)
-        // } else if piece == Piece::Pawn {
-        //     self.pawn_attacks[Side::opposite(attacking_side) as usize][square as usize]
-        // } else {
-        //     self.get_non_slider_attacks(piece, square)
-        // }
     }
 
     /// Generates pseudo-legal moves for the current board state.
