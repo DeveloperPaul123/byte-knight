@@ -916,4 +916,20 @@ mod tests {
         assert_eq!(piece_kind_bb, *black_pawns_bb | *white_pawns_bb);
         assert_eq!(piece_kind_bb.number_of_occupied_squares(), 16);
     }
+
+    #[test]
+    fn piece_bitboards_for_side() {
+        let board = Board::default_board();
+        let white_pieces_bb = board.pieces(Side::White);
+        let black_pieces_bb = board.pieces(Side::Black);
+
+        let expected_white_bb = 0x000000000000FFFF;
+        let expected_black_bb = 0xFFFF000000000000;
+
+        assert_eq!(white_pieces_bb, Bitboard::new(expected_white_bb));
+        assert_eq!(black_pieces_bb, Bitboard::new(expected_black_bb));
+
+        let all = board.all_pieces();
+        assert_eq!(all, white_pieces_bb | black_pieces_bb);
+    }
 }
