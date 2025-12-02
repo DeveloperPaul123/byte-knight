@@ -877,9 +877,8 @@ impl MoveGenerator {
                 // en passant
                 let bb_en_passant = match board.en_passant_square() {
                     Some(en_passant_square) => {
-                        // we only want to add the en passant square if it is within range of the pawn
-                        // this means that the en passant square is within 1 rank of the pawn and the en passant square
-                        // is in the pawn's attack table
+                        // We only want to add the en passant square if it is within range of the pawn.
+                        // This means that the en passant square is within 1 rank of the pawn and the en passant square is in the pawn's attack table
                         let en_passant_bb = Bitboard::from_square(en_passant_square);
                         let result = en_passant_bb & !(attack_bb);
                         let is_in_range = result == 0;
