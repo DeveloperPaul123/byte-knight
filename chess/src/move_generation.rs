@@ -26,7 +26,7 @@ use crate::{
     moves::{Move, MoveDescriptor, MoveType, PromotionDescriptor},
     non_slider_piece::NonSliderPiece,
     piece_category::PieceCategory,
-    pieces::{Piece, SQUARE_NAME},
+    pieces::{ALL_PIECES, Piece, SQUARE_NAME},
     rank::Rank,
     side::Side,
     sliding_piece_attacks::SlidingPieceAttacks,
@@ -561,17 +561,8 @@ impl MoveGenerator {
     ) -> Bitboard {
         let mut attacks = Bitboard::default();
 
-        // get the squares attacked by each piece
-        for piece in [
-            Piece::Bishop,
-            Piece::Rook,
-            Piece::Queen,
-            Piece::King,
-            Piece::Knight,
-            Piece::Pawn,
-        ]
-        .iter()
-        {
+        // Get the squares attacked by each piece
+        for piece in ALL_PIECES.iter() {
             let mut piece_bb = *board.piece_bitboard(*piece, side);
             if piece_bb.as_number() == 0 {
                 continue;
