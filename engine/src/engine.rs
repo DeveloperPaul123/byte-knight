@@ -1,15 +1,9 @@
 /*
- * engine.rs
  * Part of the byte-knight project
- * Created Date: Friday, November 15th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
- * -----
- * Last Modified: Thu Apr 17 2025
- * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
- *
  */
 
 use std::{
