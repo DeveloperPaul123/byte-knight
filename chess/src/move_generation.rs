@@ -1,15 +1,9 @@
 /*
- * move_generation.rs
  * Part of the byte-knight project
- * Created Date: Wednesday, August 28th 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
- * -----
- * Last Modified: Thu Apr 24 2025
- * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
- *
  */
 
 use crate::{
@@ -26,7 +20,7 @@ use crate::{
     moves::{Move, MoveDescriptor, MoveType, PromotionDescriptor},
     non_slider_piece::NonSliderPiece,
     piece_category::PieceCategory,
-    pieces::{ALL_PIECES, Piece, SQUARE_NAME},
+    pieces::{Piece, SQUARE_NAME},
     rank::Rank,
     side::Side,
     sliding_piece_attacks::SlidingPieceAttacks,
@@ -561,8 +555,17 @@ impl MoveGenerator {
     ) -> Bitboard {
         let mut attacks = Bitboard::default();
 
-        // Get the squares attacked by each piece
-        for piece in ALL_PIECES.iter() {
+        // get the squares attacked by each piece
+        for piece in [
+            Piece::Bishop,
+            Piece::Rook,
+            Piece::Queen,
+            Piece::King,
+            Piece::Knight,
+            Piece::Pawn,
+        ]
+        .iter()
+        {
             let mut piece_bb = *board.piece_bitboard(*piece, side);
             if piece_bb.as_number() == 0 {
                 continue;
@@ -609,6 +612,14 @@ impl MoveGenerator {
                 self.get_non_slider_attacks(Side::opposite(attacking_side), non_slider, square)
             }
         }
+        // TODO(PT): Remove this old code
+        // if piece.is_slider() {
+        //     self.get_slider_attacks(piece, square, occupancy)
+        // } else if piece == Piece::Pawn {
+        //     self.pawn_attacks[Side::opposite(attacking_side) as usize][square as usize]
+        // } else {
+        //     self.get_non_slider_attacks(piece, square)
+        // }
     }
 
     /// Generates pseudo-legal moves for the current board state.
@@ -877,8 +888,9 @@ impl MoveGenerator {
                 // en passant
                 let bb_en_passant = match board.en_passant_square() {
                     Some(en_passant_square) => {
-                        // We only want to add the en passant square if it is within range of the pawn.
-                        // This means that the en passant square is within 1 rank of the pawn and the en passant square is in the pawn's attack table
+                        // we only want to add the en passant square if it is within range of the pawn
+                        // this means that the en passant square is within 1 rank of the pawn and the en passant square
+                        // is in the pawn's attack table
                         let en_passant_bb = Bitboard::from_square(en_passant_square);
                         let result = en_passant_bb & !(attack_bb);
                         let is_in_range = result == 0;

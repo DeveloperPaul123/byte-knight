@@ -1,15 +1,9 @@
 /*
- * definitions.rs
  * Part of the byte-knight project
- * Created Date: Wednesday, August 21st 2024
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
- * -----
- * Last Modified: Tue Nov 26 2024
- * -----
  * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
- *
  */
 
 use crate::bitboard::Bitboard;
