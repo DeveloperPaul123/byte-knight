@@ -1,15 +1,9 @@
 /*
- * pext.rs
  * Part of the byte-knight project
- * Created Date: Tuesday, July 8, 2025
  * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
- * -----
- * Last Modified: Tues July 8 2025
- * -----
- * Copyright (c) 2024-2025 Paul Tsouchlos (DeveloperPaul123)
+ * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
- *
  */
 
 use crate::bitboard::Bitboard;
