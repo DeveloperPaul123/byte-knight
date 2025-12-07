@@ -161,13 +161,21 @@ fn main() {
     let magic_bishop_numbers = find_magic_numbers(Piece::Bishop);
     let magic_rook_numbers = find_magic_numbers(Piece::Rook);
 
-    println!("\nBishop magic values:\n");
+    println!("pub(crate) const BISHOP_MAGICS: [MagicNumber; NumberOf::SQUARES] = [");
     for magic in magic_bishop_numbers {
-        println!("{},", magic.magic_value);
+        println!(
+            "  MagicNumber::new(Bitboard::new({}), {}, {}, {}),",
+            magic.relevant_bits_mask, magic.shift, magic.offset, magic.magic_value
+        );
     }
+    println!("];");
 
-    println!("\nRook magic values:");
+    println!("pub(crate) const ROOK_MAGICS: [MagicNumber; NumberOf::SQUARES] = [");
     for magic in magic_rook_numbers {
-        println!("{},", magic.magic_value);
+        println!(
+            "  MagicNumber::new(Bitboard::new({}), {}, {}, {}),",
+            magic.relevant_bits_mask, magic.shift, magic.offset, magic.magic_value
+        );
     }
+    println!("];");
 }
