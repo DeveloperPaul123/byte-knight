@@ -26,7 +26,7 @@ use crate::{
     moves::{Move, MoveDescriptor, MoveType, PromotionDescriptor},
     non_slider_piece::NonSliderPiece,
     piece_category::PieceCategory,
-    pieces::{Piece, SQUARE_NAME},
+    pieces::{ALL_PIECES, Piece, SQUARE_NAME},
     rank::Rank,
     side::Side,
     sliding_piece_attacks::SlidingPieceAttacks,
@@ -553,7 +553,7 @@ impl MoveGenerator {
     /// # Returns
     ///
     /// A bitboard representing all squares currently being attacked by the given side.
-    pub(crate) fn get_attacked_squares(
+    pub fn get_attacked_squares(
         &self,
         board: &Board,
         side: Side,
@@ -561,17 +561,8 @@ impl MoveGenerator {
     ) -> Bitboard {
         let mut attacks = Bitboard::default();
 
-        // get the squares attacked by each piece
-        for piece in [
-            Piece::Bishop,
-            Piece::Rook,
-            Piece::Queen,
-            Piece::King,
-            Piece::Knight,
-            Piece::Pawn,
-        ]
-        .iter()
-        {
+        // Get the squares attacked by each piece
+        for piece in ALL_PIECES.iter() {
             let mut piece_bb = *board.piece_bitboard(*piece, side);
             if piece_bb.as_number() == 0 {
                 continue;
@@ -618,14 +609,6 @@ impl MoveGenerator {
                 self.get_non_slider_attacks(Side::opposite(attacking_side), non_slider, square)
             }
         }
-        // TODO(PT): Remove this old code
-        // if piece.is_slider() {
-        //     self.get_slider_attacks(piece, square, occupancy)
-        // } else if piece == Piece::Pawn {
-        //     self.pawn_attacks[Side::opposite(attacking_side) as usize][square as usize]
-        // } else {
-        //     self.get_non_slider_attacks(piece, square)
-        // }
     }
 
     /// Generates pseudo-legal moves for the current board state.
@@ -894,9 +877,8 @@ impl MoveGenerator {
                 // en passant
                 let bb_en_passant = match board.en_passant_square() {
                     Some(en_passant_square) => {
-                        // we only want to add the en passant square if it is within range of the pawn
-                        // this means that the en passant square is within 1 rank of the pawn and the en passant square
-                        // is in the pawn's attack table
+                        // We only want to add the en passant square if it is within range of the pawn.
+                        // This means that the en passant square is within 1 rank of the pawn and the en passant square is in the pawn's attack table
                         let en_passant_bb = Bitboard::from_square(en_passant_square);
                         let result = en_passant_bb & !(attack_bb);
                         let is_in_range = result == 0;
