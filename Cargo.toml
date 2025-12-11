@@ -20,7 +20,7 @@ repository = "https://github.com/DeveloperPaul123/byte-knight"
 anyhow = "1.0.100"
 arrayvec = "0.7.6"
 chess = { path = "chess" }
-clap = "4.5.48"
+clap = "4.5.53"
 colored = "3.0.0"
 console = "0.16.1"
 criterion = "0.7"
