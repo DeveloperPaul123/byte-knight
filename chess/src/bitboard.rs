@@ -66,18 +66,18 @@ impl Bitboard {
     }
 
     /// Mark a square as occupied.
-    pub fn set_square(&mut self, square: u8) {
+    pub const fn set_square(&mut self, square: u8) {
         self.clear_square(square);
         self.data |= 1 << square;
     }
 
     /// Clear a given square.
-    pub fn clear_square(&mut self, square: u8) {
+    pub const fn clear_square(&mut self, square: u8) {
         self.data &= !(1 << square);
     }
 
     /// Get the number of occupied squares on the board.
-    pub fn number_of_occupied_squares(&self) -> u32 {
+    pub const fn number_of_occupied_squares(&self) -> u32 {
         self.data.count_ones()
     }
 
@@ -105,8 +105,8 @@ impl Bitboard {
     /// let bb2 = Bitboard::new(0x0000000000000001);
     /// assert!(bb1.intersects(bb2));
     /// ```
-    pub fn intersects(&self, other: impl Into<Self>) -> bool {
-        (*self & other.into()).number_of_occupied_squares() > 0
+    pub const fn intersects(&self, other: Bitboard) -> bool {
+        Bitboard::new(self.as_number() & other.as_number()).number_of_occupied_squares() > 0
     }
 }
 
