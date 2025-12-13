@@ -10,145 +10,7 @@ use std::fmt::{Display, Formatter};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{bitboard::Bitboard, definitions::NumberOf};
-
-/// Magic numbers for the bishop piece.
-/// Do not modify this array. See the src/bin/generate_magics/main.rs for more information.
-pub(crate) const BISHOP_MAGIC_VALUES: [u64; NumberOf::SQUARES] = [
-    595196782661861409,
-    9011599751790656,
-    1157587868464711938,
-    5368889448497020992,
-    363104992665796616,
-    2351513561672975360,
-    563843381067792,
-    4756082964981432320,
-    10448368747282481664,
-    576463331465101376,
-    306281368336416768,
-    54329223212498944,
-    4647997459728039936,
-    558618382336,
-    4616475493292843264,
-    18298074725157125,
-    5802888257844871696,
-    298363612769681952,
-    36310478171013392,
-    38291044476977344,
-    565166175502340,
-    563087938684928,
-    18085463072982018,
-    10232257518911098884,
-    4521849023385600,
-    19157925500178600,
-    153265359544132100,
-    10134233100126336,
-    148763928212545538,
-    2882375229806510592,
-    20338766094861312,
-    4578950550423552,
-    9224014168827371588,
-    9531323811908294656,
-    4647741238224355393,
-    2308097010265751680,
-    9011635955965954,
-    3461019616464220160,
-    9291027873563665,
-    231490152105216,
-    20286024431183392,
-    4757492326287803536,
-    1153485004862440448,
-    866943203419357696,
-    4621001085300057153,
-    578652371157504,
-    9309239879193870592,
-    581106261962031400,
-    144704680994545808,
-    2826861592969220,
-    1152927019361894400,
-    2305843009761575428,
-    11529782462822613504,
-    14136804315897069568,
-    4918216958505140224,
-    1161929811971871008,
-    3460036116207779843,
-    9009406887921664,
-    5070951929679877,
-    2251920081421316,
-    2305843011629744650,
-    72057663311118596,
-    9225659040435045376,
-    10385584416998064260,
-];
-
-/// Magic numbers for the rook piece.
-/// Do not modify this array. See the src/bin/generate_magics/main.rs for more information.
-pub(crate) const ROOK_MAGIC_VALUES: [u64; NumberOf::SQUARES] = [
-    9259401250783365248,
-    306247270842507266,
-    612498414153760900,
-    72066407864471552,
-    2666135411809718528,
-    936751505698988288,
-    108087490602074496,
-    144115471545827588,
-    1734308207515435008,
-    1180013472457433088,
-    563027271239712,
-    2814895796535441,
-    793337256227243008,
-    2599139943536660484,
-    562968224367104,
-    281507759412480,
-    3459364297421897728,
-    4611722303384912000,
-    5188288058511855617,
-    9241424918539667712,
-    5497692360960,
-    2342013093543936512,
-    293881866758422792,
-    13917250947790176324,
-    13889453096679189632,
-    4688317585133996160,
-    1729453729462099969,
-    9018202962149408,
-    6919783027552026689,
-    144119588269981824,
-    10137501519839744,
-    469641138228183296,
-    11892387047538817,
-    141012374659072,
-    563088499675264,
-    8798248898560,
-    4644354303985665,
-    563019310433304,
-    2449960675552792728,
-    17937964466436,
-    432627588964352040,
-    9304437114420740096,
-    4539342349533204,
-    148636401366269960,
-    9011597435502720,
-    9259963852630654984,
-    4634487780893524016,
-    9259401385038970897,
-    36310549021073664,
-    725149978007208064,
-    9367768769702658304,
-    2305869397761229184,
-    7206040947623200000,
-    18577417333637632,
-    1232015990275965184,
-    13344535512576,
-    2814840009687106,
-    2450239809982054401,
-    1196818944233986,
-    2832346265172001,
-    288793363149557762,
-    9259963788190288002,
-    5770799976825489410,
-    864972604513985025,
-];
+use crate::{attacks, bitboard::Bitboard, definitions::NumberOf};
 
 #[allow(unused)]
 pub(crate) const BISHOP_MAGICS: [MagicNumber; NumberOf::SQUARES] = [
@@ -676,6 +538,46 @@ pub(crate) const ROOK_MAGICS: [MagicNumber; NumberOf::SQUARES] = [
     ),
 ];
 
+#[allow(long_running_const_eval)]
+pub(crate) static ROOK_ATTACKS: [Bitboard; 102400] = generate_rook_attacks();
+
+const fn generate_rook_attacks() -> [Bitboard; 102400] {
+    let mut table = [Bitboard::default(); 102400];
+    let mut sq = 0u8;
+    while sq < NumberOf::SQUARES as u8 {
+        let magic = ROOK_MAGICS[sq as usize];
+
+        let mut subset = Bitboard::default();
+
+        let attacks = attacks::orthogonal_ray_attacks(sq, subset.as_number());
+        let blockers = subset;
+        let idx = magic.index(blockers);
+        table[idx] = attacks;
+
+        // Update the subset (Carry-Rippler method)
+        subset = Bitboard::new(
+            subset.as_number().wrapping_sub(magic.relevant_bits_mask) & magic.relevant_bits_mask,
+        );
+
+        // Repeat for all subsets until subset is zero
+        while subset.as_number() != 0 {
+            let attacks = attacks::orthogonal_ray_attacks(sq, subset.as_number());
+            let blockers = subset;
+            let idx = magic.index(blockers);
+            table[idx] = attacks;
+            // Update the subset (Carry-Rippler method) - same as above
+            subset = Bitboard::new(
+                subset.as_number().wrapping_sub(magic.relevant_bits_mask)
+                    & magic.relevant_bits_mask,
+            );
+        }
+
+        sq += 1;
+    }
+
+    table
+}
+
 /// "Magic" number used for fancy bitboard operations.
 #[derive(Serialize, Default, Deserialize, Debug, Clone, Copy)]
 pub struct MagicNumber {
@@ -703,11 +605,10 @@ impl MagicNumber {
     /// Returns the index of the magic number in the table.
     ///
     /// Calculated by multiplying the blocker number with the magic number and shifting it to the right by the shift value.
-    pub fn index(&self, occupancy: Bitboard) -> usize {
-        let blockers = occupancy & self.relevant_bits_mask;
+    pub const fn index(&self, occupancy: Bitboard) -> usize {
+        let blockers = occupancy.as_number() & self.relevant_bits_mask;
         // need to shift
-        let blocker_num = blockers.as_number();
-        let hash = blocker_num.wrapping_mul(self.magic_value);
+        let hash = blockers.wrapping_mul(self.magic_value);
         ((hash >> self.shift) + self.offset) as usize
     }
 }
@@ -768,17 +669,10 @@ mod tests {
         );
 
         // test c4 for the bishop
-        let relevant_bits = MoveGenerator::relevant_bishop_bits(Squares::C4);
-        let magic_value = BISHOP_MAGIC_VALUES[Squares::C4 as usize];
-        let magic = MagicNumber::new(
-            relevant_bits,
-            (64 - relevant_bits.as_number().count_ones()) as u8,
-            0,
-            magic_value,
-        );
+        let magic = BISHOP_MAGICS[Squares::C4 as usize];
         assert_eq!(
             format!("{magic}"),
-            "bb         9024834391117824 shift   57 offset      0 magic       153265359544132100"
+            "bb         9024834391117824 shift   57 offset   1280 magic           71605963260416"
         );
     }
 }

@@ -323,7 +323,7 @@ impl MoveGenerator {
     ) -> Bitboard {
         // pawns can get complex because of en passant and promotion
         // also, we need to take into account the pin directions
-        let is_pinned = pinned_pieces.intersects(*square);
+        let is_pinned = pinned_pieces.intersects(Bitboard::from_square(square.to_square_index()));
         let us = board.side_to_move();
         let their_pieces = board.pieces(Side::opposite(us));
         let direction = match us {
@@ -442,7 +442,7 @@ impl MoveGenerator {
         orthogonal_pin_rays: &Bitboard,
         diagonal_pin_rays: &Bitboard,
     ) -> Bitboard {
-        let is_pinned = pinned_mask.intersects(*square);
+        let is_pinned = pinned_mask.intersects(Bitboard::from_square(square.to_square_index()));
         let us = board.side_to_move();
         let their_pieces = board.pieces(Side::opposite(us));
         let from_square = square.to_square_index();
