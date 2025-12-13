@@ -10,17 +10,13 @@ use crate::{
     bitboard::Bitboard,
     bitboard_helpers,
     board::Board,
-    definitions::{
-        BISHOP_BLOCKER_PERMUTATIONS, FILE_BITBOARDS, NumberOf, QUEEN_OFFSETS, RANK_BITBOARDS,
-        ROOK_BLOCKER_PERMUTATIONS, Squares,
-    },
+    definitions::{FILE_BITBOARDS, NumberOf, QUEEN_OFFSETS, RANK_BITBOARDS, Squares},
     file::File,
-    magics::{BISHOP_MAGIC_VALUES, MagicNumber, ROOK_MAGIC_VALUES},
     move_list::MoveList,
     moves::{Move, MoveDescriptor, MoveType, PromotionDescriptor},
     non_slider_piece::NonSliderPiece,
     piece_category::PieceCategory,
-    pieces::{Piece, SQUARE_NAME},
+    pieces::Piece,
     rank::Rank,
     side::Side,
     sliding_piece_attacks::SlidingPieceAttacks,
@@ -149,10 +145,6 @@ pub struct MoveGenerator {
     pub(crate) king_attacks: [Bitboard; NumberOf::SQUARES],
     pub(crate) knight_attacks: [Bitboard; NumberOf::SQUARES],
     pub(crate) pawn_attacks: [[Bitboard; NumberOf::SQUARES]; NumberOf::SIDES],
-    pub(crate) rook_magics: [MagicNumber; NumberOf::SQUARES],
-    pub(crate) bishop_magics: [MagicNumber; NumberOf::SQUARES],
-    pub(crate) rook_attacks: Vec<Bitboard>,
-    pub(crate) bishop_attacks: Vec<Bitboard>,
     pub(crate) rays_between: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES],
     pub(crate) sliding_piece_attacks: SlidingPieceAttacks,
 }
@@ -172,10 +164,6 @@ impl MoveGenerator {
             king_attacks,
             knight_attacks,
             pawn_attacks,
-            rook_magics: [MagicNumber::default(); NumberOf::SQUARES],
-            bishop_magics: [MagicNumber::default(); NumberOf::SQUARES],
-            rook_attacks: vec![Bitboard::default(); ROOK_BLOCKER_PERMUTATIONS],
-            bishop_attacks: vec![Bitboard::default(); BISHOP_BLOCKER_PERMUTATIONS],
             rays_between: [[Bitboard::default(); NumberOf::SQUARES]; NumberOf::SQUARES],
             sliding_piece_attacks: SlidingPieceAttacks::new(),
         };
@@ -190,87 +178,6 @@ impl MoveGenerator {
             initialize_king_attacks(square, &mut self.king_attacks);
             initialize_knight_attacks(square, &mut self.knight_attacks);
             initialize_pawn_attacks(square, &mut self.pawn_attacks);
-        }
-
-        // TODO: Initialize attack tables in the case of PEXT being available
-        self.initialize_magic_numbers(Piece::Rook);
-        self.initialize_magic_numbers(Piece::Bishop);
-    }
-
-    #[allow(clippy::panic)]
-    fn initialize_magic_numbers(&mut self, piece: Piece) {
-        assert!(piece == Piece::Rook || piece == Piece::Bishop);
-        let mut offset = 0;
-
-        for square in 0..NumberOf::SQUARES as u8 {
-            let rook_relevant_bits = MoveGenerator::relevant_rook_bits(square);
-            let bishop_relevant_bits = MoveGenerator::relevant_bishop_bits(square);
-            let use_mask = if piece == Piece::Rook {
-                rook_relevant_bits
-            } else {
-                bishop_relevant_bits
-            };
-
-            let bit_count = use_mask.as_number().count_ones();
-            let total_permutations = 2u64.pow(bit_count);
-            let end = offset + total_permutations - 1u64;
-            let blocker_bitboards = MoveGenerator::create_blocker_permutations(use_mask);
-            assert_eq!(blocker_bitboards.len(), total_permutations as usize);
-
-            let rook_attacks = MoveGenerator::rook_attacks(square, &blocker_bitboards);
-            let bishop_attacks = MoveGenerator::bishop_attacks(square, &blocker_bitboards);
-            let attacks = if piece == Piece::Rook {
-                rook_attacks
-            } else {
-                bishop_attacks
-            };
-
-            let magics = if piece == Piece::Rook {
-                &mut self.rook_magics
-            } else {
-                &mut self.bishop_magics
-            };
-
-            let magic_constant = if piece == Piece::Rook {
-                ROOK_MAGIC_VALUES
-            } else {
-                BISHOP_MAGIC_VALUES
-            };
-
-            let attack_table = if piece == Piece::Rook {
-                &mut self.rook_attacks
-            } else {
-                &mut self.bishop_attacks
-            };
-
-            magics[square as usize] = MagicNumber::new(
-                use_mask,
-                (64 - bit_count) as u8,
-                offset,
-                magic_constant[square as usize],
-            );
-
-            for i in 0..blocker_bitboards.len() {
-                let blocker = blocker_bitboards[i];
-                let index = magics[square as usize].index(blocker);
-
-                if attack_table[index] == Bitboard::default() || attack_table[index] == attacks[i] {
-                    // did we fail high or low index wise? (out of bounds)
-                    assert!(
-                        index as u64 >= offset && index as u64 <= end,
-                        "index out of bounds"
-                    );
-                    attack_table[index] = attacks[i];
-                } else {
-                    panic!(
-                        "Collision detected while initializing attack tables for piece {:?} and square {} - \n\t{}",
-                        piece, SQUARE_NAME[square as usize], magics[square as usize]
-                    );
-                }
-            }
-
-            // update the offset for the next square
-            offset += total_permutations;
         }
     }
 
@@ -612,14 +519,6 @@ impl MoveGenerator {
                 self.get_non_slider_attacks(Side::opposite(attacking_side), non_slider, square)
             }
         }
-        // TODO(PT): Remove this old code
-        // if piece.is_slider() {
-        //     self.get_slider_attacks(piece, square, occupancy)
-        // } else if piece == Piece::Pawn {
-        //     self.pawn_attacks[Side::opposite(attacking_side) as usize][square as usize]
-        // } else {
-        //     self.get_non_slider_attacks(piece, square)
-        // }
     }
 
     /// Generates pseudo-legal moves for the current board state.
@@ -1092,7 +991,7 @@ impl MoveGenerator {
 #[cfg(test)]
 mod tests {
 
-    use crate::{board::Board, move_generation};
+    use crate::{board::Board, move_generation, slider_pieces::SliderPiece};
 
     use super::*;
 
@@ -1155,18 +1054,6 @@ mod tests {
                 &Square::from_square_index(square),
                 Side::Black
             ));
-        }
-    }
-
-    #[test]
-    fn check_basic_construction() {
-        let move_gen = MoveGenerator::new();
-        // verify the order of the magic numbers
-        for square in 0..NumberOf::SQUARES {
-            let rook_magic = move_gen.rook_magics[square];
-            let bishop_magic = move_gen.bishop_magics[square];
-            assert_eq!(rook_magic.magic_value, ROOK_MAGIC_VALUES[square]);
-            assert_eq!(bishop_magic.magic_value, BISHOP_MAGIC_VALUES[square]);
         }
     }
 
@@ -1636,6 +1523,88 @@ mod tests {
         }
 
         println!("bishop offset sum: {offset_sum}");
+    }
+
+    #[test]
+    fn check_rook_attacks() {
+        let move_gen = MoveGenerator::new();
+        let occupancy = Bitboard::default();
+        const EXPECTED_ATTACKS: [u64; NumberOf::SQUARES] = [
+            0x1010101010101fe,
+            0x2020202020202fd,
+            0x4040404040404fb,
+            0x8080808080808f7,
+            0x10101010101010ef,
+            0x20202020202020df,
+            0x40404040404040bf,
+            0x808080808080807f,
+            0x10101010101fe01,
+            0x20202020202fd02,
+            0x40404040404fb04,
+            0x80808080808f708,
+            0x101010101010ef10,
+            0x202020202020df20,
+            0x404040404040bf40,
+            0x8080808080807f80,
+            0x101010101fe0101,
+            0x202020202fd0202,
+            0x404040404fb0404,
+            0x808080808f70808,
+            0x1010101010ef1010,
+            0x2020202020df2020,
+            0x4040404040bf4040,
+            0x80808080807f8080,
+            0x1010101fe010101,
+            0x2020202fd020202,
+            0x4040404fb040404,
+            0x8080808f7080808,
+            0x10101010ef101010,
+            0x20202020df202020,
+            0x40404040bf404040,
+            0x808080807f808080,
+            0x10101fe01010101,
+            0x20202fd02020202,
+            0x40404fb04040404,
+            0x80808f708080808,
+            0x101010ef10101010,
+            0x202020df20202020,
+            0x404040bf40404040,
+            0x8080807f80808080,
+            0x101fe0101010101,
+            0x202fd0202020202,
+            0x404fb0404040404,
+            0x808f70808080808,
+            0x1010ef1010101010,
+            0x2020df2020202020,
+            0x4040bf4040404040,
+            0x80807f8080808080,
+            0x1fe010101010101,
+            0x2fd020202020202,
+            0x4fb040404040404,
+            0x8f7080808080808,
+            0x10ef101010101010,
+            0x20df202020202020,
+            0x40bf404040404040,
+            0x807f808080808080,
+            0xfe01010101010101,
+            0xfd02020202020202,
+            0xfb04040404040404,
+            0xf708080808080808,
+            0xef10101010101010,
+            0xdf20202020202020,
+            0xbf40404040404040,
+            0x7f80808080808080,
+        ];
+
+        for sq in 0..NumberOf::SQUARES {
+            let rook_attack_bb = move_gen.sliding_piece_attacks.get_slider_attack(
+                SliderPiece::Rook,
+                sq as u8,
+                &occupancy,
+            );
+            // println!("{:#x},", rook_attack_bb.as_number())
+            assert_eq!(rook_attack_bb.as_number(), EXPECTED_ATTACKS[sq]);
+        }
     }
 
     #[test]

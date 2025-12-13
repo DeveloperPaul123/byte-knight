@@ -9,7 +9,7 @@
 use crate::{
     bitboard::Bitboard,
     definitions::NumberOf,
-    magics::{BISHOP_MAGIC_VALUES, MagicNumber, ROOK_MAGIC_VALUES},
+    magics::{BISHOP_MAGICS, ROOK_MAGICS},
     move_generation::MoveGenerator,
     pext::Pext,
     pieces::{Piece, SQUARE_NAME},
@@ -143,8 +143,6 @@ impl PextSlidingPieceAttacks {
 }
 
 pub struct SlidingPieceAttacks {
-    pub(crate) rook_magics: [MagicNumber; NumberOf::SQUARES],
-    pub(crate) bishop_magics: [MagicNumber; NumberOf::SQUARES],
     pub(crate) rook_attacks: Vec<Bitboard>,
     pub(crate) bishop_attacks: Vec<Bitboard>,
     #[cfg(target_arch = "x86_64")]
@@ -162,8 +160,6 @@ impl SlidingPieceAttacks {
     /// Create a new instance of SlidingPieceAttacks with initialized magic numbers and attack tables.
     pub fn new() -> Self {
         let mut instance = SlidingPieceAttacks {
-            rook_magics: [MagicNumber::default(); NumberOf::SQUARES],
-            bishop_magics: [MagicNumber::default(); NumberOf::SQUARES],
             rook_attacks: vec![Bitboard::default(); 102400], // 2^12 * 64
             bishop_attacks: vec![Bitboard::default(); 5248], // 2^10 * 64
             #[cfg(target_arch = "x86_64")]
@@ -240,15 +236,9 @@ impl SlidingPieceAttacks {
             };
 
             let magics = if piece == Piece::Rook {
-                &mut self.rook_magics
+                ROOK_MAGICS
             } else {
-                &mut self.bishop_magics
-            };
-
-            let magic_constant = if piece == Piece::Rook {
-                ROOK_MAGIC_VALUES
-            } else {
-                BISHOP_MAGIC_VALUES
+                BISHOP_MAGICS
             };
 
             let attack_table = if piece == Piece::Rook {
@@ -256,13 +246,6 @@ impl SlidingPieceAttacks {
             } else {
                 &mut self.bishop_attacks
             };
-
-            magics[square as usize] = MagicNumber::new(
-                use_mask,
-                (64 - bit_count) as u8,
-                offset,
-                magic_constant[square as usize],
-            );
 
             for i in 0..blocker_bitboards.len() {
                 let blocker = blocker_bitboards[i];
@@ -304,16 +287,16 @@ impl SlidingPieceAttacks {
     fn get_attack(&self, piece: SliderPiece, from_square: u8, occupancy: &Bitboard) -> Bitboard {
         match piece {
             SliderPiece::Rook => {
-                let index = self.rook_magics[from_square as usize].index(*occupancy);
+                let index = ROOK_MAGICS[from_square as usize].index(*occupancy);
                 self.rook_attacks[index]
             }
             SliderPiece::Bishop => {
-                let index = self.bishop_magics[from_square as usize].index(*occupancy);
+                let index = BISHOP_MAGICS[from_square as usize].index(*occupancy);
                 self.bishop_attacks[index]
             }
             SliderPiece::Queen => {
-                let rook_index = self.rook_magics[from_square as usize].index(*occupancy);
-                let bishop_index = self.bishop_magics[from_square as usize].index(*occupancy);
+                let rook_index = ROOK_MAGICS[from_square as usize].index(*occupancy);
+                let bishop_index = BISHOP_MAGICS[from_square as usize].index(*occupancy);
                 self.rook_attacks[rook_index] ^ self.bishop_attacks[bishop_index]
             }
         }
