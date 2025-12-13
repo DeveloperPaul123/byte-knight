@@ -47,6 +47,20 @@ impl Rank {
         *self as u8
     }
 
+    pub const fn of(sq: u8) -> Self {
+        match sq >> 3 {
+            0 => Self::R1,
+            1 => Self::R2,
+            2 => Self::R3,
+            3 => Self::R4,
+            4 => Self::R5,
+            5 => Self::R6,
+            6 => Self::R7,
+            7 => Self::R8,
+            _ => unreachable!(),
+        }
+    }
+
     /// Offset the rank by the given delta.
     ///
     /// Returns `None` if the resulting rank is out of bounds.
@@ -62,10 +76,10 @@ impl Rank {
     /// assert_eq!(Rank::R8.offset(-1), Some(Rank::R7));
     /// ```
     ///
-    pub fn offset(&self, delta: i8) -> Option<Self> {
+    pub const fn offset(&self, delta: i8) -> Option<Self> {
         let new_rank = (*self as i8) + delta;
-        if (0..=7).contains(&new_rank) {
-            return Rank::try_from(new_rank as u8).ok();
+        if new_rank >= 0 && new_rank <= 7 {
+            return Some(unsafe { std::mem::transmute(new_rank as u8) });
         }
         None
     }
