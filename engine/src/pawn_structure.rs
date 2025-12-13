@@ -105,8 +105,8 @@ impl PawnEvaluator {
         let shifted_white_pawns = white_pawns >> 8;
         let shifted_black_pawns = black_pawns << 8;
 
-        let shifted_wp_fill = bitboard_helpers::south_fill(&shifted_white_pawns);
-        let shifted_bp_fill = bitboard_helpers::north_fill(&shifted_black_pawns);
+        let shifted_wp_fill = bitboard_helpers::south_fill(shifted_white_pawns);
+        let shifted_bp_fill = bitboard_helpers::north_fill(shifted_black_pawns);
 
         // Now fill to find all squares behind the shifted pawns and AND with the original pawns to find doubled pawns.
         // Note that only the pawns behind the frontmost pawn on each file will be detected as doubled.
