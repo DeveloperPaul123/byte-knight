@@ -6,7 +6,7 @@
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
  */
 
-use crate::{bitboard::Bitboard, definitions::FILE_BITBOARDS, file::File};
+use crate::{bitboard::Bitboard, file::File};
 
 /// Returns the index of the next bit set to 1 in the bitboard and sets it to 0.
 ///
