@@ -8,7 +8,7 @@
 
 use anyhow::Result;
 
-use crate::{bitboard::Bitboard, definitions::FILE_BITBOARDS, square::Square};
+use crate::{bitboard::Bitboard, definitions::FILE_BITBOARDS};
 
 /// Represents a file on the chess board.
 #[repr(u8)]

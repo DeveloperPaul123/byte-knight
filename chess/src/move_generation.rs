@@ -1596,14 +1596,14 @@ mod tests {
             0x7f80808080808080,
         ];
 
-        for sq in 0..NumberOf::SQUARES {
+        for (sq, expected) in EXPECTED_ATTACKS.iter().enumerate() {
             let rook_attack_bb = move_gen.sliding_piece_attacks.get_slider_attack(
                 SliderPiece::Rook,
                 sq as u8,
                 &occupancy,
             );
             // println!("{:#x},", rook_attack_bb.as_number())
-            assert_eq!(rook_attack_bb.as_number(), EXPECTED_ATTACKS[sq]);
+            assert_eq!(rook_attack_bb.as_number(), *expected);
         }
     }
 
