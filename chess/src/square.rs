@@ -7,7 +7,11 @@
  */
 
 use crate::{
-    bitboard::Bitboard, bitboard_helpers, color::Color, definitions::DARK_SQUARES, file::File,
+    bitboard::Bitboard,
+    bitboard_helpers,
+    color::Color,
+    definitions::{DARK_SQUARES, NumberOf},
+    file::File,
     rank::Rank,
 };
 
@@ -21,7 +25,7 @@ pub struct Square {
 }
 
 impl Square {
-    pub fn new(file: File, rank: Rank) -> Self {
+    pub const fn new(file: File, rank: Rank) -> Self {
         Self { file, rank }
     }
 
@@ -41,16 +45,16 @@ impl Square {
     }
 
     /// Convert to a raw square index (0-63).
-    pub fn to_square_index(&self) -> u8 {
+    pub const fn to_square_index(&self) -> u8 {
         to_square(self.file as u8, self.rank as u8)
     }
 
     /// Convert a square index to a [`Square`] object.
-    pub fn from_square_index(square: u8) -> Self {
-        let (file, rank) = from_square(square);
+    pub const fn from_square_index(square: u8) -> Self {
+        assert!(square < NumberOf::SQUARES as u8);
         Self {
-            file: File::try_from(file).unwrap(),
-            rank: Rank::try_from(rank).unwrap(),
+            file: File::of(square),
+            rank: Rank::of(square),
         }
     }
 
@@ -74,9 +78,14 @@ impl Square {
     /// let new_square = square.offset(-1, -1);
     /// assert!(new_square.is_none());
     /// ```
-    pub fn offset(&self, file_delta: i8, rank_delta: i8) -> Option<Self> {
-        let new_file = self.file.offset(file_delta)?;
-        let new_rank = self.rank.offset(rank_delta)?;
+    pub const fn offset(&self, file_delta: i8, rank_delta: i8) -> Option<Self> {
+        let new_file = self.file.offset(file_delta);
+        let new_rank = self.rank.offset(rank_delta);
+        if new_file.is_none() || new_rank.is_none() {
+            return None;
+        }
+        let new_file = new_file.unwrap();
+        let new_rank = new_rank.unwrap();
         Some(Self::new(new_file, new_rank))
     }
 
