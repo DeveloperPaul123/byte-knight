@@ -10,6 +10,7 @@
 #![deny(clippy::panic)]
 #![deny(clippy::expect_used)]
 
+pub mod attacks;
 pub mod bitboard;
 pub mod bitboard_helpers;
 pub mod board;
@@ -31,6 +32,7 @@ pub mod pext;
 pub mod piece_category;
 pub mod pieces;
 pub mod rank;
+pub mod rays;
 pub mod side;
 pub mod slider_pieces;
 pub mod sliding_piece_attacks;
