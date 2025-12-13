@@ -8,6 +8,8 @@
 
 use anyhow::Result;
 
+use crate::{bitboard::Bitboard, definitions::FILE_BITBOARDS, square::Square};
+
 /// Represents a file on the chess board.
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -40,12 +42,30 @@ impl File {
     /// assert_eq!(File::H.offset(1), None);
     /// assert_eq!(File::H.offset(-1), Some(File::G));
     /// ```
-    pub fn offset(&self, delta: i8) -> Option<Self> {
+    pub const fn offset(&self, delta: i8) -> Option<Self> {
         let new_file = (*self as i8) + delta;
-        if (0..=7).contains(&new_file) {
-            return File::try_from(new_file as u8).ok();
+        if new_file >= 0 && new_file <= 7 {
+            return Some(unsafe { std::mem::transmute(new_file as u8) });
         }
         None
+    }
+
+    pub const fn to_bitboard(self) -> Bitboard {
+        FILE_BITBOARDS[self as usize]
+    }
+
+    pub const fn of(sq: u8) -> Self {
+        match sq & 7u8 {
+            0 => Self::A,
+            1 => Self::B,
+            2 => Self::C,
+            3 => Self::D,
+            4 => Self::E,
+            5 => Self::F,
+            6 => Self::G,
+            7 => Self::H,
+            _ => unreachable!(),
+        }
     }
 
     /// Returns the character representation of the file (lowercase)
@@ -151,6 +171,21 @@ mod tests {
 
         for i in 8..=u8::MAX {
             assert!(File::try_from(i).is_err());
+        }
+    }
+
+    #[test]
+    fn to_bitboard() {
+        for file_index in 0..8u8 {
+            let file = File::try_from(file_index).unwrap();
+            let bb = file.to_bitboard();
+            println!("File {:?}\n{}", file, bb);
+
+            let not_bb = Bitboard::new(!(bb.as_number()));
+            println!("Not BB:\n{}", not_bb);
+
+            assert_eq!(bb & not_bb, Bitboard::new(0u64));
+            assert_eq!(bb | not_bb, Bitboard::new(u64::MAX));
         }
     }
 }
