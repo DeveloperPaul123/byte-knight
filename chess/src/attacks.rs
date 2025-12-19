@@ -157,6 +157,18 @@ pub const fn bishop(square: u8, occupancy: Bitboard) -> Bitboard {
     BISHOP_ATTACKS[index]
 }
 
+/// Get queen attacks for a given square and occupancy.
+///
+/// # Arguments
+/// * `square` - The square the queen currently occupies.
+/// * `occupancy` - The current occupancy of the board.
+///
+/// # Returns
+/// * A [`Bitboard`] representing all the valid attacks for a queen at the given square with the given occupancy.
+pub fn queen(square: u8, occupancy: Bitboard) -> Bitboard {
+    rook(square, occupancy) | bishop(square, occupancy)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
