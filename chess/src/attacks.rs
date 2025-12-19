@@ -3,7 +3,14 @@ use crate::{
     magics::{BISHOP_ATTACKS, BISHOP_MAGICS, ROOK_ATTACKS, ROOK_MAGICS},
 };
 
-pub const fn diagonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
+/// Calculate diagonal ray attacks for a given square and occupancy.
+/// # Arguments
+/// * `square` - The square to calculate attacks for (0-63).
+/// * `occupied` - The occupancy bitboard.
+///
+/// # Returns
+/// * A [`Bitboard`] representing the diagonal ray attacks from the given square.
+pub(crate) const fn diagonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
     let mut attacks = 0u64;
     let bb = square as u64;
 
@@ -60,7 +67,7 @@ pub const fn diagonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
 /// * `occupied` - The occupancy bitboard.
 ///
 /// # Returns
-/// * A Bitboard representing the orthogonal ray attacks from the given square.
+/// * A [`Bitboard`] representing the orthogonal ray attacks from the given square.
 ///
 /// # Examples
 ///
@@ -121,12 +128,29 @@ pub const fn orthogonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
     Bitboard::new(attacks)
 }
 
+/// Get rook attacks for a given "from" square and board occupancy.
+///
+/// # Arguments
+/// * `square` - The square the rook currently occupies.
+/// * `occupancy` - The current occupancy of the board.
+///
+/// # Returns
+/// * A [`Bitboard`] representing all the valid attacks for a rook at the given `square` with the given occupancy.
+///
 pub const fn rook(square: u8, occupancy: Bitboard) -> Bitboard {
     let magic = ROOK_MAGICS[square as usize];
     let index = magic.index(occupancy);
     ROOK_ATTACKS[index]
 }
 
+/// Get bishop attacks for a given "from" square and board occupancy.
+///
+/// # Arguments
+/// * `square` - The square the bishop currently occupies.
+/// * `occupancy` - The current occupancy of the board.
+///
+/// # Returns
+/// * A [`Bitboard`] representing all the valid attacks for a bishop at the given square with the given occupancy.
 pub const fn bishop(square: u8, occupancy: Bitboard) -> Bitboard {
     let magic = BISHOP_MAGICS[square as usize];
     let index = magic.index(occupancy);
