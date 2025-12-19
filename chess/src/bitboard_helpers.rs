@@ -6,7 +6,10 @@
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
  */
 
-use crate::{bitboard::Bitboard, file::File};
+use crate::{
+    bitboard::{self, Bitboard},
+    file::File,
+};
 
 /// Returns the index of the next bit set to 1 in the bitboard and sets it to 0.
 ///
@@ -169,6 +172,56 @@ pub const fn west_fill(bitboard: Bitboard) -> Bitboard {
     b |= (b & not_a_file) >> 1;
     Bitboard::new(b)
 }
+
+const NORTH: u64 = 8;
+const SOUTH: u64 = 8;
+const WEST: u64 = 1;
+const EAST: u64 = 1;
+const NORTH_EAST: u64 = 9;
+const NORTH_WEST: u64 = 7;
+const SOUTH_EAST: u64 = 7;
+const SOUTH_WEST: u64 = 9;
+const NORTH_NORTH_EAST: u64 = 17;
+const WEST_NORTH_WEST: u64 = 6;
+const NORTH_NORTH_WEST: u64 = 15;
+const EAST_NORTH_EAST: u64 = 10;
+const SOUTH_SOUTH_WEST: u64 = 17;
+const WEST_SOUTH_WEST: u64 = 10;
+const SOUTH_SOUTH_EAST: u64 = 15;
+const EAST_SOUTH_EAST: u64 = 6;
+
+pub fn north(bitboard: Bitboard) -> Bitboard {
+    bitboard << NORTH
+}
+
+pub fn south(bitboard: Bitboard) -> Bitboard {
+    bitboard >> SOUTH
+}
+
+pub fn west(bitboard: Bitboard) -> Bitboard {
+    bitboard << WEST & !File::H.to_bitboard()
+}
+
+pub fn east(bitboard: Bitboard) -> Bitboard {
+    bitboard >> EAST & !File::A.to_bitboard()
+}
+
+pub fn north_west(bitboard: Bitboard) -> Bitboard {
+    bitboard << NORTH_WEST & !File::H.to_bitboard()
+}
+
+pub fn north_east(bitboard: Bitboard) -> Bitboard {
+    bitboard << NORTH_EAST & !File::A.to_bitboard()
+}
+
+pub fn south_west(bitboard: Bitboard) -> Bitboard {
+    bitboard >> SOUTH_WEST & !File::H.to_bitboard()
+}
+
+pub fn south_east(bitboard: Bitboard) -> Bitboard {
+    bitboard >> SOUTH_EAST & !File::A.to_bitboard()
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
