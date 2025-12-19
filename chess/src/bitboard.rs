@@ -40,6 +40,8 @@ pub struct Bitboard {
 
 impl Bitboard {
     pub const EMPTY: Bitboard = Bitboard::new(0);
+    pub const FULL: Bitboard = Bitboard::new(0xFFFFFFFFFFFFFFFF);
+
     /// Create a new Bitboard with the given data.
     pub const fn new(data: u64) -> Self {
         Bitboard { data }
@@ -47,7 +49,7 @@ impl Bitboard {
 
     /// Create an empty Bitboard.
     pub const fn default() -> Self {
-        Bitboard { data: 0 }
+        return Bitboard { data: 0 };
     }
 
     /// Create a bitboard from the given square index.
