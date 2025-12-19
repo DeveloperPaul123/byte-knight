@@ -81,7 +81,7 @@ pub(crate) const fn diagonal_ray_attacks(square: u8, occupied: u64) -> Bitboard 
 /// assert_eq!(attacks.as_number(), 1157443723186929664);
 /// ```
 #[allow(long_running_const_eval)]
-pub const fn orthogonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
+pub(crate) const fn orthogonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
     let mut attacks = 0u64;
     let bb = square as u64;
 
