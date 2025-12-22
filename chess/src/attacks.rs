@@ -13,7 +13,9 @@ https://www.gnu.org/licenses/gpl-3.0-standalone.html
 use crate::{
     bitboard::Bitboard,
     bitboard_helpers,
-    magics::{BISHOP_ATTACKS, BISHOP_MAGICS, ROOK_ATTACKS, ROOK_MAGICS},
+    definitions::NumberOf,
+    file::File,
+    magics::{BISHOP_MAGICS, ROOK_MAGICS},
     side::Side,
 };
 
@@ -127,7 +129,7 @@ pub(crate) const fn diagonal_ray_attacks(square: u8, occupied: u64) -> Bitboard 
 
     // Northwest
     let mut ray = bb;
-    while ray % 8 > 0 && ray / 8 < 7 {
+    while !ray.is_multiple_of(8) && ray / 8 < 7 {
         ray += 7;
         let ray_bb = 1u64 << ray;
         attacks |= ray_bb;
@@ -149,7 +151,7 @@ pub(crate) const fn diagonal_ray_attacks(square: u8, occupied: u64) -> Bitboard 
 
     // Southwest
     let mut ray = bb;
-    while ray % 8 > 0 && ray / 8 >= 1 {
+    while !ray.is_multiple_of(8) && ray / 8 >= 1 {
         ray -= 9;
         let ray_bb = 1u64 << ray;
         attacks |= ray_bb;
@@ -217,7 +219,7 @@ pub(crate) const fn orthogonal_ray_attacks(square: u8, occupied: u64) -> Bitboar
 
     // West
     let mut ray = bb;
-    while ray % 8 > 0 {
+    while !ray.is_multiple_of(8) {
         ray -= 1;
         attacks |= 1 << ray;
         if (1 << ray) & occupied != 0 {
@@ -313,10 +315,10 @@ pub fn knight(square: u8) -> Bitboard {
 #[cfg(test)]
 mod tests {
     use crate::{
-        attacks,
+        attacks::{self, BISHOP_ATTACKS, ROOK_ATTACKS},
         bitboard::Bitboard,
         definitions::NumberOf,
-        magics::{BISHOP_ATTACKS, BISHOP_MAGICS, ROOK_ATTACKS, ROOK_MAGICS},
+        magics::{BISHOP_MAGICS, ROOK_MAGICS},
         move_generation::MoveGenerator,
     };
 
