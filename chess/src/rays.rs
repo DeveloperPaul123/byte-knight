@@ -1,7 +1,7 @@
 use crate::{attacks, bitboard::Bitboard, definitions::NumberOf};
 
 #[allow(long_running_const_eval)]
-const RAYS_BETWEEN: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] = initialize_rays_between();
+static RAYS_BETWEEN: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] = initialize_rays_between();
 
 const fn initialize_rays_between() -> [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] {
     let mut rays_between: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] =

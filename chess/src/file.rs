@@ -45,7 +45,7 @@ impl File {
     pub const fn offset(&self, delta: i8) -> Option<Self> {
         let new_file = (*self as i8) + delta;
         if new_file >= 0 && new_file <= 7 {
-            return Some(unsafe { std::mem::transmute(new_file as u8) });
+            return Some(unsafe { std::mem::transmute::<u8, File>(new_file as u8) });
         }
         None
     }
