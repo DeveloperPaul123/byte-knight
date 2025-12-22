@@ -79,7 +79,7 @@ impl Rank {
     pub const fn offset(&self, delta: i8) -> Option<Self> {
         let new_rank = (*self as i8) + delta;
         if new_rank >= 0 && new_rank <= 7 {
-            return Some(unsafe { std::mem::transmute(new_rank as u8) });
+            return Some(unsafe { std::mem::transmute::<u8, Rank>(new_rank as u8) });
         }
         None
     }

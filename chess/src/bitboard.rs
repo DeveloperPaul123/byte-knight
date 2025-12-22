@@ -49,7 +49,7 @@ impl Bitboard {
 
     /// Create an empty Bitboard.
     pub const fn default() -> Self {
-        return Bitboard { data: 0 };
+        Bitboard { data: 0 }
     }
 
     /// Create a bitboard from the given square index.
