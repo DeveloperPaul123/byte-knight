@@ -1,3 +1,15 @@
+/*!
+This module defines functions to define and retrieve attacks for all chess pieces.
+
+To the extent possible, attacks are generated at compile time to save runtime computation.
+Sliding piece attacks use so called "magic" numbers/bitboard unless the PEXT instruction
+set is available and enabled.
+
+Part of the byte-knight project.
+Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+GNU General Public License v3.0 or later
+https://www.gnu.org/licenses/gpl-3.0-standalone.html
+*/
 use crate::{
     bitboard::Bitboard,
     bitboard_helpers,
