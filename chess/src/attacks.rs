@@ -5,6 +5,92 @@ use crate::{
     side::Side,
 };
 
+#[allow(long_running_const_eval)]
+pub(crate) static ROOK_ATTACKS: [Bitboard; 102400] = generate_rook_attacks();
+
+#[allow(long_running_const_eval)]
+pub(crate) static BISHOP_ATTACKS: [Bitboard; 5248] = generate_bishop_attacks();
+
+/// Compile time helper function to generate all possible bishop attacks.
+///
+/// This will generate all possible attacks using the bishop magic numbers as defined in the magics module.
+const fn generate_bishop_attacks() -> [Bitboard; 5248] {
+    let mut table = [Bitboard::default(); 5248];
+    let mut sq = 0u8;
+    while sq < NumberOf::SQUARES as u8 {
+        let magic = BISHOP_MAGICS[sq as usize];
+
+        let mut subset = Bitboard::default();
+
+        let attacks = diagonal_ray_attacks(sq, subset.as_number());
+        let blockers = subset;
+        let idx = magic.index(blockers);
+        table[idx] = attacks;
+
+        // Update the subset (Carry-Rippler method)
+        subset = Bitboard::new(
+            subset.as_number().wrapping_sub(magic.relevant_bits_mask) & magic.relevant_bits_mask,
+        );
+
+        // Repeat for all subsets until subset is zero
+        while subset.as_number() != 0 {
+            let attacks = diagonal_ray_attacks(sq, subset.as_number());
+            let blockers = subset;
+            let idx = magic.index(blockers);
+            table[idx] = attacks;
+            // Update the subset (Carry-Rippler method) - same as above
+            subset = Bitboard::new(
+                subset.as_number().wrapping_sub(magic.relevant_bits_mask)
+                    & magic.relevant_bits_mask,
+            );
+        }
+
+        sq += 1;
+    }
+
+    table
+}
+
+/// Compile time helper function to generate rook attacks.
+///
+/// This will generate all possible rook attacks using the rook magic numbers as defined in the magics module.
+const fn generate_rook_attacks() -> [Bitboard; 102400] {
+    let mut table = [Bitboard::default(); 102400];
+    let mut sq = 0u8;
+    while sq < NumberOf::SQUARES as u8 {
+        let magic = ROOK_MAGICS[sq as usize];
+
+        let mut subset = Bitboard::default();
+
+        let attacks = orthogonal_ray_attacks(sq, subset.as_number());
+        let blockers = subset;
+        let idx = magic.index(blockers);
+        table[idx] = attacks;
+
+        // Update the subset (Carry-Rippler method)
+        subset = Bitboard::new(
+            subset.as_number().wrapping_sub(magic.relevant_bits_mask) & magic.relevant_bits_mask,
+        );
+
+        // Repeat for all subsets until subset is zero
+        while subset.as_number() != 0 {
+            let attacks = orthogonal_ray_attacks(sq, subset.as_number());
+            let blockers = subset;
+            let idx = magic.index(blockers);
+            table[idx] = attacks;
+            // Update the subset (Carry-Rippler method) - same as above
+            subset = Bitboard::new(
+                subset.as_number().wrapping_sub(magic.relevant_bits_mask)
+                    & magic.relevant_bits_mask,
+            );
+        }
+
+        sq += 1;
+    }
+
+    table
+}
+
 /// Calculate diagonal ray attacks for a given square and occupancy.
 /// # Arguments
 /// * `square` - The square to calculate attacks for (0-63).
