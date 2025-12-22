@@ -265,6 +265,39 @@ pub fn pawn(square: u8, side: Side) -> Bitboard {
     }
 }
 
+const NORTH_NORTH_EAST: u64 = 17;
+const WEST_NORTH_WEST: u64 = 6;
+const NORTH_NORTH_WEST: u64 = 15;
+const EAST_NORTH_EAST: u64 = 10;
+const SOUTH_SOUTH_WEST: u64 = 17;
+const WEST_SOUTH_WEST: u64 = 10;
+const SOUTH_SOUTH_EAST: u64 = 15;
+const EAST_SOUTH_EAST: u64 = 6;
+
+pub fn knight(square: u8) -> Bitboard {
+    let bb = Bitboard::from_square(square);
+    let mut attacks_bb = Bitboard::default();
+    // with our bit board setup, "east" means right, and "west" means left
+    // so this means east means we move more towards the MSB, so shift.
+    // So all the east and north moves are shifted left, all south and west moves are shifted right
+    let not_h_file = !File::H.to_bitboard();
+    let not_gh_file = !File::G.to_bitboard() & !File::H.to_bitboard();
+    let not_ab_file = !File::A.to_bitboard() & !File::B.to_bitboard();
+    let not_a_file = !File::A.to_bitboard();
+
+    attacks_bb |= (bb & not_h_file) << NORTH_NORTH_EAST;
+    attacks_bb |= (bb & not_gh_file) << EAST_NORTH_EAST;
+    attacks_bb |= (bb & not_a_file) << NORTH_NORTH_WEST;
+    attacks_bb |= (bb & not_ab_file) << WEST_NORTH_WEST;
+
+    attacks_bb |= (bb & not_h_file) >> SOUTH_SOUTH_EAST;
+    attacks_bb |= (bb & not_gh_file) >> EAST_SOUTH_EAST;
+    attacks_bb |= (bb & not_a_file) >> SOUTH_SOUTH_WEST;
+    attacks_bb |= (bb & not_ab_file) >> WEST_SOUTH_WEST;
+
+    attacks_bb
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{

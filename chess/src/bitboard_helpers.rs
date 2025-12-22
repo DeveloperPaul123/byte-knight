@@ -6,10 +6,7 @@
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
  */
 
-use crate::{
-    bitboard::{self, Bitboard},
-    file::File,
-};
+use crate::{bitboard::Bitboard, file::File};
 
 /// Returns the index of the next bit set to 1 in the bitboard and sets it to 0.
 ///
@@ -181,14 +178,6 @@ const NORTH_EAST: u64 = 9;
 const NORTH_WEST: u64 = 7;
 const SOUTH_EAST: u64 = 7;
 const SOUTH_WEST: u64 = 9;
-const NORTH_NORTH_EAST: u64 = 17;
-const WEST_NORTH_WEST: u64 = 6;
-const NORTH_NORTH_WEST: u64 = 15;
-const EAST_NORTH_EAST: u64 = 10;
-const SOUTH_SOUTH_WEST: u64 = 17;
-const WEST_SOUTH_WEST: u64 = 10;
-const SOUTH_SOUTH_EAST: u64 = 15;
-const EAST_SOUTH_EAST: u64 = 6;
 
 pub fn north(bitboard: Bitboard) -> Bitboard {
     bitboard << NORTH
