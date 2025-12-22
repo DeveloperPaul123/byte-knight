@@ -271,6 +271,14 @@ pub fn queen(square: u8, occupancy: Bitboard) -> Bitboard {
     rook(square, occupancy) | bishop(square, occupancy)
 }
 
+/// Get pawn attacks for a given square and side.
+///
+/// # Arguments
+/// * `square` - The square the pawn currently occupies.
+/// * `side` - Which side is the attacking pawn on?
+///
+/// # Returns
+/// * A [`Bitboard`] representing all the valid attacks for a pawn at the given square on the given side.
 pub fn pawn(square: u8, side: Side) -> Bitboard {
     let bb = Bitboard::from_square(square);
     match side {
