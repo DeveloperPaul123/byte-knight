@@ -61,49 +61,49 @@ pub enum Piece {
 impl Piece {
     pub const NONE: u32 = 6;
 
-    /// Returns `true` if the piece is [`KING`].
+    /// Returns `true` if the piece is [`King`].
     ///
-    /// [`KING`]: Piece::KING
+    /// [`King`]: Piece::King
     #[must_use]
     pub fn is_king(&self) -> bool {
         matches!(self, Self::King)
     }
 
-    /// Returns `true` if the piece is [`QUEEN`].
+    /// Returns `true` if the piece is [`Queen`].
     ///
-    /// [`QUEEN`]: Piece::QUEEN
+    /// [`Queen`]: Piece::Queen
     #[must_use]
     pub fn is_queen(&self) -> bool {
         matches!(self, Self::Queen)
     }
 
-    /// Returns `true` if the piece is [`ROOK`].
+    /// Returns `true` if the piece is [`Rook`].
     ///
-    /// [`ROOK`]: Piece::ROOK
+    /// [`Rook`]: Piece::Rook
     #[must_use]
     pub fn is_rook(&self) -> bool {
         matches!(self, Self::Rook)
     }
 
-    /// Returns `true` if the piece is [`BISHOP`].
+    /// Returns `true` if the piece is [`Bishop`].
     ///
-    /// [`BISHOP`]: Piece::BISHOP
+    /// [`Bishop`]: Piece::Bishop
     #[must_use]
     pub fn is_bishop(&self) -> bool {
         matches!(self, Self::Bishop)
     }
 
-    /// Returns `true` if the piece is [`KNIGHT`].
+    /// Returns `true` if the piece is [`Knight`].
     ///
-    /// [`KNIGHT`]: Piece::KNIGHT
+    /// [`Knight`]: Piece::Knight
     #[must_use]
     pub fn is_knight(&self) -> bool {
         matches!(self, Self::Knight)
     }
 
-    /// Returns `true` if the piece is [`PAWN`].
+    /// Returns `true` if the piece is [`Pawn`].
     ///
-    /// [`PAWN`]: Piece::PAWN
+    /// [`Pawn`]: Piece::Pawn
     #[must_use]
     pub fn is_pawn(&self) -> bool {
         matches!(self, Self::Pawn)
