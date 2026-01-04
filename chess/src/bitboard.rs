@@ -22,6 +22,7 @@ use crate::square::Square;
 /// The board is represented as a 64-bit integer.
 /// A bit is set if the corresponding square is occupied.
 ///
+/// ```
 /// v-a8 (bit 56)
 /// 0 0 0 0 0 0 0 0 <- h8 (bit 63)
 /// 0 0 0 0 0 0 0 0
@@ -32,6 +33,7 @@ use crate::square::Square;
 /// 0 0 0 0 0 0 0 0
 /// 0 0 0 0 0 0 0 0 <- h1 (bit 7)
 /// ^-a1 (bit 0)
+/// ```
 ///
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Bitboard {
