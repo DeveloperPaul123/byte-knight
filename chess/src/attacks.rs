@@ -107,11 +107,11 @@ const fn generate_rook_attacks() -> [Bitboard; 102400] {
 
 /// Calculate diagonal ray attacks for a given square and occupancy.
 /// # Arguments
-/// * `square` - The square to calculate attacks for (0-63).
-/// * `occupied` - The occupancy bitboard.
+/// - `square` - The square to calculate attacks for (0-63).
+/// - `occupied` - The occupancy bitboard.
 ///
 /// # Returns
-/// * A [`Bitboard`] representing the diagonal ray attacks from the given square.
+/// - A [`Bitboard`] representing the diagonal ray attacks from the given square.
 pub(crate) const fn diagonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
     let mut attacks = 0u64;
     let bb = square as u64;
@@ -165,11 +165,11 @@ pub(crate) const fn diagonal_ray_attacks(square: u8, occupied: u64) -> Bitboard 
 
 /// Calculate orthogonal ray attacks for a given square and occupancy.
 /// # Arguments
-/// * `square` - The square to calculate attacks for (0-63).
-/// * `occupied` - The occupancy bitboard.
+/// - `square` - The square to calculate attacks for (0-63).
+/// - `occupied` - The occupancy bitboard.
 ///
 /// # Returns
-/// * A [`Bitboard`] representing the orthogonal ray attacks from the given square.
+/// - A [`Bitboard`] representing the orthogonal ray attacks from the given square.
 ///
 /// # Examples
 ///
@@ -233,11 +233,11 @@ pub(crate) const fn orthogonal_ray_attacks(square: u8, occupied: u64) -> Bitboar
 /// Get rook attacks for a given "from" square and board occupancy.
 ///
 /// # Arguments
-/// * `square` - The square the rook currently occupies.
-/// * `occupancy` - The current occupancy of the board.
+/// - `square` - The square the rook currently occupies.
+/// - `occupancy` - The current occupancy of the board.
 ///
 /// # Returns
-/// * A [`Bitboard`] representing all the valid attacks for a rook at the given `square` with the given occupancy.
+/// - A [`Bitboard`] representing all the valid attacks for a rook at the given `square` with the given occupancy.
 ///
 pub const fn rook(square: u8, occupancy: Bitboard) -> Bitboard {
     let magic = ROOK_MAGICS[square as usize];
@@ -248,11 +248,11 @@ pub const fn rook(square: u8, occupancy: Bitboard) -> Bitboard {
 /// Get bishop attacks for a given "from" square and board occupancy.
 ///
 /// # Arguments
-/// * `square` - The square the bishop currently occupies.
-/// * `occupancy` - The current occupancy of the board.
+/// - `square` - The square the bishop currently occupies.
+/// - `occupancy` - The current occupancy of the board.
 ///
 /// # Returns
-/// * A [`Bitboard`] representing all the valid attacks for a bishop at the given square with the given occupancy.
+/// - A [`Bitboard`] representing all the valid attacks for a bishop at the given square with the given occupancy.
 pub const fn bishop(square: u8, occupancy: Bitboard) -> Bitboard {
     let magic = BISHOP_MAGICS[square as usize];
     let index = magic.index(occupancy);
@@ -262,11 +262,11 @@ pub const fn bishop(square: u8, occupancy: Bitboard) -> Bitboard {
 /// Get queen attacks for a given square and occupancy.
 ///
 /// # Arguments
-/// * `square` - The square the queen currently occupies.
-/// * `occupancy` - The current occupancy of the board.
+/// - `square` - The square the queen currently occupies.
+/// - `occupancy` - The current occupancy of the board.
 ///
 /// # Returns
-/// * A [`Bitboard`] representing all the valid attacks for a queen at the given square with the given occupancy.
+/// - A [`Bitboard`] representing all the valid attacks for a queen at the given square with the given occupancy.
 pub fn queen(square: u8, occupancy: Bitboard) -> Bitboard {
     rook(square, occupancy) | bishop(square, occupancy)
 }
@@ -274,11 +274,11 @@ pub fn queen(square: u8, occupancy: Bitboard) -> Bitboard {
 /// Get pawn attacks for a given square and side.
 ///
 /// # Arguments
-/// * `square` - The square the pawn currently occupies.
-/// * `side` - Which side is the attacking pawn on?
+/// - `square` - The square the pawn currently occupies.
+/// - `side` - Which side is the attacking pawn on?
 ///
 /// # Returns
-/// * A [`Bitboard`] representing all the valid attacks for a pawn at the given square on the given side.
+/// - A [`Bitboard`] representing all the valid attacks for a pawn at the given square on the given side.
 pub fn pawn(square: u8, side: Side) -> Bitboard {
     let bb = Bitboard::from_square(square);
     match side {
