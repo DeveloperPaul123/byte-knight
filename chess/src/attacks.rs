@@ -296,6 +296,13 @@ const WEST_SOUTH_WEST: u64 = 10;
 const SOUTH_SOUTH_EAST: u64 = 15;
 const EAST_SOUTH_EAST: u64 = 6;
 
+/// Get knight attacks for a given square.
+///
+/// # Arguments
+/// - `square` - The square the knight currently occupies.
+///
+/// # Returns
+/// - A [`Bitboard`] representing all the valid attacks for a knight at the given square.
 pub fn knight(square: u8) -> Bitboard {
     let bb = Bitboard::from_square(square);
     let mut attacks_bb = Bitboard::default();
