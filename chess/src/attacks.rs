@@ -285,26 +285,167 @@ pub fn pawn(square: u8, side: Side) -> Bitboard {
     }
 }
 
-const NORTH_NORTH_EAST: u64 = 17;
-const WEST_NORTH_WEST: u64 = 6;
-const NORTH_NORTH_WEST: u64 = 15;
-const EAST_NORTH_EAST: u64 = 10;
-const SOUTH_SOUTH_WEST: u64 = 17;
-const WEST_SOUTH_WEST: u64 = 10;
-const SOUTH_SOUTH_EAST: u64 = 15;
-const EAST_SOUTH_EAST: u64 = 6;
+const KING_ATTACKS: [Bitboard; NumberOf::SQUARES] = [
+    Bitboard::new(0x302),
+    Bitboard::new(0x704),
+    Bitboard::new(0xe0a),
+    Bitboard::new(0x1c14),
+    Bitboard::new(0x3828),
+    Bitboard::new(0x7050),
+    Bitboard::new(0xe020),
+    Bitboard::new(0xc140),
+    Bitboard::new(0x30283),
+    Bitboard::new(0x70407),
+    Bitboard::new(0xe0a0e),
+    Bitboard::new(0x1c141c),
+    Bitboard::new(0x382838),
+    Bitboard::new(0x705070),
+    Bitboard::new(0xe020e0),
+    Bitboard::new(0xc140c0),
+    Bitboard::new(0x3028300),
+    Bitboard::new(0x7040700),
+    Bitboard::new(0xe0a0e00),
+    Bitboard::new(0x1c141c00),
+    Bitboard::new(0x38283800),
+    Bitboard::new(0x70507000),
+    Bitboard::new(0xe020e000),
+    Bitboard::new(0xc140c000),
+    Bitboard::new(0x302830000),
+    Bitboard::new(0x704070000),
+    Bitboard::new(0xe0a0e0000),
+    Bitboard::new(0x1c141c0000),
+    Bitboard::new(0x3828380000),
+    Bitboard::new(0x7050700000),
+    Bitboard::new(0xe020e00000),
+    Bitboard::new(0xc140c00000),
+    Bitboard::new(0x30283000000),
+    Bitboard::new(0x70407000000),
+    Bitboard::new(0xe0a0e000000),
+    Bitboard::new(0x1c141c000000),
+    Bitboard::new(0x382838000000),
+    Bitboard::new(0x705070000000),
+    Bitboard::new(0xe020e0000000),
+    Bitboard::new(0xc140c0000000),
+    Bitboard::new(0x3028300000000),
+    Bitboard::new(0x7040700000000),
+    Bitboard::new(0xe0a0e00000000),
+    Bitboard::new(0x1c141c00000000),
+    Bitboard::new(0x38283800000000),
+    Bitboard::new(0x70507000000000),
+    Bitboard::new(0xe020e000000000),
+    Bitboard::new(0xc140c000000000),
+    Bitboard::new(0x302830000000000),
+    Bitboard::new(0x704070000000000),
+    Bitboard::new(0xe0a0e0000000000),
+    Bitboard::new(0x1c141c0000000000),
+    Bitboard::new(0x3828380000000000),
+    Bitboard::new(0x7050700000000000),
+    Bitboard::new(0xe020e00000000000),
+    Bitboard::new(0xc140c00000000000),
+    Bitboard::new(0x283000000000000),
+    Bitboard::new(0x407000000000000),
+    Bitboard::new(0xa0e000000000000),
+    Bitboard::new(0x141c000000000000),
+    Bitboard::new(0x2838000000000000),
+    Bitboard::new(0x5070000000000000),
+    Bitboard::new(0x20e0000000000000),
+    Bitboard::new(0x40c0000000000000),
+];
 
-/// Get knight attacks for a given square.
+/// Get king attacks for a given square.
 ///
 /// # Arguments
-/// - `square` - The square the knight currently occupies.
+/// - `square` - The square the king currently occupies.
 ///
 /// # Returns
-/// - A [`Bitboard`] representing all the valid attacks for a knight at the given square.
-pub fn knight(square: u8) -> Bitboard {
+/// - A [`Bitboard`] representing all the valid attacks for a king at the given square.
+pub fn king(square: u8) -> Bitboard {
+    assert!(square < NumberOf::SQUARES as u8);
+    KING_ATTACKS[square as usize]
+}
+
+const KNIGHT_ATTACKS: [Bitboard; NumberOf::SQUARES] = [
+    Bitboard::new(0x20400),
+    Bitboard::new(0x50800),
+    Bitboard::new(0xa1100),
+    Bitboard::new(0x142200),
+    Bitboard::new(0x284400),
+    Bitboard::new(0x508800),
+    Bitboard::new(0xa01000),
+    Bitboard::new(0x402000),
+    Bitboard::new(0x2040004),
+    Bitboard::new(0x5080008),
+    Bitboard::new(0xa110011),
+    Bitboard::new(0x14220022),
+    Bitboard::new(0x28440044),
+    Bitboard::new(0x50880088),
+    Bitboard::new(0xa0100010),
+    Bitboard::new(0x40200020),
+    Bitboard::new(0x204000402),
+    Bitboard::new(0x508000805),
+    Bitboard::new(0xa1100110a),
+    Bitboard::new(0x1422002214),
+    Bitboard::new(0x2844004428),
+    Bitboard::new(0x5088008850),
+    Bitboard::new(0xa0100010a0),
+    Bitboard::new(0x4020002040),
+    Bitboard::new(0x20400040200),
+    Bitboard::new(0x50800080500),
+    Bitboard::new(0xa1100110a00),
+    Bitboard::new(0x142200221400),
+    Bitboard::new(0x284400442800),
+    Bitboard::new(0x508800885000),
+    Bitboard::new(0xa0100010a000),
+    Bitboard::new(0x402000204000),
+    Bitboard::new(0x2040004020000),
+    Bitboard::new(0x5080008050000),
+    Bitboard::new(0xa1100110a0000),
+    Bitboard::new(0x14220022140000),
+    Bitboard::new(0x28440044280000),
+    Bitboard::new(0x50880088500000),
+    Bitboard::new(0xa0100010a00000),
+    Bitboard::new(0x40200020400000),
+    Bitboard::new(0x204000402000000),
+    Bitboard::new(0x508000805000000),
+    Bitboard::new(0xa1100110a000000),
+    Bitboard::new(0x1422002214000000),
+    Bitboard::new(0x2844004428000000),
+    Bitboard::new(0x5088008850000000),
+    Bitboard::new(0xa0100010a0000000),
+    Bitboard::new(0x4020002040000000),
+    Bitboard::new(0x400040200000000),
+    Bitboard::new(0x800080500000000),
+    Bitboard::new(0x1100110a00000000),
+    Bitboard::new(0x2200221400000000),
+    Bitboard::new(0x4400442800000000),
+    Bitboard::new(0x8800885000000000),
+    Bitboard::new(0x100010a000000000),
+    Bitboard::new(0x2000204000000000),
+    Bitboard::new(0x4020000000000),
+    Bitboard::new(0x8050000000000),
+    Bitboard::new(0x110a0000000000),
+    Bitboard::new(0x22140000000000),
+    Bitboard::new(0x44280000000000),
+    Bitboard::new(0x88500000000000),
+    Bitboard::new(0x10a00000000000),
+    Bitboard::new(0x20400000000000),
+];
+
+#[allow(dead_code)]
+/// Helper to generate the knight attacks. This was used to generate the `KNIGHT_ATTACKS` constant at compile time (see above).
+fn generate_knight(square: u8) -> Bitboard {
+    const NORTH_NORTH_EAST: u64 = 17;
+    const WEST_NORTH_WEST: u64 = 6;
+    const NORTH_NORTH_WEST: u64 = 15;
+    const EAST_NORTH_EAST: u64 = 10;
+    const SOUTH_SOUTH_WEST: u64 = 17;
+    const WEST_SOUTH_WEST: u64 = 10;
+    const SOUTH_SOUTH_EAST: u64 = 15;
+    const EAST_SOUTH_EAST: u64 = 6;
+
     let bb = Bitboard::from_square(square);
     let mut attacks_bb = Bitboard::default();
-    // with our bit board setup, "east" means right, and "west" means left
+    // With our Bitboard setup, "east" means right, and "west" means left
     // so this means east means we move more towards the MSB, so shift.
     // So all the east and north moves are shifted left, all south and west moves are shifted right
     let not_h_file = !File::H.to_bitboard();
@@ -323,6 +464,18 @@ pub fn knight(square: u8) -> Bitboard {
     attacks_bb |= (bb & not_ab_file) >> WEST_SOUTH_WEST;
 
     attacks_bb
+}
+
+/// Get knight attacks for a given square.
+///
+/// # Arguments
+/// - `square` - The square the knight currently occupies.
+///
+/// # Returns
+/// - A [`Bitboard`] representing all the valid attacks for a knight at the given square.
+pub fn knight(square: u8) -> Bitboard {
+    assert!(square < NumberOf::SQUARES as u8);
+    KNIGHT_ATTACKS[square as usize]
 }
 
 #[cfg(test)]
@@ -540,8 +693,17 @@ mod tests {
     fn test_knight_attacks() {
         for sq in 0..NumberOf::SQUARES as u8 {
             let attacks = attacks::knight(sq);
-            println!("{:#x},", attacks.as_number());
+            println!("Bitboard::new({:#x}),", attacks.as_number());
             assert_eq!(attacks, Bitboard::new(EXPECTED_KNIGHT_ATTACKS[sq as usize]))
+        }
+    }
+
+    #[test]
+    fn test_king_attacks() {
+        for sq in 0..NumberOf::SQUARES as u8 {
+            let attacks = attacks::king(sq);
+            // println!("{}", attacks);
+            println!("Bitboard::new({:#x}),", attacks.as_number());
         }
     }
 
