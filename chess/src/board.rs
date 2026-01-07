@@ -27,7 +27,7 @@ use super::fen;
 use super::side::Side;
 use super::{bitboard::Bitboard, pieces::Piece};
 
-/// Represents a chess board position.
+/// Represents a chessboard position.
 #[derive(Debug)]
 pub struct Board {
     piece_bitboards: [[Bitboard; NumberOf::PIECE_TYPES]; NumberOf::SIDES],
