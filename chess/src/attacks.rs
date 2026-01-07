@@ -168,18 +168,6 @@ pub(crate) const fn diagonal_ray_attacks(square: u8, occupied: u64) -> Bitboard 
 ///
 /// # Returns
 /// - A [`Bitboard`] representing the orthogonal ray attacks from the given square.
-///
-/// # Examples
-///
-/// ```
-/// use chess::bitboard::Bitboard;
-/// use chess::attacks::orthogonal_ray_attacks;
-/// let square = 36; // e5
-/// let occupied = Bitboard::from_square(20).as_number(); // e3 is
-/// let attacks = orthogonal_ray_attacks(square, occupied);
-/// println!("{}", attacks);
-/// assert_eq!(attacks.as_number(), 1157443723186929664);
-/// ```
 #[allow(long_running_const_eval)]
 pub(crate) const fn orthogonal_ray_attacks(square: u8, occupied: u64) -> Bitboard {
     let mut attacks = 0u64;
