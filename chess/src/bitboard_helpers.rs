@@ -179,18 +179,46 @@ const NORTH_WEST: u64 = 7;
 const SOUTH_EAST: u64 = 7;
 const SOUTH_WEST: u64 = 9;
 
+/// Shifts the [`Bitboard`] one square to the north.
+///
+/// # Arguments
+/// - `bitboard` - The [`Bitboard`] to shift.
+///
+/// # Returns
+/// A new [`Bitboard`] shifted one square to the north.
 pub fn north(bitboard: Bitboard) -> Bitboard {
     bitboard << NORTH
 }
 
+/// Shifts the [`Bitboard`] one square to the south.
+///
+/// # Arguments
+/// - `bitboard` - The [`Bitboard`] to shift.
+///
+/// # Returns
+/// A new [`Bitboard`] shifted one square to the south.
 pub fn south(bitboard: Bitboard) -> Bitboard {
     bitboard >> SOUTH
 }
 
+/// Shifts the [`Bitboard`] one square to the west without wrap-around.
+///
+/// # Arguments
+/// - `bitboard` - The [`Bitboard`] to shift.
+///
+/// # Returns
+/// A new [`Bitboard`] shifted one square to the west without wrap-around.
 pub fn west(bitboard: Bitboard) -> Bitboard {
     bitboard << WEST & !File::H.to_bitboard()
 }
 
+/// Shifts the [`Bitboard`] one square to the east without wrap-around.
+///
+/// # Arguments
+/// - `bitboard` - The [`Bitboard`] to shift.
+///
+/// # Returns
+/// A new [`Bitboard`] shifted one square to the east without wrap-around.
 pub fn east(bitboard: Bitboard) -> Bitboard {
     bitboard >> EAST & !File::A.to_bitboard()
 }
@@ -199,14 +227,35 @@ pub fn north_west(bitboard: Bitboard) -> Bitboard {
     bitboard << NORTH_WEST & !File::H.to_bitboard()
 }
 
+/// Shifts the [`Bitboard`] one square to the north-east without wrap-around.
+///
+/// # Arguments
+/// - `bitboard` - The [`Bitboard`] to shift.
+///
+/// # Returns
+/// A new [`Bitboard`] shifted one square to the north-east without wrap-around.
 pub fn north_east(bitboard: Bitboard) -> Bitboard {
     bitboard << NORTH_EAST & !File::A.to_bitboard()
 }
 
+/// Shifts the [`Bitboard`] one square to the south-west without wrap-around.
+///
+/// # Arguments
+/// - `bitboard` - The [`Bitboard`] to shift.
+///
+/// # Returns
+/// A new [`Bitboard`] shifted one square to the south-west without wrap-around.
 pub fn south_west(bitboard: Bitboard) -> Bitboard {
     bitboard >> SOUTH_WEST & !File::H.to_bitboard()
 }
 
+/// Shifts the bitboard one square to the south-east without wrap-around.
+///
+/// # Arguments
+/// - `bitboard` - The bitboard to shift.
+///
+/// # Returns
+/// A new bitboard shifted one square to the south-east without wrap-around.
 pub fn south_east(bitboard: Bitboard) -> Bitboard {
     bitboard >> SOUTH_EAST & !File::A.to_bitboard()
 }
