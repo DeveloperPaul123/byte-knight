@@ -3,6 +3,10 @@ use crate::{attacks, bitboard::Bitboard, definitions::NumberOf};
 #[allow(long_running_const_eval)]
 static RAYS_BETWEEN: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] = initialize_rays_between();
 
+/// Initializes the rays between all pairs of squares on the chessboard.
+///
+/// Returns
+/// - A 2D array where each entry [from][to] contains a Bitboard representing the squares between `from` and `to`.
 const fn initialize_rays_between() -> [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] {
     let mut rays_between: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES] =
         [[Bitboard::default(); NumberOf::SQUARES]; NumberOf::SQUARES];
@@ -65,6 +69,30 @@ mod tests {
                 );
 
                 assert_eq!(bb, move_gen_bb);
+            }
+        }
+    }
+
+    #[test]
+    fn test_initialize_rays_between() {
+        let rays_between = super::initialize_rays_between();
+        for from in 0..64_u8 {
+            for to in 0..64_u8 {
+                let bb = rays_between[from as usize][to as usize];
+                let expected_bb = super::between(from, to);
+                assert_eq!(
+                    bb, expected_bb,
+                    "Rays between {} and {} do not match.",
+                    SQUARE_NAME[from as usize], SQUARE_NAME[to as usize]
+                );
+
+                let bb_rev = rays_between[to as usize][from as usize];
+                let expected_bb_rev = super::between(to, from);
+                assert_eq!(
+                    bb_rev, expected_bb_rev,
+                    "Rays between {} and {} do not match.",
+                    SQUARE_NAME[to as usize], SQUARE_NAME[from as usize]
+                );
             }
         }
     }
