@@ -678,6 +678,22 @@ mod tests {
     ];
 
     #[test]
+    fn test_generate_bishop_attacks() {
+        let generated = super::generate_bishop_attacks();
+        for (i, &attack) in BISHOP_ATTACKS.iter().enumerate() {
+            assert_eq!(attack, generated[i], "Mismatch at index {}", i);
+        }
+    }
+
+    #[test]
+    fn test_generate_rook_attacks() {
+        let generated = super::generate_rook_attacks();
+        for (i, &attack) in ROOK_ATTACKS.iter().enumerate() {
+            assert_eq!(attack, generated[i], "Mismatch at index {}", i);
+        }
+    }
+
+    #[test]
     fn test_knight_attacks() {
         for sq in 0..NumberOf::SQUARES as u8 {
             let attacks = attacks::knight(sq);
@@ -786,6 +802,19 @@ mod tests {
                     expected_attack
                 );
             }
+        }
+    }
+
+    #[test]
+    fn test_pawn_attacks() {
+        for sq in 0..NumberOf::SQUARES as u8 {
+            let white_attacks = attacks::pawn(sq, crate::side::Side::White);
+            let black_attacks = attacks::pawn(sq, crate::side::Side::Black);
+            println!(
+                "Square: {}\nWhite Pawn Attacks:\n{}\nBlack Pawn Attacks:\n{}",
+                sq, white_attacks, black_attacks
+            );
+            assert_ne!(white_attacks, black_attacks);
         }
     }
 }
