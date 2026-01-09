@@ -264,7 +264,9 @@ pub fn south_east(bitboard: Bitboard) -> Bitboard {
 mod tests {
     use crate::{
         bitboard::Bitboard,
-        bitboard_helpers,
+        bitboard_helpers::{
+            self, east, north, north_east, north_west, south, south_east, south_west, west,
+        },
         definitions::{RANK_BITBOARDS, Squares},
         rank::Rank,
     };
@@ -347,5 +349,32 @@ mod tests {
         let single_sq_bb = Bitboard::from_square(Squares::H1);
         let filled_bb = bitboard_helpers::west_fill(single_sq_bb);
         assert_eq!(filled_bb, RANK_BITBOARDS[Rank::R1 as usize]);
+    }
+
+    #[test]
+    fn test_direction_shifts() {
+        let bb = Bitboard::from_square(Squares::D4);
+        assert_eq!(north(bb), Bitboard::from_square(Squares::D5));
+        assert_eq!(south(bb), Bitboard::from_square(Squares::D3));
+        assert_eq!(east(bb), Bitboard::from_square(Squares::E4));
+        assert_eq!(west(bb), Bitboard::from_square(Squares::C4));
+
+        // Do the same for diagonals
+        assert_eq!(north_east(bb), Bitboard::from_square(Squares::E5));
+        assert_eq!(north_west(bb), Bitboard::from_square(Squares::C5));
+        assert_eq!(south_east(bb), Bitboard::from_square(Squares::E3));
+        assert_eq!(south_west(bb), Bitboard::from_square(Squares::C3));
+
+        // Repeat for edge cases
+        // Use top right corner
+        let bb = Bitboard::from_square(Squares::H8);
+        assert_eq!(north(bb), Bitboard::default());
+        assert_eq!(east(bb), Bitboard::default());
+        assert_eq!(west(bb), Bitboard::from_square(Squares::G8));
+        assert_eq!(south(bb), Bitboard::from_square(Squares::H7));
+        assert_eq!(north_east(bb), Bitboard::default());
+        assert_eq!(north_west(bb), Bitboard::default());
+        assert_eq!(south_east(bb), Bitboard::default());
+        assert_eq!(south_west(bb), Bitboard::from_square(Squares::G7));
     }
 }
