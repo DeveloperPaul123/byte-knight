@@ -6,6 +6,7 @@
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
  */
 
+use crate::attacks;
 use crate::definitions::RANK_BITBOARDS;
 use crate::move_generation::NORTH;
 use crate::move_generation::SOUTH;
@@ -212,7 +213,7 @@ impl MoveGenerator {
             self.get_piece_attacks(Piece::Bishop, king_square, us, &kingless_occupancy);
         let queen_attacks = rook_attacks | bishop_attacks;
         // note we use the opposite side for the pawn attacks
-        let pawn_attacks = self.pawn_attacks[Side::opposite(them) as usize][king_square as usize];
+        let pawn_attacks = attacks::pawn(king_square, Side::opposite(them));
 
         let enemy_pawns = board.piece_bitboard(Piece::Pawn, them);
         let enemy_knights = board.piece_bitboard(Piece::Knight, them);
@@ -404,7 +405,7 @@ impl MoveGenerator {
 
         // filter pushes by the occupancy
         let legal_pushes = (pushes & !occupancy) & hv_pin_ray_mask;
-        let attacks = self.pawn_attacks[us as usize][square.to_square_index() as usize]
+        let attacks = attacks::pawn(square.to_square_index(), us)
             & (their_pieces | en_passant_bb)
             & diag_pin_ray_mask;
 

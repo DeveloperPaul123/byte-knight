@@ -7,10 +7,11 @@
  */
 
 use crate::{
+    attacks,
     bitboard::Bitboard,
     bitboard_helpers,
     board::Board,
-    definitions::{FILE_BITBOARDS, NumberOf, QUEEN_OFFSETS, RANK_BITBOARDS, Squares},
+    definitions::{FILE_BITBOARDS, RANK_BITBOARDS, Squares},
     file::File,
     move_list::MoveList,
     moves::{Move, MoveDescriptor, MoveType, PromotionDescriptor},
@@ -18,6 +19,7 @@ use crate::{
     piece_category::PieceCategory,
     pieces::Piece,
     rank::Rank,
+    rays,
     side::Side,
     sliding_piece_attacks::SlidingPieceAttacks,
     square::{self, Square},
@@ -26,126 +28,8 @@ use crate::{
 pub(crate) const NORTH: u64 = 8;
 pub(crate) const SOUTH: u64 = 8;
 
-const WEST: u64 = 1;
-const EAST: u64 = 1;
-const NORTH_EAST: u64 = 9;
-const NORTH_WEST: u64 = 7;
-const SOUTH_EAST: u64 = 7;
-const SOUTH_WEST: u64 = 9;
-const NORTH_NORTH_EAST: u64 = 17;
-const WEST_NORTH_WEST: u64 = 6;
-const NORTH_NORTH_WEST: u64 = 15;
-const EAST_NORTH_EAST: u64 = 10;
-const SOUTH_SOUTH_WEST: u64 = 17;
-const WEST_SOUTH_WEST: u64 = 10;
-const SOUTH_SOUTH_EAST: u64 = 15;
-const EAST_SOUTH_EAST: u64 = 6;
-
-fn initialize_king_attacks(square: u8, attacks: &mut [Bitboard; NumberOf::SQUARES]) {
-    let mut bb = Bitboard::default();
-    let mut attacks_bb = Bitboard::default();
-
-    // king can move 1 square in any direction
-    bb.set_square(square);
-
-    // with our bit board setup, "east" means right, and "west" means left
-    // so this means east means we move more towards the MSB, so shift.
-    // So all the east and north moves are shifted left, all south and west moves are shifted right
-
-    let not_h_file = !FILE_BITBOARDS[File::H as usize];
-    let not_a_file = !FILE_BITBOARDS[File::A as usize];
-    let not_r8_rank = !RANK_BITBOARDS[Rank::R8 as usize];
-    let not_r1_rank = !RANK_BITBOARDS[Rank::R1 as usize];
-
-    attacks_bb |= (bb & not_r8_rank) << NORTH;
-    attacks_bb |= (bb & not_a_file & not_r8_rank) << NORTH_WEST;
-    attacks_bb |= (bb & not_h_file & not_r8_rank) << NORTH_EAST;
-    attacks_bb |= (bb & not_h_file) << EAST;
-
-    attacks_bb |= (bb & not_r1_rank) >> SOUTH;
-    attacks_bb |= (bb & not_a_file & not_r1_rank) >> SOUTH_WEST;
-    attacks_bb |= (bb & not_h_file & not_r1_rank) >> SOUTH_EAST;
-    attacks_bb |= (bb & not_a_file) >> WEST;
-
-    attacks[square as usize] = attacks_bb;
-}
-
-fn initialize_knight_attacks(square: u8, attacks: &mut [Bitboard; NumberOf::SQUARES]) {
-    let mut bb = Bitboard::default();
-    let mut attacks_bb = Bitboard::default();
-
-    // knight can move 1 square in any direction
-    bb.set_square(square);
-
-    // with our bit board setup, "east" means right, and "west" means left
-    // so this means east means we move more towards the MSB, so shift.
-    // So all the east and north moves are shifted left, all south and west moves are shifted right
-    let not_h_file = !FILE_BITBOARDS[File::H as usize];
-    let not_gh_file = !FILE_BITBOARDS[File::G as usize] & !FILE_BITBOARDS[File::H as usize];
-    let not_ab_file = !FILE_BITBOARDS[File::A as usize] & !FILE_BITBOARDS[File::B as usize];
-    let not_a_file = !FILE_BITBOARDS[File::A as usize];
-
-    attacks_bb |= (bb & not_h_file) << NORTH_NORTH_EAST;
-    attacks_bb |= (bb & not_gh_file) << EAST_NORTH_EAST;
-    attacks_bb |= (bb & not_a_file) << NORTH_NORTH_WEST;
-    attacks_bb |= (bb & not_ab_file) << WEST_NORTH_WEST;
-
-    attacks_bb |= (bb & not_h_file) >> SOUTH_SOUTH_EAST;
-    attacks_bb |= (bb & not_gh_file) >> EAST_SOUTH_EAST;
-    attacks_bb |= (bb & not_a_file) >> SOUTH_SOUTH_WEST;
-    attacks_bb |= (bb & not_ab_file) >> WEST_SOUTH_WEST;
-
-    attacks[square as usize] = attacks_bb;
-}
-
-fn initialize_pawn_attacks(
-    square: u8,
-    attacks: &mut [[Bitboard; NumberOf::SQUARES]; NumberOf::SIDES],
-) {
-    let mut bb = Bitboard::default();
-    bb.set_square(square);
-
-    let mut attacks_w_bb = Bitboard::default();
-    let mut attacks_b_bb = Bitboard::default();
-
-    let not_a_file = !FILE_BITBOARDS[File::A as usize];
-    let not_h_file = !FILE_BITBOARDS[File::H as usize];
-
-    // white is NORTH_WEST and NORTH_EAST
-    attacks_w_bb |= (bb & not_a_file) << NORTH_WEST;
-    attacks_w_bb |= (bb & not_h_file) << NORTH_EAST;
-
-    attacks_b_bb |= (bb & not_a_file) >> SOUTH_WEST;
-    attacks_b_bb |= (bb & not_h_file) >> SOUTH_EAST;
-
-    attacks[Side::White as usize][square as usize] = attacks_w_bb;
-    attacks[Side::Black as usize][square as usize] = attacks_b_bb;
-}
-
-fn initialize_rays_between(rays_between: &mut [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES]) {
-    for sq in 0..NumberOf::SQUARES as u8 {
-        let from_square = Square::from_square_index(sq);
-        for (delta_file, delta_rank) in QUEEN_OFFSETS {
-            let mut ray = Bitboard::default();
-            let mut to = from_square;
-            while let Some(shifted) = to.offset(delta_file, delta_rank) {
-                ray.set_square(shifted.to_square_index());
-                to = shifted;
-                let from_index = from_square.to_square_index() as usize;
-                let to_index = to.to_square_index() as usize;
-                rays_between[from_index][to_index] =
-                    ray ^ Bitboard::from_square(to.to_square_index());
-            }
-        }
-    }
-}
-
 /// The MoveGenerator struct is responsible for generating moves for a given board state.
 pub struct MoveGenerator {
-    pub(crate) king_attacks: [Bitboard; NumberOf::SQUARES],
-    pub(crate) knight_attacks: [Bitboard; NumberOf::SQUARES],
-    pub(crate) pawn_attacks: [[Bitboard; NumberOf::SQUARES]; NumberOf::SIDES],
-    pub(crate) rays_between: [[Bitboard; NumberOf::SQUARES]; NumberOf::SQUARES],
     pub(crate) sliding_piece_attacks: SlidingPieceAttacks,
 }
 
@@ -157,27 +41,8 @@ impl Default for MoveGenerator {
 
 impl MoveGenerator {
     pub fn new() -> Self {
-        let king_attacks = [Bitboard::default(); NumberOf::SQUARES];
-        let knight_attacks = [Bitboard::default(); NumberOf::SQUARES];
-        let pawn_attacks = [[Bitboard::default(); NumberOf::SQUARES]; NumberOf::SIDES];
-        let mut move_gen = Self {
-            king_attacks,
-            knight_attacks,
-            pawn_attacks,
-            rays_between: [[Bitboard::default(); NumberOf::SQUARES]; NumberOf::SQUARES],
+        Self {
             sliding_piece_attacks: SlidingPieceAttacks::new(),
-        };
-
-        move_gen.initialize_attack_boards();
-        initialize_rays_between(&mut move_gen.rays_between);
-        move_gen
-    }
-
-    fn initialize_attack_boards(&mut self) {
-        for square in 0..NumberOf::SQUARES as u8 {
-            initialize_king_attacks(square, &mut self.king_attacks);
-            initialize_knight_attacks(square, &mut self.knight_attacks);
-            initialize_pawn_attacks(square, &mut self.pawn_attacks);
         }
     }
 
@@ -442,7 +307,7 @@ impl MoveGenerator {
 
     /// Calculate the ray between two squares. This is simply a look up as we pre-calculate all rays between all squares.
     pub(crate) fn ray_between(&self, from: Square, to: Square) -> Bitboard {
-        self.rays_between[from.to_square_index() as usize][to.to_square_index() as usize]
+        rays::between(from.to_square_index(), to.to_square_index())
     }
 
     /// Calculate all squares currently being attacked by a given side.
@@ -709,11 +574,9 @@ impl MoveGenerator {
         from_square: u8,
     ) -> Bitboard {
         match piece {
-            NonSliderPiece::King => self.king_attacks[from_square as usize],
-            NonSliderPiece::Knight => self.knight_attacks[from_square as usize],
-            NonSliderPiece::Pawn => {
-                self.pawn_attacks[attacking_side as usize][from_square as usize]
-            }
+            NonSliderPiece::King => attacks::king(from_square),
+            NonSliderPiece::Knight => attacks::knight(from_square),
+            NonSliderPiece::Pawn => attacks::pawn(from_square, attacking_side),
         }
     }
 
@@ -733,7 +596,7 @@ impl MoveGenerator {
         // loop through all the pawns for us
         while bb > 0 {
             let from_square = bitboard_helpers::next_bit(&mut bb) as u8;
-            let attack_bb = self.pawn_attacks[us as usize][from_square as usize];
+            let attack_bb = attacks::pawn(from_square, us);
 
             let mut bb_moves = Bitboard::default();
             let to_square = match us {
@@ -965,8 +828,7 @@ impl MoveGenerator {
         );
         let queen_attacks = rook_attacks | bishop_attacks;
         // note we use the opposite side for the pawn attacks
-        let pawn_attacks = self.pawn_attacks[Side::opposite(attacking_side) as usize]
-            [square.to_square_index() as usize];
+        let pawn_attacks = attacks::pawn(square.to_square_index(), Side::opposite(attacking_side));
 
         let is_king_attacker = (king_attacks & *king_bb) > 0;
         let is_knight_attacker = (knight_attacks & *knight_bb) > 0;
@@ -991,7 +853,7 @@ impl MoveGenerator {
 #[cfg(test)]
 mod tests {
 
-    use crate::{board::Board, move_generation, slider_pieces::SliderPiece};
+    use crate::{board::Board, definitions::NumberOf, move_generation, slider_pieces::SliderPiece};
 
     use super::*;
 
@@ -1054,312 +916,6 @@ mod tests {
                 &Square::from_square_index(square),
                 Side::Black
             ));
-        }
-    }
-
-    #[test]
-    fn check_king_attacks() {
-        let move_gen = MoveGenerator::new();
-        let king_attacks = move_gen.king_attacks;
-
-        // these were generated empirically by running this test and printing out the attack bitboards as numbers
-        let expected_king_attacks: [u64; NumberOf::SQUARES] = [
-            770,
-            1797,
-            3594,
-            7188,
-            14376,
-            28752,
-            57504,
-            49216,
-            197123,
-            460039,
-            920078,
-            1840156,
-            3680312,
-            7360624,
-            14721248,
-            12599488,
-            50463488,
-            117769984,
-            235539968,
-            471079936,
-            942159872,
-            1884319744,
-            3768639488,
-            3225468928,
-            12918652928,
-            30149115904,
-            60298231808,
-            120596463616,
-            241192927232,
-            482385854464,
-            964771708928,
-            825720045568,
-            3307175149568,
-            7718173671424,
-            15436347342848,
-            30872694685696,
-            61745389371392,
-            123490778742784,
-            246981557485568,
-            211384331665408,
-            846636838289408,
-            1975852459884544,
-            3951704919769088,
-            7903409839538176,
-            15806819679076352,
-            31613639358152704,
-            63227278716305408,
-            54114388906344448,
-            216739030602088448,
-            505818229730443264,
-            1011636459460886528,
-            2023272918921773056,
-            4046545837843546112,
-            8093091675687092224,
-            16186183351374184448,
-            13853283560024178688,
-            144959613005987840,
-            362258295026614272,
-            724516590053228544,
-            1449033180106457088,
-            2898066360212914176,
-            5796132720425828352,
-            11592265440851656704,
-            4665729213955833856,
-        ];
-
-        for square in 0..NumberOf::SQUARES {
-            let attacks_bb = king_attacks[square];
-            assert_eq!(attacks_bb.as_number(), expected_king_attacks[square]);
-        }
-    }
-
-    #[test]
-    fn check_knight_attacks() {
-        let move_gen = MoveGenerator::new();
-        let knight_attacks = move_gen.knight_attacks;
-        let expected_knight_attacks: [u64; NumberOf::SQUARES] = [
-            132096,
-            329728,
-            659712,
-            1319424,
-            2638848,
-            5277696,
-            10489856,
-            4202496,
-            33816580,
-            84410376,
-            168886289,
-            337772578,
-            675545156,
-            1351090312,
-            2685403152,
-            1075839008,
-            8657044482,
-            21609056261,
-            43234889994,
-            86469779988,
-            172939559976,
-            345879119952,
-            687463207072,
-            275414786112,
-            2216203387392,
-            5531918402816,
-            11068131838464,
-            22136263676928,
-            44272527353856,
-            88545054707712,
-            175990581010432,
-            70506185244672,
-            567348067172352,
-            1416171111120896,
-            2833441750646784,
-            5666883501293568,
-            11333767002587136,
-            22667534005174272,
-            45053588738670592,
-            18049583422636032,
-            145241105196122112,
-            362539804446949376,
-            725361088165576704,
-            1450722176331153408,
-            2901444352662306816,
-            5802888705324613632,
-            11533718717099671552,
-            4620693356194824192,
-            288234782788157440,
-            576469569871282176,
-            1224997833292120064,
-            2449995666584240128,
-            4899991333168480256,
-            9799982666336960512,
-            1152939783987658752,
-            2305878468463689728,
-            1128098930098176,
-            2257297371824128,
-            4796069720358912,
-            9592139440717824,
-            19184278881435648,
-            38368557762871296,
-            4679521487814656,
-            9077567998918656,
-        ];
-        for square in 0..NumberOf::SQUARES {
-            let attacks_bb = knight_attacks[square];
-            assert_eq!(attacks_bb.as_number(), expected_knight_attacks[square]);
-        }
-    }
-
-    #[test]
-    fn check_pawn_attacks() {
-        let move_gen = MoveGenerator::new();
-        let pawn_attacks = move_gen.pawn_attacks;
-        let expected_black_pawn_attacks: [u64; NumberOf::SQUARES] = [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            2,
-            5,
-            10,
-            20,
-            40,
-            80,
-            160,
-            64,
-            512,
-            1280,
-            2560,
-            5120,
-            10240,
-            20480,
-            40960,
-            16384,
-            131072,
-            327680,
-            655360,
-            1310720,
-            2621440,
-            5242880,
-            10485760,
-            4194304,
-            33554432,
-            83886080,
-            167772160,
-            335544320,
-            671088640,
-            1342177280,
-            2684354560,
-            1073741824,
-            8589934592,
-            21474836480,
-            42949672960,
-            85899345920,
-            171798691840,
-            343597383680,
-            687194767360,
-            274877906944,
-            2199023255552,
-            5497558138880,
-            10995116277760,
-            21990232555520,
-            43980465111040,
-            87960930222080,
-            175921860444160,
-            70368744177664,
-            562949953421312,
-            1407374883553280,
-            2814749767106560,
-            5629499534213120,
-            11258999068426240,
-            22517998136852480,
-            45035996273704960,
-            18014398509481984,
-        ];
-
-        let expected_white_pawn_attacks: [u64; NumberOf::SQUARES] = [
-            512,
-            1280,
-            2560,
-            5120,
-            10240,
-            20480,
-            40960,
-            16384,
-            131072,
-            327680,
-            655360,
-            1310720,
-            2621440,
-            5242880,
-            10485760,
-            4194304,
-            33554432,
-            83886080,
-            167772160,
-            335544320,
-            671088640,
-            1342177280,
-            2684354560,
-            1073741824,
-            8589934592,
-            21474836480,
-            42949672960,
-            85899345920,
-            171798691840,
-            343597383680,
-            687194767360,
-            274877906944,
-            2199023255552,
-            5497558138880,
-            10995116277760,
-            21990232555520,
-            43980465111040,
-            87960930222080,
-            175921860444160,
-            70368744177664,
-            562949953421312,
-            1407374883553280,
-            2814749767106560,
-            5629499534213120,
-            11258999068426240,
-            22517998136852480,
-            45035996273704960,
-            18014398509481984,
-            144115188075855872,
-            360287970189639680,
-            720575940379279360,
-            1441151880758558720,
-            2882303761517117440,
-            5764607523034234880,
-            11529215046068469760,
-            4611686018427387904,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-        ];
-        for square in 0..NumberOf::SQUARES {
-            let attacks_b_bb = pawn_attacks[Side::Black as usize][square];
-            let attacks_w_bb = pawn_attacks[Side::White as usize][square];
-            assert_eq!(
-                attacks_b_bb.as_number(),
-                expected_black_pawn_attacks[square]
-            );
-            assert_eq!(
-                attacks_w_bb.as_number(),
-                expected_white_pawn_attacks[square]
-            );
         }
     }
 
