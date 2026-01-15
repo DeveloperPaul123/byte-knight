@@ -9,11 +9,13 @@
 //! set is available and enabled.
 
 use crate::{
+    attacks,
     bitboard::Bitboard,
     bitboard_helpers,
     definitions::NumberOf,
     file::File,
     magics::{BISHOP_MAGICS, ROOK_MAGICS},
+    pieces::Piece,
     side::Side,
 };
 
@@ -274,70 +276,70 @@ pub fn pawn(square: u8, side: Side) -> Bitboard {
 }
 
 const KING_ATTACKS: [Bitboard; NumberOf::SQUARES] = [
-    Bitboard::new(0x302),
-    Bitboard::new(0x704),
-    Bitboard::new(0xe0a),
-    Bitboard::new(0x1c14),
-    Bitboard::new(0x3828),
-    Bitboard::new(0x7050),
-    Bitboard::new(0xe020),
-    Bitboard::new(0xc140),
-    Bitboard::new(0x30283),
-    Bitboard::new(0x70407),
-    Bitboard::new(0xe0a0e),
-    Bitboard::new(0x1c141c),
-    Bitboard::new(0x382838),
-    Bitboard::new(0x705070),
-    Bitboard::new(0xe020e0),
-    Bitboard::new(0xc140c0),
-    Bitboard::new(0x3028300),
-    Bitboard::new(0x7040700),
-    Bitboard::new(0xe0a0e00),
-    Bitboard::new(0x1c141c00),
-    Bitboard::new(0x38283800),
-    Bitboard::new(0x70507000),
-    Bitboard::new(0xe020e000),
-    Bitboard::new(0xc140c000),
-    Bitboard::new(0x302830000),
-    Bitboard::new(0x704070000),
-    Bitboard::new(0xe0a0e0000),
-    Bitboard::new(0x1c141c0000),
-    Bitboard::new(0x3828380000),
-    Bitboard::new(0x7050700000),
-    Bitboard::new(0xe020e00000),
-    Bitboard::new(0xc140c00000),
-    Bitboard::new(0x30283000000),
-    Bitboard::new(0x70407000000),
-    Bitboard::new(0xe0a0e000000),
-    Bitboard::new(0x1c141c000000),
-    Bitboard::new(0x382838000000),
-    Bitboard::new(0x705070000000),
-    Bitboard::new(0xe020e0000000),
-    Bitboard::new(0xc140c0000000),
-    Bitboard::new(0x3028300000000),
-    Bitboard::new(0x7040700000000),
-    Bitboard::new(0xe0a0e00000000),
-    Bitboard::new(0x1c141c00000000),
-    Bitboard::new(0x38283800000000),
-    Bitboard::new(0x70507000000000),
-    Bitboard::new(0xe020e000000000),
-    Bitboard::new(0xc140c000000000),
-    Bitboard::new(0x302830000000000),
-    Bitboard::new(0x704070000000000),
-    Bitboard::new(0xe0a0e0000000000),
-    Bitboard::new(0x1c141c0000000000),
-    Bitboard::new(0x3828380000000000),
-    Bitboard::new(0x7050700000000000),
-    Bitboard::new(0xe020e00000000000),
-    Bitboard::new(0xc140c00000000000),
-    Bitboard::new(0x283000000000000),
-    Bitboard::new(0x407000000000000),
-    Bitboard::new(0xa0e000000000000),
-    Bitboard::new(0x141c000000000000),
-    Bitboard::new(0x2838000000000000),
-    Bitboard::new(0x5070000000000000),
-    Bitboard::new(0x20e0000000000000),
-    Bitboard::new(0x40c0000000000000),
+    Bitboard::new(770),
+    Bitboard::new(1797),
+    Bitboard::new(3594),
+    Bitboard::new(7188),
+    Bitboard::new(14376),
+    Bitboard::new(28752),
+    Bitboard::new(57504),
+    Bitboard::new(49216),
+    Bitboard::new(197123),
+    Bitboard::new(460039),
+    Bitboard::new(920078),
+    Bitboard::new(1840156),
+    Bitboard::new(3680312),
+    Bitboard::new(7360624),
+    Bitboard::new(14721248),
+    Bitboard::new(12599488),
+    Bitboard::new(50463488),
+    Bitboard::new(117769984),
+    Bitboard::new(235539968),
+    Bitboard::new(471079936),
+    Bitboard::new(942159872),
+    Bitboard::new(1884319744),
+    Bitboard::new(3768639488),
+    Bitboard::new(3225468928),
+    Bitboard::new(12918652928),
+    Bitboard::new(30149115904),
+    Bitboard::new(60298231808),
+    Bitboard::new(120596463616),
+    Bitboard::new(241192927232),
+    Bitboard::new(482385854464),
+    Bitboard::new(964771708928),
+    Bitboard::new(825720045568),
+    Bitboard::new(3307175149568),
+    Bitboard::new(7718173671424),
+    Bitboard::new(15436347342848),
+    Bitboard::new(30872694685696),
+    Bitboard::new(61745389371392),
+    Bitboard::new(123490778742784),
+    Bitboard::new(246981557485568),
+    Bitboard::new(211384331665408),
+    Bitboard::new(846636838289408),
+    Bitboard::new(1975852459884544),
+    Bitboard::new(3951704919769088),
+    Bitboard::new(7903409839538176),
+    Bitboard::new(15806819679076352),
+    Bitboard::new(31613639358152704),
+    Bitboard::new(63227278716305408),
+    Bitboard::new(54114388906344448),
+    Bitboard::new(216739030602088448),
+    Bitboard::new(505818229730443264),
+    Bitboard::new(1011636459460886528),
+    Bitboard::new(2023272918921773056),
+    Bitboard::new(4046545837843546112),
+    Bitboard::new(8093091675687092224),
+    Bitboard::new(16186183351374184448),
+    Bitboard::new(13853283560024178688),
+    Bitboard::new(144959613005987840),
+    Bitboard::new(362258295026614272),
+    Bitboard::new(724516590053228544),
+    Bitboard::new(1449033180106457088),
+    Bitboard::new(2898066360212914176),
+    Bitboard::new(5796132720425828352),
+    Bitboard::new(11592265440851656704),
+    Bitboard::new(4665729213955833856),
 ];
 
 /// Get king attacks for a given square.
@@ -464,6 +466,27 @@ fn generate_knight(square: u8) -> Bitboard {
 pub fn knight(square: u8) -> Bitboard {
     assert!(square < NumberOf::SQUARES as u8);
     KNIGHT_ATTACKS[square as usize]
+}
+
+/// Get attack bitboard for the given piece, square occupancy and side to move.
+///
+/// # Arguments
+/// - `piece` - The [`Piece`] to get attacks for.
+/// - `square` - The square the given [`Piece`] currently occupies.
+/// - `occupancy` - The current occupancy of the board.
+/// - `side` - The current side to move.
+///
+/// # Returns
+/// - A [`Bitboard`] representing the possible attacks of piece on the given square with the given occupancy.
+pub fn for_piece(piece: Piece, square: u8, occupancy: Bitboard, side: Side) -> Bitboard {
+    match piece {
+        Piece::Bishop => attacks::bishop(square, occupancy),
+        Piece::King => attacks::king(square),
+        Piece::Knight => attacks::knight(square),
+        Piece::Pawn => attacks::pawn(square, side),
+        Piece::Queen => attacks::queen(square, occupancy),
+        Piece::Rook => attacks::rook(square, occupancy),
+    }
 }
 
 #[cfg(test)]
@@ -677,6 +700,74 @@ mod tests {
         0x20400000000000,
     ];
 
+    // these were generated empirically by running this test and printing out the attack bitboards as numbers
+    const EXPECTED_KING_ATTACKS: [u64; NumberOf::SQUARES] = [
+        770,
+        1797,
+        3594,
+        7188,
+        14376,
+        28752,
+        57504,
+        49216,
+        197123,
+        460039,
+        920078,
+        1840156,
+        3680312,
+        7360624,
+        14721248,
+        12599488,
+        50463488,
+        117769984,
+        235539968,
+        471079936,
+        942159872,
+        1884319744,
+        3768639488,
+        3225468928,
+        12918652928,
+        30149115904,
+        60298231808,
+        120596463616,
+        241192927232,
+        482385854464,
+        964771708928,
+        825720045568,
+        3307175149568,
+        7718173671424,
+        15436347342848,
+        30872694685696,
+        61745389371392,
+        123490778742784,
+        246981557485568,
+        211384331665408,
+        846636838289408,
+        1975852459884544,
+        3951704919769088,
+        7903409839538176,
+        15806819679076352,
+        31613639358152704,
+        63227278716305408,
+        54114388906344448,
+        216739030602088448,
+        505818229730443264,
+        1011636459460886528,
+        2023272918921773056,
+        4046545837843546112,
+        8093091675687092224,
+        16186183351374184448,
+        13853283560024178688,
+        144959613005987840,
+        362258295026614272,
+        724516590053228544,
+        1449033180106457088,
+        2898066360212914176,
+        5796132720425828352,
+        11592265440851656704,
+        4665729213955833856,
+    ];
+
     #[test]
     fn test_generate_bishop_attacks() {
         let generated = super::generate_bishop_attacks();
@@ -706,8 +797,15 @@ mod tests {
     fn test_king_attacks() {
         for sq in 0..NumberOf::SQUARES as u8 {
             let attacks = attacks::king(sq);
-            // println!("{}", attacks);
-            println!("Bitboard::new({:#x}),", attacks.as_number());
+            println!("{}", attacks);
+            // println!("Bitboard::new({}),", attacks);
+            assert_eq!(
+                attacks.as_number(),
+                EXPECTED_KING_ATTACKS[sq as usize],
+                "King attack\n{}\nDoes not match\n{}",
+                attacks,
+                Bitboard::new(EXPECTED_KING_ATTACKS[sq as usize])
+            )
         }
     }
 
@@ -807,6 +905,140 @@ mod tests {
 
     #[test]
     fn test_pawn_attacks() {
+        let expected_black_pawn_attacks: [u64; NumberOf::SQUARES] = [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            5,
+            10,
+            20,
+            40,
+            80,
+            160,
+            64,
+            512,
+            1280,
+            2560,
+            5120,
+            10240,
+            20480,
+            40960,
+            16384,
+            131072,
+            327680,
+            655360,
+            1310720,
+            2621440,
+            5242880,
+            10485760,
+            4194304,
+            33554432,
+            83886080,
+            167772160,
+            335544320,
+            671088640,
+            1342177280,
+            2684354560,
+            1073741824,
+            8589934592,
+            21474836480,
+            42949672960,
+            85899345920,
+            171798691840,
+            343597383680,
+            687194767360,
+            274877906944,
+            2199023255552,
+            5497558138880,
+            10995116277760,
+            21990232555520,
+            43980465111040,
+            87960930222080,
+            175921860444160,
+            70368744177664,
+            562949953421312,
+            1407374883553280,
+            2814749767106560,
+            5629499534213120,
+            11258999068426240,
+            22517998136852480,
+            45035996273704960,
+            18014398509481984,
+        ];
+
+        let expected_white_pawn_attacks: [u64; NumberOf::SQUARES] = [
+            512,
+            1280,
+            2560,
+            5120,
+            10240,
+            20480,
+            40960,
+            16384,
+            131072,
+            327680,
+            655360,
+            1310720,
+            2621440,
+            5242880,
+            10485760,
+            4194304,
+            33554432,
+            83886080,
+            167772160,
+            335544320,
+            671088640,
+            1342177280,
+            2684354560,
+            1073741824,
+            8589934592,
+            21474836480,
+            42949672960,
+            85899345920,
+            171798691840,
+            343597383680,
+            687194767360,
+            274877906944,
+            2199023255552,
+            5497558138880,
+            10995116277760,
+            21990232555520,
+            43980465111040,
+            87960930222080,
+            175921860444160,
+            70368744177664,
+            562949953421312,
+            1407374883553280,
+            2814749767106560,
+            5629499534213120,
+            11258999068426240,
+            22517998136852480,
+            45035996273704960,
+            18014398509481984,
+            144115188075855872,
+            360287970189639680,
+            720575940379279360,
+            1441151880758558720,
+            2882303761517117440,
+            5764607523034234880,
+            11529215046068469760,
+            4611686018427387904,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        ];
+
         for sq in 0..NumberOf::SQUARES as u8 {
             let white_attacks = attacks::pawn(sq, crate::side::Side::White);
             let black_attacks = attacks::pawn(sq, crate::side::Side::Black);
@@ -815,6 +1047,14 @@ mod tests {
                 sq, white_attacks, black_attacks
             );
             assert_ne!(white_attacks, black_attacks);
+            assert_eq!(
+                black_attacks.as_number(),
+                expected_black_pawn_attacks[sq as usize]
+            );
+            assert_eq!(
+                white_attacks.as_number(),
+                expected_white_pawn_attacks[sq as usize]
+            );
         }
     }
 }
