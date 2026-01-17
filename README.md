@@ -6,6 +6,8 @@
 
 You can challenge `byte-knight` yourself on [Lichess](https://lichess.org/@/byte-knight)!
 
+> **Note:** The GitHub account for this project was renamed from `DeveloperPaul123` to `ptsouchlos`. Repository ownership and history are unchanged.
+
 # Overview
 
 `byte-knight` is my first "real" Rust project. I'm a long time [C++ developer](https://github.com/ptsouchlos?tab=repositories&q=&type=source&language=c%2B%2B&sort=stargazers) and have been itching to learn Rust. I really enjoyed participating in the chess challenge a while back and thought that writing a new chess engine from scratch would be a good way to learn the language.
