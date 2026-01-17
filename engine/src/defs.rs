@@ -1,24 +1,15 @@
-/*
- * defs.rs
- * Part of the byte-knight project
- * Created Date: Friday, November 8th 2024
- * Author: Paul Tsouchlos (ptsouchlos) (developer.paul.123@gmail.com)
- * -----
- * Last Modified: Thu Nov 21 2024
- * -----
- * Copyright (c) 2024 Paul Tsouchlos (ptsouchlos)
- * GNU General Public License v3.0 or later
- * https://www.gnu.org/licenses/gpl-3.0-standalone.html
- *
- */
+// Part of the byte-knight project.
+// Author: Paul Tsouchlos (ptsouchlos) (developer.paul.123@gmail.com)
+// GNU General Public License v3.0 or later
+// https://www.gnu.org/licenses/gpl-3.0-standalone.html
 
 #[rustfmt::skip]
 const BANNER: &str = r#"
- _         _           _        _      _   _   
-| |__ _  _| |_ ___ ___| |___ _ (_)__ _| |_| |_ 
+ _         _           _        _      _   _
+| |__ _  _| |_ ___ ___| |___ _ (_)__ _| |_| |_
 | '_ \ || |  _/ -_)___| / / ' \| / _` | ' \  _|
 |_.__/\_, |\__\___|   |_\_\_||_|_\__, |_||_\__|
-      |__/                       |___/         
+      |__/                       |___/
 "#;
 
 pub struct About;
