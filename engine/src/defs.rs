@@ -2,11 +2,11 @@
  * defs.rs
  * Part of the byte-knight project
  * Created Date: Friday, November 8th 2024
- * Author: Paul Tsouchlos (DeveloperPaul123) (developer.paul.123@gmail.com)
+ * Author: Paul Tsouchlos (ptsouchlos) (developer.paul.123@gmail.com)
  * -----
  * Last Modified: Thu Nov 21 2024
  * -----
- * Copyright (c) 2024 Paul Tsouchlos (DeveloperPaul123)
+ * Copyright (c) 2024 Paul Tsouchlos (ptsouchlos)
  * GNU General Public License v3.0 or later
  * https://www.gnu.org/licenses/gpl-3.0-standalone.html
  *
@@ -27,7 +27,7 @@ impl About {
     pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
     pub const EMAIL: &'static str = "developer.paul.123@gmail.com";
     pub const SHORT_DESCRIPTION: &'static str = "byte-knight is a UCI compliant chess engine.";
-    pub const AUTHORS: &'static str = "Paul T. (DeveloperPaul123)";
+    pub const AUTHORS: &'static str = "Paul T. (ptsouchlos)";
     pub const BANNER: &'static str = BANNER;
 }
 
