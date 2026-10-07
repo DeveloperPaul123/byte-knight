@@ -16,7 +16,7 @@ use crate::{
     killers_table::KillerMovesTable,
     node::NodeStack,
     score::{Score, ScoreType},
-    search::limits::SearchLimits,
+    search::limits::{SearchLimits, SoftLimitInputs},
     ttable::TranspositionTable,
     tuneable::score_stability_threshold,
 };
@@ -166,11 +166,11 @@ impl ThreadData {
             return true;
         }
 
-        let best_move_stability = self.bestmove_stability_for_scaling();
-        let eval_stability = self.eval_stability_for_scaling();
-        if let Some(soft_time) = self
-            .limits
-            .scaled_soft_limit(best_move_stability, eval_stability)
+        let inputs = SoftLimitInputs {
+            best_move_stability: self.bestmove_stability_for_scaling(),
+            eval_stability: self.eval_stability_for_scaling(),
+        };
+        if let Some(soft_time) = self.limits.scaled_soft_limit(inputs)
             && self.start_time.elapsed() >= soft_time
         {
             return true;
