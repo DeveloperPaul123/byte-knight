@@ -12,8 +12,13 @@ use chess::{board::Board, moves::Move};
 use uci_parser::UciSearchOptions;
 
 use crate::{
-    history::Histories, killers_table::KillerMovesTable, node::NodeStack, score::ScoreType,
-    search::limits::SearchLimits, ttable::TranspositionTable,
+    history::Histories,
+    killers_table::KillerMovesTable,
+    node::NodeStack,
+    score::{Score, ScoreType},
+    search::limits::SearchLimits,
+    ttable::TranspositionTable,
+    tuneable::score_stability_threshold,
 };
 
 /// Number of nodes searched between wall-clock polls for the hard time limit.
@@ -25,6 +30,7 @@ pub struct ThreadData {
     pub(crate) histories: Histories,
     pub(crate) killers_table: KillerMovesTable,
     pub(crate) bestmove_stability: u64,
+    pub(crate) eval_stability: u64,
     pub(crate) prev_best_move: Option<Move>,
     pub(crate) start_time: Instant,
     pub(crate) limits: SearchLimits,
@@ -34,6 +40,7 @@ pub struct ThreadData {
     nodes_until_time_check: u64,
     stopped: bool,
     pub(crate) stack: NodeStack,
+    pub(crate) avg_root_score: Option<Score>,
 }
 
 pub enum LimitType {
@@ -48,6 +55,7 @@ impl Default for ThreadData {
             histories: Histories::default(),
             killers_table: KillerMovesTable::default(),
             bestmove_stability: 0,
+            eval_stability: 0,
             prev_best_move: None,
             start_time: Instant::now(),
             limits: SearchLimits::default(),
@@ -57,6 +65,7 @@ impl Default for ThreadData {
             nodes_until_time_check: 0,
             stopped: false,
             stack: NodeStack::default(),
+            avg_root_score: None,
         }
     }
 }
@@ -81,8 +90,10 @@ impl ThreadData {
         self.stopped = false;
         self.seldepth = 0;
         self.bestmove_stability = 0;
+        self.eval_stability = 0;
         self.prev_best_move = None;
         self.stack = NodeStack::default();
+        self.avg_root_score = None;
     }
 
     pub fn reset_start_time(&mut self) {
@@ -114,6 +125,26 @@ impl ThreadData {
         self.prev_best_move = new_best;
     }
 
+    /// Update score stability based on the new score from the current root search score.
+    pub fn update_eval_stability(&mut self, score: Score) {
+        let avg = match self.avg_root_score {
+            None => score,
+            Some(avg) => {
+                let new_avg = ((avg.0 as i32 + score.0 as i32) / 2) as ScoreType;
+                Score::new(new_avg)
+            }
+        };
+
+        // Update the average score with the new score.
+        self.avg_root_score = Some(avg);
+
+        if (score.0 as i32 - avg.0 as i32).abs() < score_stability_threshold() {
+            self.eval_stability += 1;
+        } else {
+            self.eval_stability = 0;
+        }
+    }
+
     /// Returns true if a hard limit already stopped the search. Unlike
     /// [`Self::should_stop`], this never polls the clock.
     pub fn is_stopped(&self) -> bool {
@@ -136,7 +167,10 @@ impl ThreadData {
         }
 
         let best_move_stability = self.bestmove_stability_for_scaling();
-        if let Some(soft_time) = self.limits.scaled_soft_limit(best_move_stability)
+        let eval_stability = self.eval_stability_for_scaling();
+        if let Some(soft_time) = self
+            .limits
+            .scaled_soft_limit(best_move_stability, eval_stability)
             && self.start_time.elapsed() >= soft_time
         {
             return true;
@@ -191,5 +225,9 @@ impl ThreadData {
         } else {
             None
         }
+    }
+
+    fn eval_stability_for_scaling(&self) -> Option<u64> {
+        self.avg_root_score.map(|_| self.eval_stability)
     }
 }
