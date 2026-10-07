@@ -10,6 +10,10 @@ const BEST_MOVE_TIME_BASE: f32 = 1.1;
 const BEST_MOVE_TIME_FACTOR: f32 = 0.05;
 const BEST_MOVE_TIME_MIN_SCALE: f32 = 0.5;
 
+const EVAL_STABILITY_BASE: f32 = 1.2664;
+const EVAL_STABILITY_FACTOR: f32 = 0.0416;
+const EVAL_STABILITY_MIN_SCALE: f32 = 0.8642;
+
 /// Input parameters for the search.
 #[derive(Clone, Debug, Copy)]
 pub struct SearchLimits {
@@ -65,7 +69,11 @@ impl SearchLimits {
         params
     }
 
-    pub(crate) fn scaled_soft_limit(&self, best_move_stability: Option<u64>) -> Option<Duration> {
+    pub(crate) fn scaled_soft_limit(
+        &self,
+        best_move_stability: Option<u64>,
+        eval_stability: Option<u64>,
+    ) -> Option<Duration> {
         // No time control set (depth/nodes-only search): don't scale.
         if self.soft_timeout.is_zero() || self.soft_timeout == Duration::MAX {
             return None;
@@ -76,7 +84,13 @@ impl SearchLimits {
             None => 1.0,
         };
 
-        let scaled = self.soft_timeout.as_secs_f32() * best_move_stability_scale;
+        let eval_stability_scale = match eval_stability {
+            Some(value) => Self::eval_stability_scale(value),
+            None => 1.0,
+        };
+
+        let scaled =
+            self.soft_timeout.as_secs_f32() * best_move_stability_scale * eval_stability_scale;
 
         Some(Duration::from_secs_f32(scaled))
     }
@@ -84,6 +98,11 @@ impl SearchLimits {
     fn best_move_stability_scale(best_move_stability: u64) -> f32 {
         (BEST_MOVE_TIME_BASE - BEST_MOVE_TIME_FACTOR * best_move_stability as f32)
             .max(BEST_MOVE_TIME_MIN_SCALE)
+    }
+
+    fn eval_stability_scale(eval_stability: u64) -> f32 {
+        (EVAL_STABILITY_BASE - EVAL_STABILITY_FACTOR * eval_stability as f32)
+            .max(EVAL_STABILITY_MIN_SCALE)
     }
 
     fn calculate_time_limits(time: Duration, inc: Duration) -> (Duration, Duration) {
@@ -165,7 +184,7 @@ mod tests {
     fn initial_scaled_soft_limits() {
         let limits = create_basic_fischer_limits(Duration::from_secs(10), Duration::from_secs(1));
         // Make sure our initial scaled soft limits make sense at the start of a search where we have no data.
-        let duration = limits.scaled_soft_limit(None);
+        let duration = limits.scaled_soft_limit(None, None);
         // Should be no scaling without any data.
         assert!(duration.is_some_and(|val| {
             (val.as_secs_f32() - limits.soft_timeout.as_secs_f32()).abs() < f32::EPSILON
@@ -176,9 +195,18 @@ mod tests {
     fn scaled_soft_limits_with_stability() {
         let limits = create_basic_fischer_limits(Duration::from_secs(10), Duration::from_secs(1));
         // Same scaling as stability_scale_middle test, so we expect a 15% reduction in time.
-        let duration = limits.scaled_soft_limit(Some(5));
+        let duration = limits.scaled_soft_limit(Some(5), None);
         assert!(duration.is_some_and(|val| {
             (val.as_secs_f32() - limits.soft_timeout.as_secs_f32() * 0.85).abs() < f32::EPSILON
+        }));
+    }
+
+    #[test]
+    fn scaled_soft_limits_with_eval_stability() {
+        let limits = create_basic_fischer_limits(Duration::from_secs(10), Duration::from_secs(1));
+        let duration = limits.scaled_soft_limit(None, Some(12));
+        assert!(duration.is_some_and(|val| {
+            (val.as_secs_f32() - limits.soft_timeout.as_secs_f32() * 0.8642).abs() < f32::EPSILON
         }));
     }
 
