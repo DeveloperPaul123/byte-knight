@@ -343,8 +343,10 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
                 );
             }
 
-            // update best-move stability for soft-limit scaling on the next iter
+            // Update best-move stability for soft-limit scaling on the next iter
             td.update_bestmove_stability(best_result.best_move);
+            // Update eval stability for soft-limit scaling on the next iter
+            td.update_eval_stability(score);
 
             // increment depth for next iteration
             td.depth += 1;
