@@ -231,3 +231,70 @@ impl ThreadData {
         self.avg_root_score.map(|_| self.eval_stability)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Feed `scores` through [`ThreadData::update_eval_stability`] and return
+    /// the counter after each update.
+    fn feed(td: &mut ThreadData, scores: &[ScoreType]) -> Vec<u64> {
+        scores
+            .iter()
+            .map(|&s| {
+                td.update_eval_stability(Score::new(s));
+                td.eval_stability
+            })
+            .collect()
+    }
+
+    #[test]
+    fn eval_stability_counts_up_on_stable_scores() {
+        let mut td = ThreadData::default();
+        assert_eq!(feed(&mut td, &[30, 32, 31, 30]), vec![1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn eval_stability_resets_on_jump() {
+        let mut td = ThreadData::default();
+        assert_eq!(feed(&mut td, &[30, 32, 120]), vec![1, 2, 0]);
+    }
+
+    #[test]
+    fn eval_stability_compares_after_average_update() {
+        // From avg 0: score 22 gives new avg 11, diff 11 < 12, so stable.
+        let mut td = ThreadData::default();
+        assert_eq!(feed(&mut td, &[0, 22]), vec![1, 2]);
+
+        // Score 23 gives new avg 11, diff 12, so it resets. Comparing against
+        // the old average would reset both cases.
+        let mut td = ThreadData::default();
+        assert_eq!(feed(&mut td, &[0, 23]), vec![1, 0]);
+    }
+
+    #[test]
+    fn eval_stability_handles_near_mate_scores() {
+        let mut td = ThreadData::default();
+        assert_eq!(feed(&mut td, &[31_000, -31_000]), vec![1, 0]);
+        assert_eq!(td.avg_root_score, Some(Score::new(0)));
+    }
+
+    #[test]
+    fn eval_stability_for_scaling_gates_on_average() {
+        let mut td = ThreadData::default();
+        assert_eq!(td.eval_stability_for_scaling(), None);
+
+        // A reset counter still scales (at the maximum), it doesn't switch off.
+        feed(&mut td, &[30, 120]);
+        assert_eq!(td.eval_stability_for_scaling(), Some(0));
+    }
+
+    #[test]
+    fn reset_clears_eval_stability() {
+        let mut td = ThreadData::default();
+        feed(&mut td, &[30, 32, 31]);
+        td.reset();
+        assert_eq!(td.eval_stability, 0);
+        assert_eq!(td.avg_root_score, None);
+    }
+}
