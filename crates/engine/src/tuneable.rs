@@ -56,6 +56,7 @@ tunable_params!(
     cont_hist_2_bonus_offset = 250, 0, 500, 1,        true;
     cont_hist_2_malus_scale  = 300, 50, 600, 1,       true;
     cont_hist_2_malus_offset = 250, 0, 500, 1,        true;
+    score_stability_threshold = 12, 4, 48, 1,         true;
 );
 
 pub(crate) const LMR_OFFSET: f64 = 0.2;
