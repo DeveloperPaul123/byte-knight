@@ -270,6 +270,40 @@ mod tests {
     }
 
     #[test]
+    fn node_stability_scale_values() {
+        // (1.45 - f) * 1.35
+        assert!((SearchLimits::node_stability_scale(0.0) - 1.9575).abs() < 1e-5);
+        assert!((SearchLimits::node_stability_scale(0.5) - 1.2825).abs() < 1e-5);
+        assert!((SearchLimits::node_stability_scale(1.0) - 0.6075).abs() < 1e-5);
+    }
+
+    #[test]
+    fn scaled_soft_limits_with_all_inputs() {
+        let limits = create_basic_fischer_limits(Duration::from_secs(10), Duration::from_secs(1));
+        let duration = limits.scaled_soft_limit(SoftLimitInputs {
+            best_move_stability: Some(5),
+            eval_stability: Some(5),
+            best_move_node_fraction: Some(0.8),
+        });
+        let expected = limits.soft_timeout.as_secs_f32()
+            * SearchLimits::best_move_stability_scale(5)
+            * SearchLimits::eval_stability_scale(5)
+            * SearchLimits::node_stability_scale(0.8);
+        assert!(duration.is_some_and(|val| (val.as_secs_f32() - expected).abs() < 1e-4));
+    }
+
+    #[test]
+    fn scaled_soft_limits_with_node_fraction_only() {
+        let limits = create_basic_fischer_limits(Duration::from_secs(10), Duration::from_secs(1));
+        let duration = limits.scaled_soft_limit(SoftLimitInputs {
+            best_move_node_fraction: Some(0.5),
+            ..Default::default()
+        });
+        let expected = limits.soft_timeout.as_secs_f32() * 1.2825;
+        assert!(duration.is_some_and(|val| (val.as_secs_f32() - expected).abs() < 1e-4));
+    }
+
+    #[test]
     fn new_with_time_no_increment_gives_finite_limits() {
         use chess::board::Board;
         use uci_parser::UciSearchOptions;

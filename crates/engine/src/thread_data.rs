@@ -251,6 +251,8 @@ impl ThreadData {
 
 #[cfg(test)]
 mod tests {
+    use chess::moves::MoveFlag;
+
     use super::*;
 
     /// Feed `scores` through [`ThreadData::update_eval_stability`] and return
@@ -304,6 +306,67 @@ mod tests {
         // A reset counter still scales (at the maximum), it doesn't switch off.
         feed(&mut td, &[30, 120]);
         assert_eq!(td.eval_stability_for_scaling(), Some(0));
+    }
+
+    /// A [`ThreadData`] that has just completed `completed_depth` with `best`
+    /// as its best move, with `best_nodes` of `total_nodes` spent on it.
+    fn td_after_iteration(
+        best: Move,
+        completed_depth: i32,
+        best_nodes: u64,
+        total_nodes: u64,
+    ) -> ThreadData {
+        let mut td = ThreadData {
+            prev_best_move: Some(best),
+            depth: completed_depth + 1,
+            nodes: total_nodes,
+            ..Default::default()
+        };
+        td.root_move_nodes[best.from().index()][best.to().index()] = best_nodes;
+        td
+    }
+
+    #[test]
+    fn node_tm_for_scaling_returns_fraction() {
+        let best = Move::new(Square::E2, Square::E4, MoveFlag::DoublePush);
+        let td = td_after_iteration(best, NODE_TM_MIN_DEPTH, 750, 1000);
+        assert_eq!(td.node_tm_for_scaling(), Some(0.75));
+    }
+
+    #[test]
+    fn node_tm_for_scaling_gates_on_depth() {
+        let best = Move::new(Square::E2, Square::E4, MoveFlag::DoublePush);
+        let td = td_after_iteration(best, NODE_TM_MIN_DEPTH - 1, 750, 1000);
+        assert_eq!(td.node_tm_for_scaling(), None);
+    }
+
+    #[test]
+    fn node_tm_for_scaling_gates_on_best_move() {
+        let td = ThreadData {
+            depth: NODE_TM_MIN_DEPTH + 1,
+            nodes: 1000,
+            ..Default::default()
+        };
+        assert_eq!(td.node_tm_for_scaling(), None);
+    }
+
+    #[test]
+    fn node_tm_for_scaling_gates_on_zero_nodes() {
+        let best = Move::new(Square::E2, Square::E4, MoveFlag::DoublePush);
+        // Best move never searched at the root.
+        let td = td_after_iteration(best, NODE_TM_MIN_DEPTH, 0, 1000);
+        assert_eq!(td.node_tm_for_scaling(), None);
+        // No nodes searched at all.
+        let td = td_after_iteration(best, NODE_TM_MIN_DEPTH, 0, 0);
+        assert_eq!(td.node_tm_for_scaling(), None);
+    }
+
+    #[test]
+    fn reset_clears_root_move_nodes() {
+        let best = Move::new(Square::E2, Square::E4, MoveFlag::DoublePush);
+        let mut td = td_after_iteration(best, NODE_TM_MIN_DEPTH, 750, 1000);
+        td.reset();
+        assert!(td.root_move_nodes.iter().flatten().all(|&n| n == 0));
     }
 
     #[test]

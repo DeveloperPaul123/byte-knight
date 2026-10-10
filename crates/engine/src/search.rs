@@ -1245,6 +1245,28 @@ mod tests {
     }
 
     #[test]
+    fn root_move_nodes_track_search() {
+        let mut board = Board::default_board();
+        let config = SearchLimits {
+            max_depth: 6,
+            ..Default::default()
+        };
+
+        let mut td = ThreadData::from_limits(config);
+        let mut sink = io::sink();
+        let mut search = Search::<LogDebug>::new(&mut sink);
+        let res = search.search(&mut board, &mut td, None);
+
+        // Every node except the root itself falls under some root move.
+        let root_total: u64 = td.root_move_nodes.iter().flatten().sum();
+        assert!(root_total > 0);
+        assert!(root_total < td.nodes);
+
+        let best = res.best_move.unwrap();
+        assert!(td.root_move_nodes[best.from().index()][best.to().index()] > 0);
+    }
+
+    #[test]
     fn black_mated_in_1() {
         let fen = "1k6/8/KQ6/2Q5/8/8/8/8 b - - 0 1";
         let mut board = Board::from_fen(fen).unwrap();
