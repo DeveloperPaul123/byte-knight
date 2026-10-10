@@ -597,6 +597,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // so we have to clear it
             local_pv.clear();
 
+            let nodes_before = td.nodes;
+
             // make the move
             board.make_move_unchecked(&mv).unwrap();
             td.transposition_table.prefetch(board.zobrist_hash());
@@ -701,6 +703,10 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // undo the move
             board.unmake_move().unwrap();
             moves_seen += 1;
+
+            if Node::ROOT {
+                td.root_move_nodes[mv.from().index()][mv.to().index()] += td.nodes - nodes_before;
+            }
 
             // If the search aborted while this move was being searched, its score
             // is truncated so we return without letting it touch other tables like
