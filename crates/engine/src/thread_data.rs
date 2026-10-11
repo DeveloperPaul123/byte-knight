@@ -8,7 +8,7 @@
 
 use std::time::{Duration, Instant};
 
-use chess::{board::Board, moves::Move};
+use chess::{board::Board, moves::Move, square::Square};
 use uci_parser::UciSearchOptions;
 
 use crate::{
@@ -16,9 +16,10 @@ use crate::{
     killers_table::KillerMovesTable,
     node::NodeStack,
     score::{Score, ScoreType},
-    search::limits::{SearchLimits, SoftLimitInputs},
+    search::limits::{NODE_TM_MIN_DEPTH, SearchLimits, SoftLimitInputs},
     ttable::TranspositionTable,
     tuneable::score_stability_threshold,
+    utils::boxed_and_zeroed,
 };
 
 /// Number of nodes searched between wall-clock polls for the hard time limit.
@@ -41,6 +42,7 @@ pub struct ThreadData {
     stopped: bool,
     pub(crate) stack: NodeStack,
     pub(crate) avg_root_score: Option<Score>,
+    pub(crate) root_move_nodes: Box<[[u64; Square::COUNT]; Square::COUNT]>,
 }
 
 pub enum LimitType {
@@ -66,6 +68,7 @@ impl Default for ThreadData {
             stopped: false,
             stack: NodeStack::default(),
             avg_root_score: None,
+            root_move_nodes: unsafe { boxed_and_zeroed() },
         }
     }
 }
@@ -94,6 +97,7 @@ impl ThreadData {
         self.prev_best_move = None;
         self.stack = NodeStack::default();
         self.avg_root_score = None;
+        self.root_move_nodes = unsafe { boxed_and_zeroed() };
     }
 
     pub fn reset_start_time(&mut self) {
@@ -169,6 +173,7 @@ impl ThreadData {
         let inputs = SoftLimitInputs {
             best_move_stability: self.bestmove_stability_for_scaling(),
             eval_stability: self.eval_stability_for_scaling(),
+            best_move_node_fraction: self.node_tm_for_scaling(),
         };
         if let Some(soft_time) = self.limits.scaled_soft_limit(inputs)
             && self.start_time.elapsed() >= soft_time
@@ -230,10 +235,24 @@ impl ThreadData {
     fn eval_stability_for_scaling(&self) -> Option<u64> {
         self.avg_root_score.map(|_| self.eval_stability)
     }
+
+    fn node_tm_for_scaling(&self) -> Option<f32> {
+        if let Some(best) = self.prev_best_move
+            && (self.depth - 1) >= NODE_TM_MIN_DEPTH
+            && self.nodes > 0
+        {
+            let best_nodes = self.root_move_nodes[best.from().index()][best.to().index()];
+            (best_nodes > 0).then(|| best_nodes as f32 / self.nodes as f32)
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use chess::moves::MoveFlag;
+
     use super::*;
 
     /// Feed `scores` through [`ThreadData::update_eval_stability`] and return
@@ -287,6 +306,67 @@ mod tests {
         // A reset counter still scales (at the maximum), it doesn't switch off.
         feed(&mut td, &[30, 120]);
         assert_eq!(td.eval_stability_for_scaling(), Some(0));
+    }
+
+    /// A [`ThreadData`] that has just completed `completed_depth` with `best`
+    /// as its best move, with `best_nodes` of `total_nodes` spent on it.
+    fn td_after_iteration(
+        best: Move,
+        completed_depth: i32,
+        best_nodes: u64,
+        total_nodes: u64,
+    ) -> ThreadData {
+        let mut td = ThreadData {
+            prev_best_move: Some(best),
+            depth: completed_depth + 1,
+            nodes: total_nodes,
+            ..Default::default()
+        };
+        td.root_move_nodes[best.from().index()][best.to().index()] = best_nodes;
+        td
+    }
+
+    #[test]
+    fn node_tm_for_scaling_returns_fraction() {
+        let best = Move::new(Square::E2, Square::E4, MoveFlag::DoublePush);
+        let td = td_after_iteration(best, NODE_TM_MIN_DEPTH, 750, 1000);
+        assert_eq!(td.node_tm_for_scaling(), Some(0.75));
+    }
+
+    #[test]
+    fn node_tm_for_scaling_gates_on_depth() {
+        let best = Move::new(Square::E2, Square::E4, MoveFlag::DoublePush);
+        let td = td_after_iteration(best, NODE_TM_MIN_DEPTH - 1, 750, 1000);
+        assert_eq!(td.node_tm_for_scaling(), None);
+    }
+
+    #[test]
+    fn node_tm_for_scaling_gates_on_best_move() {
+        let td = ThreadData {
+            depth: NODE_TM_MIN_DEPTH + 1,
+            nodes: 1000,
+            ..Default::default()
+        };
+        assert_eq!(td.node_tm_for_scaling(), None);
+    }
+
+    #[test]
+    fn node_tm_for_scaling_gates_on_zero_nodes() {
+        let best = Move::new(Square::E2, Square::E4, MoveFlag::DoublePush);
+        // Best move never searched at the root.
+        let td = td_after_iteration(best, NODE_TM_MIN_DEPTH, 0, 1000);
+        assert_eq!(td.node_tm_for_scaling(), None);
+        // No nodes searched at all.
+        let td = td_after_iteration(best, NODE_TM_MIN_DEPTH, 0, 0);
+        assert_eq!(td.node_tm_for_scaling(), None);
+    }
+
+    #[test]
+    fn reset_clears_root_move_nodes() {
+        let best = Move::new(Square::E2, Square::E4, MoveFlag::DoublePush);
+        let mut td = td_after_iteration(best, NODE_TM_MIN_DEPTH, 750, 1000);
+        td.reset();
+        assert!(td.root_move_nodes.iter().flatten().all(|&n| n == 0));
     }
 
     #[test]

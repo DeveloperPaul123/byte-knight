@@ -14,12 +14,17 @@ const EVAL_STABILITY_BASE: f32 = 1.2664;
 const EVAL_STABILITY_FACTOR: f32 = 0.0416;
 const EVAL_STABILITY_MIN_SCALE: f32 = 0.8642;
 
+const NODE_TM_BASE: f32 = 1.45;
+const NODE_TM_SCALE: f32 = 1.35;
+pub(crate) const NODE_TM_MIN_DEPTH: i32 = 4;
+
 /// Per-iteration signals that scale the soft time limit. A `None` field leaves
 /// the limit unscaled by that signal.
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct SoftLimitInputs {
     pub best_move_stability: Option<u64>,
     pub eval_stability: Option<u64>,
+    pub best_move_node_fraction: Option<f32>,
 }
 
 /// Input parameters for the search.
@@ -93,8 +98,15 @@ impl SearchLimits {
             None => 1.0,
         };
 
-        let scaled =
-            self.soft_timeout.as_secs_f32() * best_move_stability_scale * eval_stability_scale;
+        let node_tm_stability_scale = match inputs.best_move_node_fraction {
+            Some(value) => Self::node_stability_scale(value),
+            None => 1.0,
+        };
+
+        let scaled = self.soft_timeout.as_secs_f32()
+            * best_move_stability_scale
+            * eval_stability_scale
+            * node_tm_stability_scale;
 
         Some(Duration::from_secs_f32(scaled))
     }
@@ -107,6 +119,10 @@ impl SearchLimits {
     fn eval_stability_scale(eval_stability: u64) -> f32 {
         (EVAL_STABILITY_BASE - EVAL_STABILITY_FACTOR * eval_stability as f32)
             .max(EVAL_STABILITY_MIN_SCALE)
+    }
+
+    fn node_stability_scale(best_move_fraction: f32) -> f32 {
+        (NODE_TM_BASE - best_move_fraction) * NODE_TM_SCALE
     }
 
     fn calculate_time_limits(time: Duration, inc: Duration) -> (Duration, Duration) {
@@ -245,10 +261,45 @@ mod tests {
         let duration = limits.scaled_soft_limit(SoftLimitInputs {
             best_move_stability: Some(5),
             eval_stability: Some(5),
+            ..Default::default()
         });
         let expected = limits.soft_timeout.as_secs_f32()
             * SearchLimits::best_move_stability_scale(5)
             * SearchLimits::eval_stability_scale(5);
+        assert!(duration.is_some_and(|val| (val.as_secs_f32() - expected).abs() < 1e-4));
+    }
+
+    #[test]
+    fn node_stability_scale_values() {
+        // (1.45 - f) * 1.35
+        assert!((SearchLimits::node_stability_scale(0.0) - 1.9575).abs() < 1e-5);
+        assert!((SearchLimits::node_stability_scale(0.5) - 1.2825).abs() < 1e-5);
+        assert!((SearchLimits::node_stability_scale(1.0) - 0.6075).abs() < 1e-5);
+    }
+
+    #[test]
+    fn scaled_soft_limits_with_all_inputs() {
+        let limits = create_basic_fischer_limits(Duration::from_secs(10), Duration::from_secs(1));
+        let duration = limits.scaled_soft_limit(SoftLimitInputs {
+            best_move_stability: Some(5),
+            eval_stability: Some(5),
+            best_move_node_fraction: Some(0.8),
+        });
+        let expected = limits.soft_timeout.as_secs_f32()
+            * SearchLimits::best_move_stability_scale(5)
+            * SearchLimits::eval_stability_scale(5)
+            * SearchLimits::node_stability_scale(0.8);
+        assert!(duration.is_some_and(|val| (val.as_secs_f32() - expected).abs() < 1e-4));
+    }
+
+    #[test]
+    fn scaled_soft_limits_with_node_fraction_only() {
+        let limits = create_basic_fischer_limits(Duration::from_secs(10), Duration::from_secs(1));
+        let duration = limits.scaled_soft_limit(SoftLimitInputs {
+            best_move_node_fraction: Some(0.5),
+            ..Default::default()
+        });
+        let expected = limits.soft_timeout.as_secs_f32() * 1.2825;
         assert!(duration.is_some_and(|val| (val.as_secs_f32() - expected).abs() < 1e-4));
     }
 

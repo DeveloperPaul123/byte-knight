@@ -597,6 +597,8 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // so we have to clear it
             local_pv.clear();
 
+            let nodes_before = td.nodes;
+
             // make the move
             board.make_move_unchecked(&mv).unwrap();
             td.transposition_table.prefetch(board.zobrist_hash());
@@ -701,6 +703,10 @@ impl<'a, Log: LogLevel> Search<'a, Log> {
             // undo the move
             board.unmake_move().unwrap();
             moves_seen += 1;
+
+            if Node::ROOT {
+                td.root_move_nodes[mv.from().index()][mv.to().index()] += td.nodes - nodes_before;
+            }
 
             // If the search aborted while this move was being searched, its score
             // is truncated so we return without letting it touch other tables like
@@ -1236,6 +1242,28 @@ mod tests {
             res.best_move.unwrap().to_long_algebraic(),
             "b6a7".to_string()
         );
+    }
+
+    #[test]
+    fn root_move_nodes_track_search() {
+        let mut board = Board::default_board();
+        let config = SearchLimits {
+            max_depth: 6,
+            ..Default::default()
+        };
+
+        let mut td = ThreadData::from_limits(config);
+        let mut sink = io::sink();
+        let mut search = Search::<LogDebug>::new(&mut sink);
+        let res = search.search(&mut board, &mut td, None);
+
+        // Every node except the root itself falls under some root move.
+        let root_total: u64 = td.root_move_nodes.iter().flatten().sum();
+        assert!(root_total > 0);
+        assert!(root_total < td.nodes);
+
+        let best = res.best_move.unwrap();
+        assert!(td.root_move_nodes[best.from().index()][best.to().index()] > 0);
     }
 
     #[test]
