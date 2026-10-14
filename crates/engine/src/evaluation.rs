@@ -539,6 +539,7 @@ mod tests {
     };
 
     use crate::{
+        bench_positions::BENCH_FENS,
         evaluation::ByteKnightEvaluation,
         score::{LargeScoreType, ScoreType},
         traits::Eval,
@@ -908,5 +909,19 @@ mod tests {
             triple_score < single_score,
             "Three storming pawns should be worse than one"
         );
+    }
+
+    #[test]
+    fn fresh_eval_and_eval_cache_match() {
+        let positions = BENCH_FENS;
+        let eval = ByteKnightEvaluation::default();
+
+        for pos in positions {
+            let board = Board::from_fen(pos).unwrap();
+            let score = eval.eval(&board);
+            let eval_local = ByteKnightEvaluation::default();
+            let local_score = eval_local.eval(&board);
+            assert_eq!(score, local_score);
+        }
     }
 }
