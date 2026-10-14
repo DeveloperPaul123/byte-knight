@@ -303,7 +303,7 @@ impl MovePicker {
                 .get_or_insert_with(|| move_generation::metadata::compute(board));
             let tt_legal = self.tt_move.is_some_and(|tt_mv| {
                 chess::legal::is_pseudo_legal(board, &tt_mv)
-                    && chess::legal::is_legal_with_metadata(board, &tt_mv, &meta)
+                    && chess::legal::is_legal_with_metadata(board, &tt_mv, meta)
             });
 
             if let Some(tt_mv) = self.tt_move.filter(|_| tt_legal) {
