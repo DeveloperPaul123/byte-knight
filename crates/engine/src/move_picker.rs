@@ -298,12 +298,13 @@ impl MovePicker {
         if self.stage == Stage::TtMove {
             self.stage = Stage::GenerateTacticals;
             // Compute metadata now so it can be reused by GenerateTacticals/GenerateQuiets.
-            let meta = move_generation::metadata::compute(board);
+            let meta = self
+                .metadata
+                .get_or_insert_with(|| move_generation::metadata::compute(board));
             let tt_legal = self.tt_move.is_some_and(|tt_mv| {
                 chess::legal::is_pseudo_legal(board, &tt_mv)
                     && chess::legal::is_legal_with_metadata(board, &tt_mv, &meta)
             });
-            self.metadata = Some(meta);
 
             if let Some(tt_mv) = self.tt_move.filter(|_| tt_legal) {
                 self.tt_move_yielded = true;
