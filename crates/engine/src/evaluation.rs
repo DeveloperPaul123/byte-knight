@@ -333,20 +333,19 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
     ///
     /// - `board`: The [`Board`] to evaluate.
     fn eval(&self, board: &Board) -> Score {
-        let side_to_move = board.side_to_move();
+        let us = board.side_to_move();
+        let them = us.opposite();
+
         let mut mg: [i32; 2] = [0; 2];
         let mut eg: [i32; 2] = [0; 2];
         let mut game_phase = 0_i32;
-        let stm_idx = side_to_move as usize;
-        let opposite = side_to_move.opposite();
-        let opp_idx = opposite as usize;
 
         let pawn_scores = self.evaluate_pawn_structure(board);
-        mg[stm_idx] += pawn_scores[stm_idx].mg() as i32;
-        mg[opp_idx] += pawn_scores[opp_idx].mg() as i32;
+        mg[us] += pawn_scores[us].mg() as i32;
+        mg[them] += pawn_scores[them].mg() as i32;
 
-        eg[stm_idx] += pawn_scores[stm_idx].eg() as i32;
-        eg[opp_idx] += pawn_scores[opp_idx].eg() as i32;
+        eg[us] += pawn_scores[us].eg() as i32;
+        eg[them] += pawn_scores[them].eg() as i32;
 
         let occupancy = board.all_pieces();
 
@@ -384,23 +383,23 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
 
         // Evaluate bishop pair bonus
         if board
-            .piece_bitboard(Piece::Bishop, side_to_move)
+            .piece_bitboard(Piece::Bishop, us)
             .number_of_occupied_squares()
             >= 2
         {
-            let bonus = self.values.bishop_pair_bonus_value(side_to_move);
-            mg[stm_idx] += bonus.mg() as i32;
-            eg[stm_idx] += bonus.eg() as i32;
+            let bonus = self.values.bishop_pair_bonus_value(us);
+            mg[us] += bonus.mg() as i32;
+            eg[us] += bonus.eg() as i32;
         }
 
         if board
-            .piece_bitboard(Piece::Bishop, opposite)
+            .piece_bitboard(Piece::Bishop, them)
             .number_of_occupied_squares()
             >= 2
         {
-            let bonus = self.values.bishop_pair_bonus_value(opposite);
-            mg[opp_idx] += bonus.mg() as i32;
-            eg[opp_idx] += bonus.eg() as i32;
+            let bonus = self.values.bishop_pair_bonus_value(them);
+            mg[them] += bonus.mg() as i32;
+            eg[them] += bonus.eg() as i32;
         }
 
         // Score both sides for king safety
@@ -431,45 +430,41 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
 
         let our_threats_val = self.evaluate_threats(
             board,
-            side_to_move,
-            pawn_attacks[stm_idx],
-            knight_attacks[stm_idx],
-            bishop_attacks[stm_idx],
+            us,
+            pawn_attacks[us],
+            knight_attacks[us],
+            bishop_attacks[us],
         );
         let their_threats_val = self.evaluate_threats(
             board,
-            opposite,
-            pawn_attacks[opp_idx],
-            knight_attacks[opp_idx],
-            bishop_attacks[opp_idx],
+            them,
+            pawn_attacks[them],
+            knight_attacks[them],
+            bishop_attacks[them],
         );
 
-        mg[stm_idx] += our_threats_val.mg() as i32;
-        eg[stm_idx] += our_threats_val.eg() as i32;
+        mg[us] += our_threats_val.mg() as i32;
+        eg[us] += our_threats_val.eg() as i32;
 
-        mg[opp_idx] += their_threats_val.mg() as i32;
-        eg[opp_idx] += their_threats_val.eg() as i32;
+        mg[them] += their_threats_val.mg() as i32;
+        eg[them] += their_threats_val.eg() as i32;
 
         // Evaluate mobility
-        let our_mobility_val = self.evaluate_mobility(
-            board,
-            side_to_move,
-            &attacks_by_square,
-            pawn_attacks[opp_idx],
-        );
+        let our_mobility_val =
+            self.evaluate_mobility(board, us, &attacks_by_square, pawn_attacks[them]);
         let their_mobility_val =
-            self.evaluate_mobility(board, opposite, &attacks_by_square, pawn_attacks[stm_idx]);
+            self.evaluate_mobility(board, them, &attacks_by_square, pawn_attacks[us]);
 
-        mg[stm_idx] += our_mobility_val.mg() as i32;
-        eg[stm_idx] += our_mobility_val.eg() as i32;
+        mg[us] += our_mobility_val.mg() as i32;
+        eg[us] += our_mobility_val.eg() as i32;
 
-        mg[opp_idx] += their_mobility_val.mg() as i32;
-        eg[opp_idx] += their_mobility_val.eg() as i32;
+        mg[them] += their_mobility_val.mg() as i32;
+        eg[them] += their_mobility_val.eg() as i32;
 
         // Tempo bonus for side to move
-        let tempo_bonus = self.values().tempo_bonus(side_to_move);
-        mg[stm_idx] += tempo_bonus.mg() as i32;
-        eg[stm_idx] += tempo_bonus.eg() as i32;
+        let tempo_bonus = self.values().tempo_bonus(us);
+        mg[us] += tempo_bonus.mg() as i32;
+        eg[us] += tempo_bonus.eg() as i32;
 
         // King pawn shield & storm
         for side in Side::iter() {
@@ -478,45 +473,44 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
             eg[side as usize] += shield_storm.eg() as i32;
         }
 
-        let our_rook_bonus = self.evaluate_rook_files(board, side_to_move);
-        let their_rook_bonus = self.evaluate_rook_files(board, side_to_move.opposite());
+        let our_rook_bonus = self.evaluate_rook_files(board, us);
+        let their_rook_bonus = self.evaluate_rook_files(board, us.opposite());
 
-        mg[stm_idx] += our_rook_bonus.mg() as i32;
-        eg[stm_idx] += our_rook_bonus.eg() as i32;
+        mg[us] += our_rook_bonus.mg() as i32;
+        eg[us] += our_rook_bonus.eg() as i32;
 
-        mg[opp_idx] += their_rook_bonus.mg() as i32;
-        eg[opp_idx] += their_rook_bonus.eg() as i32;
+        mg[them] += their_rook_bonus.mg() as i32;
+        eg[them] += their_rook_bonus.eg() as i32;
 
         // Knight outposts
-        let our_knight_outpost_bonus = self.evaluate_knight_outposts(board, side_to_move);
-        let their_knight_outpost_bonus =
-            self.evaluate_knight_outposts(board, side_to_move.opposite());
+        let our_knight_outpost_bonus = self.evaluate_knight_outposts(board, us);
+        let their_knight_outpost_bonus = self.evaluate_knight_outposts(board, us.opposite());
 
-        mg[stm_idx] += our_knight_outpost_bonus.mg() as i32;
-        eg[stm_idx] += our_knight_outpost_bonus.eg() as i32;
+        mg[us] += our_knight_outpost_bonus.mg() as i32;
+        eg[us] += our_knight_outpost_bonus.eg() as i32;
 
-        mg[opp_idx] += their_knight_outpost_bonus.mg() as i32;
-        eg[opp_idx] += their_knight_outpost_bonus.eg() as i32;
+        mg[them] += their_knight_outpost_bonus.mg() as i32;
+        eg[them] += their_knight_outpost_bonus.eg() as i32;
 
-        let our_pawn_attacks = pawn_attacks[side_to_move];
-        let their_pawn_attacks = pawn_attacks[opposite];
+        let our_pawn_attacks = pawn_attacks[us];
+        let their_pawn_attacks = pawn_attacks[them];
         // This is computed here instead of pawn structure eval because it depends
         // on the structure of other pieces on the board, so we can't cache this score.
         let our_defended =
-            (our_pawn_attacks & board.pieces(side_to_move)).number_of_occupied_squares() as i16;
+            (our_pawn_attacks & board.pieces(us)).number_of_occupied_squares() as i16;
         let black_defended =
-            (their_pawn_attacks & board.pieces(opposite)).number_of_occupied_squares() as i16;
-        let our_pawn_defense_bonus = self.values().pawn_defense_bonus(our_defended, side_to_move);
-        let their_pawn_defense_bonus = self.values().pawn_defense_bonus(black_defended, opposite);
+            (their_pawn_attacks & board.pieces(them)).number_of_occupied_squares() as i16;
+        let our_pawn_defense_bonus = self.values().pawn_defense_bonus(our_defended, us);
+        let their_pawn_defense_bonus = self.values().pawn_defense_bonus(black_defended, them);
 
-        mg[stm_idx] += our_pawn_defense_bonus.mg() as i32;
-        eg[stm_idx] += our_pawn_defense_bonus.eg() as i32;
+        mg[us] += our_pawn_defense_bonus.mg() as i32;
+        eg[us] += our_pawn_defense_bonus.eg() as i32;
 
-        mg[opp_idx] += their_pawn_defense_bonus.mg() as i32;
-        eg[opp_idx] += their_pawn_defense_bonus.eg() as i32;
+        mg[them] += their_pawn_defense_bonus.mg() as i32;
+        eg[them] += their_pawn_defense_bonus.eg() as i32;
 
-        let mg_score = mg[stm_idx] - mg[opp_idx];
-        let eg_score = eg[stm_idx] - eg[opp_idx];
+        let mg_score = mg[us] - mg[them];
+        let eg_score = eg[us] - eg[them];
         let score = PhasedScore::new(mg_score as ScoreType, eg_score as ScoreType);
 
         // Taper the score based on the game phase
