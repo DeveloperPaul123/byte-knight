@@ -244,11 +244,7 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Evaluation<Values> {
         PhasedScore: AddAssign<Values::ReturnScore>,
     {
         let white_pawns = board.piece_bitboard(Piece::Pawn, Side::White);
-        let white_pawn_attacks =
-            bitboard_helpers::north_east(white_pawns) | bitboard_helpers::north_west(white_pawns);
         let black_pawns = board.piece_bitboard(Piece::Pawn, Side::Black);
-        let black_pawn_attacks =
-            bitboard_helpers::south_east(black_pawns) | bitboard_helpers::south_west(black_pawns);
 
         if let Some(cached_score) =
             self.pawn_cache
@@ -259,17 +255,6 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Evaluation<Values> {
 
         let structure = self.pawn_evaluator.detect_pawn_structure(board);
         let mut score = [PhasedScore::default(); Side::COUNT];
-
-        let white_defended =
-            (white_pawn_attacks & board.pieces(Side::White)).number_of_occupied_squares() as i16;
-        let black_defended =
-            (black_pawn_attacks & board.pieces(Side::Black)).number_of_occupied_squares() as i16;
-        score[Side::White] += self
-            .values()
-            .pawn_defense_bonus(white_defended, Side::White);
-        score[Side::Black] += self
-            .values()
-            .pawn_defense_bonus(black_defended, Side::Black);
 
         for side in Side::iter() {
             let idx = side as usize;
@@ -512,6 +497,23 @@ impl<Values: EvalValues<ReturnScore = PhasedScore>> Eval<Board> for Evaluation<V
 
         mg[opp_idx] += their_knight_outpost_bonus.mg() as i32;
         eg[opp_idx] += their_knight_outpost_bonus.eg() as i32;
+
+        let our_pawn_attacks = pawn_attacks[side_to_move];
+        let their_pawn_attacks = pawn_attacks[opposite];
+        // This is computed here instead of pawn structure eval because it depends
+        // on the structure of other pieces on the board, so we can't cache this score.
+        let our_defended =
+            (our_pawn_attacks & board.pieces(side_to_move)).number_of_occupied_squares() as i16;
+        let black_defended =
+            (their_pawn_attacks & board.pieces(opposite)).number_of_occupied_squares() as i16;
+        let our_pawn_defense_bonus = self.values().pawn_defense_bonus(our_defended, side_to_move);
+        let their_pawn_defense_bonus = self.values().pawn_defense_bonus(black_defended, opposite);
+
+        mg[stm_idx] += our_pawn_defense_bonus.mg() as i32;
+        eg[stm_idx] += our_pawn_defense_bonus.eg() as i32;
+
+        mg[opp_idx] += their_pawn_defense_bonus.mg() as i32;
+        eg[opp_idx] += their_pawn_defense_bonus.eg() as i32;
 
         let mg_score = mg[stm_idx] - mg[opp_idx];
         let eg_score = eg[stm_idx] - eg[opp_idx];
