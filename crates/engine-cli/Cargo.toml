@@ -21,4 +21,4 @@ rapidhash = { workspace = true }
 shadow-rs = "2.0.0"
 
 [features]
-tuning = []
+tuning = ["engine/tuning"]
