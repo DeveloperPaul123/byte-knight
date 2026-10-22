@@ -30,7 +30,7 @@ pub(crate) const fn fast_range_64(word: u64, p: u64) -> u64 {
 // Credit to Akimbo author for the implementation
 #[macro_export]
 macro_rules! tunable_params {
-    ($($name:ident = $val:expr, $min:expr, $max:expr, $step:expr, $spsa:expr;)*) => {
+    ($($name:ident = $val:expr, $min:literal ..= $max:literal, $spsa:expr;)*) => {
         #[cfg(feature = "tuning")]
         use std::sync::atomic::Ordering;
 
